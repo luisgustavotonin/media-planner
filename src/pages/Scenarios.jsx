@@ -42,7 +42,7 @@ export default function Scenarios() {
 
   const chartData = scenarios ? [
     { name: 'Leads', Otimista: scenarios.optimistic.totals.total_leads, Realista: scenarios.realistic.totals.total_leads, Conservador: scenarios.conservative.totals.total_leads },
-    { name: 'Consultas', Otimista: scenarios.optimistic.totals.total_appointments, Realista: scenarios.realistic.totals.total_appointments, Conservador: scenarios.conservative.totals.total_appointments },
+    { name: 'Agendamentos', Otimista: scenarios.optimistic.totals.total_appointments, Realista: scenarios.realistic.totals.total_appointments, Conservador: scenarios.conservative.totals.total_appointments },
     { name: 'Comparec.', Otimista: scenarios.optimistic.totals.total_showups, Realista: scenarios.realistic.totals.total_showups, Conservador: scenarios.conservative.totals.total_showups },
     { name: 'Vendas', Otimista: Math.round(scenarios.optimistic.totals.total_sales), Realista: Math.round(scenarios.realistic.totals.total_sales), Conservador: Math.round(scenarios.conservative.totals.total_sales) },
   ] : [];
@@ -94,7 +94,7 @@ export default function Scenarios() {
                   </div>
                   <div className="space-y-3">
                     <div className="flex justify-between"><span className="text-xs text-gray-500">Leads</span><span className="text-sm font-semibold">{fmtN(s.totals.total_leads)}</span></div>
-                    <div className="flex justify-between"><span className="text-xs text-gray-500">Consultas</span><span className="text-sm font-semibold">{fmtN(s.totals.total_appointments)}</span></div>
+                    <div className="flex justify-between"><span className="text-xs text-gray-500">Agendamentos</span><span className="text-sm font-semibold">{fmtN(s.totals.total_appointments)}</span></div>
                     <div className="flex justify-between"><span className="text-xs text-gray-500">Comparecimentos</span><span className="text-sm font-semibold">{fmtN(s.totals.total_showups)}</span></div>
                     <div className="flex justify-between"><span className="text-xs text-gray-500">Vendas</span><span className="text-sm font-semibold">{fmtN(s.totals.total_sales)}</span></div>
                     <div className="pt-3 border-t border-gray-50">

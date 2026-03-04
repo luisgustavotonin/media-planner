@@ -100,6 +100,7 @@ export default function PlanDetail() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard label="Investimento Total" value={`R$${totalInvestment.toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" />
         <StatCard label="Leads Esperados" value={consolidated.totals.total_leads.toLocaleString()} icon={Users} color="purple" />
+
         <StatCard label="Vendas Esperadas" value={Math.round(consolidated.totals.total_sales).toLocaleString()} icon={Target} color="orange" />
         <StatCard label="Receita Projetada" value={`R$${Math.round(consolidated.totals.total_revenue).toLocaleString('pt-BR')}`} icon={TrendingUp} color="green" />
       </div>
@@ -109,11 +110,11 @@ export default function PlanDetail() {
           <h3 className="text-sm font-semibold text-gray-900 mb-4">Premissas do Funil</h3>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <Label className="text-xs">Lead → Consulta (%)</Label>
+              <Label className="text-xs">Lead → Agendamento (%)</Label>
               <Input type="number" step="0.01" min="0" max="1" value={localPlan.lead_to_appointment_rate || ''} onChange={e => updateField('lead_to_appointment_rate', Number(e.target.value))} className="mt-1" />
             </div>
             <div>
-              <Label className="text-xs">Consulta → Comparecimento (%)</Label>
+              <Label className="text-xs">Agendamento → Comparecimento (%)</Label>
               <Input type="number" step="0.01" min="0" max="1" value={localPlan.appointment_to_show_rate || ''} onChange={e => updateField('appointment_to_show_rate', Number(e.target.value))} className="mt-1" />
             </div>
             <div>

@@ -156,7 +156,7 @@ export default function WeeklyTracking() {
                 <Input type="number" value={weekForm.leads_actual} onChange={e => setWeekForm(f => ({...f, leads_actual: Number(e.target.value)}))} className="mt-1" />
               </div>
               <div>
-                <Label className="text-xs">Consultas</Label>
+                <Label className="text-xs">Agendamentos</Label>
                 <Input type="number" value={weekForm.appointments_actual} onChange={e => setWeekForm(f => ({...f, appointments_actual: Number(e.target.value)}))} className="mt-1" />
               </div>
               <div className="flex items-end">

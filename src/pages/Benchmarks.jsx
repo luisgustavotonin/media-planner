@@ -47,8 +47,8 @@ export default function Benchmarks() {
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50">
                 <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Segmento</th>
-                <th className="text-center py-3 px-3 text-xs font-medium text-gray-500">Lead→Consulta</th>
-                <th className="text-center py-3 px-3 text-xs font-medium text-gray-500">Consulta→Comparec.</th>
+                <th className="text-center py-3 px-3 text-xs font-medium text-gray-500">Lead→Agendamento</th>
+                <th className="text-center py-3 px-3 text-xs font-medium text-gray-500">Agendamento→Comparec.</th>
                 <th className="text-center py-3 px-3 text-xs font-medium text-gray-500">Comparec.→Venda</th>
                 <th className="text-center py-3 px-3 text-xs font-medium text-gray-500">CPL Meta</th>
                 <th className="text-center py-3 px-3 text-xs font-medium text-gray-500">CPL Google</th>
@@ -91,11 +91,11 @@ export default function Benchmarks() {
             <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Taxas de Conversão</h4>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <Label className="text-xs">Lead→Consulta</Label>
+                <Label className="text-xs">Lead→Agendamento</Label>
                 <Input type="number" step="0.01" min="0" max="1" value={form.lead_to_appointment_rate || ''} onChange={e => setForm({...form, lead_to_appointment_rate: Number(e.target.value)})} />
               </div>
               <div>
-                <Label className="text-xs">Consulta→Comparec.</Label>
+                <Label className="text-xs">Agendamento→Comparec.</Label>
                 <Input type="number" step="0.01" min="0" max="1" value={form.appointment_to_show_rate || ''} onChange={e => setForm({...form, appointment_to_show_rate: Number(e.target.value)})} />
               </div>
               <div>

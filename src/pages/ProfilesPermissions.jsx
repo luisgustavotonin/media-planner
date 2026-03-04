@@ -11,6 +11,7 @@ import { Shield, Plus, Pencil, Trash2, Check, X } from 'lucide-react';
 
 const ALL_PERMISSIONS = [
   { key: 'visualizar_dashboard', label: 'Visualizar Dashboard', description: 'Acesso ao painel principal' },
+
   { key: 'criar_clientes', label: 'Criar Clientes', description: 'Adicionar novos clientes' },
   { key: 'editar_clientes', label: 'Editar Clientes', description: 'Modificar dados de clientes' },
   { key: 'criar_planos', label: 'Criar Planos', description: 'Criar novos planos de mídia' },
