@@ -3,8 +3,9 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../components/ui-custom/PageHeader';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import CurrencyInput from '../components/ui-custom/CurrencyInput';
+import PercentInput from '../components/ui-custom/PercentInput';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Pencil } from 'lucide-react';
 
@@ -92,15 +93,15 @@ export default function Benchmarks() {
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label className="text-xs">Lead→Agendamento</Label>
-                <Input type="number" step="0.01" min="0" max="1" value={form.lead_to_appointment_rate || ''} onChange={e => setForm({...form, lead_to_appointment_rate: Number(e.target.value)})} />
+                <PercentInput value={form.lead_to_appointment_rate || 0} onChange={v => setForm({...form, lead_to_appointment_rate: v})} />
               </div>
               <div>
                 <Label className="text-xs">Agendamento→Comparec.</Label>
-                <Input type="number" step="0.01" min="0" max="1" value={form.appointment_to_show_rate || ''} onChange={e => setForm({...form, appointment_to_show_rate: Number(e.target.value)})} />
+                <PercentInput value={form.appointment_to_show_rate || 0} onChange={v => setForm({...form, appointment_to_show_rate: v})} />
               </div>
               <div>
                 <Label className="text-xs">Comparec.→Venda</Label>
-                <Input type="number" step="0.01" min="0" max="1" value={form.show_to_sale_rate || ''} onChange={e => setForm({...form, show_to_sale_rate: Number(e.target.value)})} />
+                <PercentInput value={form.show_to_sale_rate || 0} onChange={v => setForm({...form, show_to_sale_rate: v})} />
               </div>
             </div>
             <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">CPL Padrão (R$)</h4>
@@ -108,7 +109,7 @@ export default function Benchmarks() {
               {[{key:'meta',label:'Meta'},{key:'google',label:'Google'},{key:'tiktok',label:'TikTok'},{key:'youtube',label:'YouTube'},{key:'other',label:'Outro'}].map(ch => (
                 <div key={ch.key}>
                   <Label className="text-xs">{ch.label}</Label>
-                  <Input type="number" value={form[`${ch.key}_default_cpl`] || ''} onChange={e => setForm({...form, [`${ch.key}_default_cpl`]: Number(e.target.value)})} />
+                  <CurrencyInput value={form[`${ch.key}_default_cpl`] || 0} onChange={v => setForm({...form, [`${ch.key}_default_cpl`]: v})} prefix="R$" />
                 </div>
               ))}
             </div>
