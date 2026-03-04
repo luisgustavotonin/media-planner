@@ -10,9 +10,10 @@ import FunnelChart from '../components/ui-custom/FunnelChart';
 import ChannelEditor from '../components/plan/ChannelEditor';
 import ResultsTable from '../components/plan/ResultsTable';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import CurrencyInput from '../components/ui-custom/CurrencyInput';
+import PercentInput from '../components/ui-custom/PercentInput';
 import { Save, Users, DollarSign, TrendingUp, Target, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -111,19 +112,19 @@ export default function PlanDetail() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <Label className="text-xs">Lead → Agendamento (%)</Label>
-              <Input type="number" step="0.01" min="0" max="1" value={localPlan.lead_to_appointment_rate || ''} onChange={e => updateField('lead_to_appointment_rate', Number(e.target.value))} className="mt-1" />
+              <PercentInput value={localPlan.lead_to_appointment_rate || 0} onChange={v => updateField('lead_to_appointment_rate', v)} className="mt-1" />
             </div>
             <div>
               <Label className="text-xs">Agendamento → Comparecimento (%)</Label>
-              <Input type="number" step="0.01" min="0" max="1" value={localPlan.appointment_to_show_rate || ''} onChange={e => updateField('appointment_to_show_rate', Number(e.target.value))} className="mt-1" />
+              <PercentInput value={localPlan.appointment_to_show_rate || 0} onChange={v => updateField('appointment_to_show_rate', v)} className="mt-1" />
             </div>
             <div>
               <Label className="text-xs">Comparecimento → Venda (%)</Label>
-              <Input type="number" step="0.01" min="0" max="1" value={localPlan.show_to_sale_rate || ''} onChange={e => updateField('show_to_sale_rate', Number(e.target.value))} className="mt-1" />
+              <PercentInput value={localPlan.show_to_sale_rate || 0} onChange={v => updateField('show_to_sale_rate', v)} className="mt-1" />
             </div>
             <div>
               <Label className="text-xs">Ticket Médio (R$)</Label>
-              <Input type="number" value={localPlan.average_ticket || ''} onChange={e => updateField('average_ticket', Number(e.target.value))} className="mt-1" />
+              <CurrencyInput value={localPlan.average_ticket || 0} onChange={v => updateField('average_ticket', v)} prefix="R$" className="mt-1" />
             </div>
           </div>
         </div>
