@@ -1,10 +1,11 @@
 import React from 'react';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import ChannelBadge from '../ui-custom/ChannelBadge';
+import CurrencyInput from '../ui-custom/CurrencyInput';
+import PercentInput from '../ui-custom/PercentInput';
 
 const CHANNELS = ['Meta', 'Google', 'TikTok', 'YouTube', 'Other'];
 const OBJECTIVES = ['Leads', 'Remarketing', 'Awareness', 'Traffic'];
@@ -74,15 +75,15 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                   )}
                 </div>
                 <div>
-                  <Input type="number" value={ch.budget_value || ''} onChange={e => updateChannel(idx, 'budget_value', Number(e.target.value))}
-                    placeholder="Budget R$" className="h-9 text-xs" disabled={readOnly} />
+                  <CurrencyInput value={ch.budget_value || 0} onChange={v => updateChannel(idx, 'budget_value', v)}
+                    placeholder="Budget R$" prefix="R$" className="text-xs" disabled={readOnly} />
                 </div>
                 <div className="text-center">
                   <span className="text-xs font-medium text-gray-500">{(ch.budget_percent || 0).toFixed(1)}%</span>
                 </div>
                 <div>
-                  <Input type="number" value={ch.expected_cpl || ''} onChange={e => updateChannel(idx, 'expected_cpl', Number(e.target.value))}
-                    placeholder="CPL R$" className="h-9 text-xs" disabled={readOnly} />
+                  <CurrencyInput value={ch.expected_cpl || 0} onChange={v => updateChannel(idx, 'expected_cpl', v)}
+                    placeholder="CPL R$" prefix="R$" className="text-xs" disabled={readOnly} />
                 </div>
               </div>
               <div className="flex items-center gap-1">
@@ -107,15 +108,15 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                   <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="text-[10px] text-gray-400">Lead→Agend.</label>
-                      <Input type="number" step="0.01" min="0" max="1" value={ch.lead_to_appointment_rate_override || ''} onChange={e => updateChannel(idx, 'lead_to_appointment_rate_override', Number(e.target.value))} className="h-8 text-xs" disabled={readOnly} />
+                      <PercentInput value={ch.lead_to_appointment_rate_override || 0} onChange={v => updateChannel(idx, 'lead_to_appointment_rate_override', v)} className="h-8 text-xs" disabled={readOnly} />
                     </div>
                     <div>
                       <label className="text-[10px] text-gray-400">Agend.→Compar.</label>
-                      <Input type="number" step="0.01" min="0" max="1" value={ch.appointment_to_show_rate_override || ''} onChange={e => updateChannel(idx, 'appointment_to_show_rate_override', Number(e.target.value))} className="h-8 text-xs" disabled={readOnly} />
+                      <PercentInput value={ch.appointment_to_show_rate_override || 0} onChange={v => updateChannel(idx, 'appointment_to_show_rate_override', v)} className="h-8 text-xs" disabled={readOnly} />
                     </div>
                     <div>
                       <label className="text-[10px] text-gray-400">Compar.→Venda</label>
-                      <Input type="number" step="0.01" min="0" max="1" value={ch.show_to_sale_rate_override || ''} onChange={e => updateChannel(idx, 'show_to_sale_rate_override', Number(e.target.value))} className="h-8 text-xs" disabled={readOnly} />
+                      <PercentInput value={ch.show_to_sale_rate_override || 0} onChange={v => updateChannel(idx, 'show_to_sale_rate_override', v)} className="h-8 text-xs" disabled={readOnly} />
                     </div>
                   </div>
                 )}
