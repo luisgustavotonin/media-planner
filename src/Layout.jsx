@@ -6,20 +6,21 @@ import { usePermissions } from './components/hooks/usePermissions';
 import { 
   LayoutDashboard, Users, Building2, BarChart3, Target, 
   FlaskConical, CalendarDays, FileText, Settings, Menu, X, 
-  ChevronRight, LogOut, Activity
+  ChevronRight, LogOut, Activity, Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
 
 const navItems = [
   { name: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'consultant'] },
-  { name: 'Clients', page: 'Clients', icon: Building2, roles: ['admin', 'consultant'] },
-  { name: 'Media Plans', page: 'MediaPlans', icon: BarChart3, roles: ['admin', 'consultant', 'client'] },
-  { name: 'Reverse Plan', page: 'ReversePlan', icon: Target, roles: ['admin', 'consultant'] },
-  { name: 'Scenarios', page: 'Scenarios', icon: FlaskConical, roles: ['admin', 'consultant'] },
-  { name: 'Weekly Tracking', page: 'WeeklyTracking', icon: CalendarDays, roles: ['admin', 'consultant'] },
+  { name: 'Clientes', page: 'Clients', icon: Building2, roles: ['admin', 'consultant'] },
+  { name: 'Planos de Mídia', page: 'MediaPlans', icon: BarChart3, roles: ['admin', 'consultant', 'client'] },
+  { name: 'Planejamento Reverso', page: 'ReversePlan', icon: Target, roles: ['admin', 'consultant'] },
+  { name: 'Cenários', page: 'Scenarios', icon: FlaskConical, roles: ['admin', 'consultant'] },
+  { name: 'Acomp. Semanal', page: 'WeeklyTracking', icon: CalendarDays, roles: ['admin', 'consultant'] },
   { name: 'Benchmarks', page: 'Benchmarks', icon: Settings, roles: ['admin'] },
-  { name: 'Users', page: 'UserManagement', icon: Users, roles: ['admin'] },
+  { name: 'Usuários', page: 'UserManagement', icon: Users, roles: ['admin'] },
+  { name: 'Perfis e Permissões', page: 'ProfilesPermissions', icon: Shield, roles: ['admin'] },
 ];
 
 export default function Layout({ children, currentPageName }) {
@@ -34,7 +35,7 @@ export default function Layout({ children, currentPageName }) {
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-500 tracking-wide">Loading...</p>
+          <p className="text-sm text-gray-500 tracking-wide">Carregando...</p>
         </div>
       </div>
     );

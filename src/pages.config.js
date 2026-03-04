@@ -47,27 +47,27 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
-import Dashboard from './pages/Dashboard';
-import Clients from './pages/Clients';
 import Benchmarks from './pages/Benchmarks';
-import UserManagement from './pages/UserManagement';
+import Clients from './pages/Clients';
+import Dashboard from './pages/Dashboard';
 import MediaPlans from './pages/MediaPlans';
 import PlanDetail from './pages/PlanDetail';
 import ReversePlan from './pages/ReversePlan';
 import Scenarios from './pages/Scenarios';
+import UserManagement from './pages/UserManagement';
 import WeeklyTracking from './pages/WeeklyTracking';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "Dashboard": Dashboard,
-    "Clients": Clients,
     "Benchmarks": Benchmarks,
-    "UserManagement": UserManagement,
+    "Clients": Clients,
+    "Dashboard": Dashboard,
     "MediaPlans": MediaPlans,
     "PlanDetail": PlanDetail,
     "ReversePlan": ReversePlan,
     "Scenarios": Scenarios,
+    "UserManagement": UserManagement,
     "WeeklyTracking": WeeklyTracking,
 }
 
