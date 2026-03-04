@@ -9,6 +9,8 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { calculateConsolidated } from '../components/hooks/usePlanCalculations';
 
+const STATUS_LABELS = { active: 'ativo', draft: 'rascunho', completed: 'concluído' };
+
 export default function Dashboard() {
   const { user } = useAuth();
   
@@ -40,36 +42,27 @@ export default function Dashboard() {
     }
   });
 
+  const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
       <PageHeader
-        title={`Welcome back, ${user?.full_name?.split(' ')[0] || 'User'}`}
-        description="Here's an overview of your media planning performance."
+        title={`Olá, ${user?.full_name?.split(' ')[0] || 'Usuário'}!`}
+        description="Visão geral do seu desempenho de mídia."
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Clients" value={myClients.length} icon={Building2} color="blue" />
-        <StatCard label="Active Plans" value={activePlans.length} icon={BarChart3} color="purple" />
-        <StatCard
-          label="Total Investment"
-          value={`R$${totalInvestment.toLocaleString('pt-BR')}`}
-          icon={DollarSign}
-          color="orange"
-        />
-        <StatCard
-          label="Projected Revenue"
-          value={`R$${Math.round(totalRevenue).toLocaleString('pt-BR')}`}
-          icon={TrendingUp}
-          color="green"
-        />
+        <StatCard label="Clientes" value={myClients.length} icon={Building2} color="blue" />
+        <StatCard label="Planos Ativos" value={activePlans.length} icon={BarChart3} color="purple" />
+        <StatCard label="Investimento Total" value={`R$${totalInvestment.toLocaleString('pt-BR')}`} icon={DollarSign} color="orange" />
+        <StatCard label="Receita Projetada" value={`R$${Math.round(totalRevenue).toLocaleString('pt-BR')}`} icon={TrendingUp} color="green" />
       </div>
 
-      {/* Recent Plans */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
-          <h2 className="text-sm font-semibold text-gray-900">Recent Media Plans</h2>
+          <h2 className="text-sm font-semibold text-gray-900">Planos de Mídia Recentes</h2>
           <Link to={createPageUrl('MediaPlans')} className="text-xs font-medium text-blue-600 hover:text-blue-700">
-            View all →
+            Ver todos →
           </Link>
         </div>
         <div className="divide-y divide-gray-50">
@@ -84,8 +77,8 @@ export default function Dashboard() {
                   <Target className="w-4 h-4 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">{plan.client_name || 'Unnamed'}</p>
-                  <p className="text-xs text-gray-400">{plan.period_month}/{plan.period_year} · {plan.segment || 'General'}</p>
+                  <p className="text-sm font-medium text-gray-900">{plan.client_name || 'Sem nome'}</p>
+                  <p className="text-xs text-gray-400">{MESES[(plan.period_month || 1) - 1]}/{plan.period_year} · {plan.segment || 'Geral'}</p>
                 </div>
               </div>
               <div className="text-right">
@@ -97,14 +90,14 @@ export default function Dashboard() {
                   plan.status === 'completed' ? 'bg-gray-100 text-gray-600' :
                   'bg-amber-50 text-amber-700'
                 }`}>
-                  {plan.status || 'draft'}
+                  {STATUS_LABELS[plan.status] || 'rascunho'}
                 </span>
               </div>
             </Link>
           ))}
           {myPlans.length === 0 && (
             <div className="px-6 py-12 text-center">
-              <p className="text-sm text-gray-400">No media plans yet. Create your first plan to get started.</p>
+              <p className="text-sm text-gray-400">Nenhum plano de mídia ainda. Crie seu primeiro plano para começar.</p>
             </div>
           )}
         </div>

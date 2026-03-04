@@ -13,8 +13,18 @@ import { BarChart3, Plus, Search, Target, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const SPECIALTIES = ['implants', 'aesthetics', 'orthodontics', 'general', 'periodontics', 'endodontics', 'pediatric', 'other'];
+const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const ESPECIALIDADES = [
+  { value: 'implants', label: 'Implantes' },
+  { value: 'aesthetics', label: 'Estética' },
+  { value: 'orthodontics', label: 'Ortodontia' },
+  { value: 'general', label: 'Clínica Geral' },
+  { value: 'periodontics', label: 'Periodontia' },
+  { value: 'endodontics', label: 'Endodontia' },
+  { value: 'pediatric', label: 'Odontopediatria' },
+  { value: 'other', label: 'Outro' },
+];
+const STATUS_LABELS = { active: 'ativo', draft: 'rascunho', completed: 'concluído' };
 
 export default function MediaPlans() {
   const { user } = useAuth();
@@ -72,28 +82,27 @@ export default function MediaPlans() {
     plans.filter(p => p.created_by === user?.email);
 
   const filtered = myPlans.filter(p => (p.client_name || '').toLowerCase().includes(search.toLowerCase()));
-
   const myClients = user?.role === 'admin' ? clients : clients.filter(c => c.created_by === user?.email);
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
       <PageHeader
-        title="Media Plans"
-        description="Create and manage multi-channel media plans."
+        title="Planos de Mídia"
+        description="Crie e gerencie planos de mídia multicanal."
         actions={!isClientRole && (
           <Button onClick={() => setOpen(true)} className="gap-2 bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4" /> New Plan
+            <Plus className="w-4 h-4" /> Novo Plano
           </Button>
         )}
       />
 
       <div className="relative mb-6">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <Input placeholder="Search plans..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 bg-white" />
+        <Input placeholder="Buscar planos..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 bg-white" />
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState icon={BarChart3} title="No media plans" description="Create your first media plan to start projecting results." />
+        <EmptyState icon={BarChart3} title="Nenhum plano de mídia" description="Crie seu primeiro plano para começar a projetar resultados." />
       ) : (
         <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50">
           {filtered.map(plan => (
@@ -103,9 +112,9 @@ export default function MediaPlans() {
                   <Target className="w-4 h-4 text-blue-500" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{plan.client_name || 'Unnamed'}</p>
+                  <p className="text-sm font-medium text-gray-900 truncate">{plan.client_name || 'Sem nome'}</p>
                   <p className="text-xs text-gray-400">
-                    {MONTHS[(plan.period_month || 1) - 1]} {plan.period_year} · {plan.segment || 'General'} · {plan.channels?.length || 0} channels
+                    {MESES[(plan.period_month || 1) - 1]} {plan.period_year} · {ESPECIALIDADES.find(e => e.value === plan.segment)?.label || 'Geral'} · {plan.channels?.length || 0} canais
                   </p>
                 </div>
               </Link>
@@ -117,7 +126,7 @@ export default function MediaPlans() {
                     plan.status === 'completed' ? 'bg-gray-100 text-gray-600' :
                     'bg-amber-50 text-amber-700'
                   }`}>
-                    {plan.status || 'draft'}
+                    {STATUS_LABELS[plan.status] || 'rascunho'}
                   </span>
                 </div>
                 {!isClientRole && (
@@ -134,12 +143,12 @@ export default function MediaPlans() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Create Media Plan</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Criar Plano de Mídia</DialogTitle></DialogHeader>
           <div className="space-y-4 mt-4">
             <div>
-              <Label className="text-xs">Client *</Label>
+              <Label className="text-xs">Cliente *</Label>
               <Select value={form.client_id} onValueChange={v => setForm({...form, client_id: v})}>
-                <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
                 <SelectContent>
                   {myClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
                 </SelectContent>
@@ -147,30 +156,30 @@ export default function MediaPlans() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Month</Label>
+                <Label className="text-xs">Mês</Label>
                 <Select value={String(form.period_month)} onValueChange={v => setForm({...form, period_month: Number(v)})}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {MONTHS.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>)}
+                    {MESES.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="text-xs">Year</Label>
+                <Label className="text-xs">Ano</Label>
                 <Input type="number" value={form.period_year} onChange={e => setForm({...form, period_year: Number(e.target.value)})} />
               </div>
             </div>
             <div>
-              <Label className="text-xs">Segment</Label>
+              <Label className="text-xs">Segmento</Label>
               <Select value={form.segment} onValueChange={v => setForm({...form, segment: v})}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {SPECIALTIES.map(s => <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>)}
+                  {ESPECIALIDADES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <Button onClick={() => createMut.mutate(form)} className="w-full bg-blue-600 hover:bg-blue-700" disabled={!form.client_id || createMut.isPending}>
-              Create Plan
+              Criar Plano
             </Button>
           </div>
         </DialogContent>

@@ -30,10 +30,6 @@ export default function ReversePlan() {
     queryKey: ['plans'],
     queryFn: () => base44.entities.MediaPlan.list('-created_date'),
   });
-  const { data: benchmarks = [] } = useQuery({
-    queryKey: ['benchmarks'],
-    queryFn: () => base44.entities.Benchmark.list(),
-  });
 
   const myPlans = user?.role === 'admin' ? plans : plans.filter(p => p.created_by === user?.email);
   const selectedPlan = myPlans.find(p => p.id === selectedPlanId);
@@ -47,19 +43,13 @@ export default function ReversePlan() {
       lead_to_appointment_rate: selectedPlan.lead_to_appointment_rate || 0.35,
       appointment_to_show_rate: selectedPlan.appointment_to_show_rate || 0.7,
       show_to_sale_rate: selectedPlan.show_to_sale_rate || 0.35,
-    } : {
-      lead_to_appointment_rate: 0.35,
-      appointment_to_show_rate: 0.7,
-      show_to_sale_rate: 0.35,
-    };
-    const avgTicket = selectedPlan?.average_ticket || 5000;
+    } : { lead_to_appointment_rate: 0.35, appointment_to_show_rate: 0.7, show_to_sale_rate: 0.35 };
 
-    // Load CPLs from plan channels if available
+    const avgTicket = selectedPlan?.average_ticket || 5000;
     const dist = distribution.map(d => {
       const planCh = selectedPlan?.channels?.find(c => c.channel_name === d.channel_name);
       return { ...d, expected_cpl: planCh?.expected_cpl || d.expected_cpl };
     });
-
     setResult(calculateReversePlan(targetRevenue, avgTicket, funnel, dist));
   };
 
@@ -67,69 +57,66 @@ export default function ReversePlan() {
 
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto">
-      <PageHeader title="Reverse Planning" description="Start from a revenue target and calculate the required investment and leads." />
+      <PageHeader title="Planejamento Reverso" description="Defina uma meta de receita e calcule o investimento necessário por canal." />
 
       <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
-            <Label className="text-xs">Base Plan (optional)</Label>
+            <Label className="text-xs">Plano Base (opcional)</Label>
             <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
-              <SelectTrigger className="mt-1"><SelectValue placeholder="Select a plan for funnel rates" /></SelectTrigger>
+              <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione um plano para usar as taxas" /></SelectTrigger>
               <SelectContent>
                 {myPlans.map(p => <SelectItem key={p.id} value={p.id}>{p.client_name} — {p.period_month}/{p.period_year}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label className="text-xs">Target Revenue (R$)</Label>
+            <Label className="text-xs">Meta de Receita (R$)</Label>
             <Input type="number" value={targetRevenue} onChange={e => setTargetRevenue(Number(e.target.value))} className="mt-1" />
           </div>
         </div>
 
-        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Channel Distribution</h4>
-        <div className="space-y-2 mb-6">
+        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Distribuição por Canal</h4>
+        <div className="space-y-2 mb-4">
+          <div className="grid grid-cols-3 gap-3 text-[10px] text-gray-400 font-medium uppercase tracking-wider px-1">
+            <span>Canal</span><span>% do Budget</span><span>CPL (R$)</span>
+          </div>
           {distribution.map((ch, idx) => (
-            <div key={idx} className="flex items-center gap-3">
-              <div className="w-20"><ChannelBadge channel={ch.channel_name} /></div>
-              <div className="flex-1">
-                <Input type="number" value={ch.percent} onChange={e => handleDistChange(idx, 'percent', e.target.value)}
-                  className="h-9 text-xs" placeholder="%" />
-              </div>
-              <div className="flex-1">
-                <Input type="number" value={ch.expected_cpl} onChange={e => handleDistChange(idx, 'expected_cpl', e.target.value)}
-                  className="h-9 text-xs" placeholder="CPL R$" />
-              </div>
+            <div key={idx} className="grid grid-cols-3 gap-3 items-center">
+              <div><ChannelBadge channel={ch.channel_name} /></div>
+              <Input type="number" value={ch.percent} onChange={e => handleDistChange(idx, 'percent', e.target.value)} className="h-9 text-xs" placeholder="%" />
+              <Input type="number" value={ch.expected_cpl} onChange={e => handleDistChange(idx, 'expected_cpl', e.target.value)} className="h-9 text-xs" placeholder="CPL" />
             </div>
           ))}
         </div>
 
         <Button onClick={handleCalculate} className="gap-2 bg-blue-600 hover:bg-blue-700">
-          <Calculator className="w-4 h-4" /> Calculate Reverse Plan
+          <Calculator className="w-4 h-4" /> Calcular Planejamento Reverso
         </Button>
       </div>
 
       {result && (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <StatCard label="Required Investment" value={fmt(result.total_investment)} icon={DollarSign} color="blue" />
-            <StatCard label="Required Leads" value={result.required_leads.toLocaleString()} icon={Users} color="purple" />
-            <StatCard label="Required Sales" value={result.required_sales.toLocaleString()} icon={Target} color="orange" />
-            <StatCard label="Target Revenue" value={fmt(targetRevenue)} icon={TrendingDown} color="green" />
+            <StatCard label="Investimento Necessário" value={fmt(result.total_investment)} icon={DollarSign} color="blue" />
+            <StatCard label="Leads Necessários" value={result.required_leads.toLocaleString()} icon={Users} color="purple" />
+            <StatCard label="Vendas Necessárias" value={result.required_sales.toLocaleString()} icon={Target} color="orange" />
+            <StatCard label="Meta de Receita" value={fmt(targetRevenue)} icon={TrendingDown} color="green" />
           </div>
 
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-50">
-              <h3 className="text-sm font-semibold text-gray-900">Channel Budget Breakdown</h3>
+              <h3 className="text-sm font-semibold text-gray-900">Orçamento por Canal</h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-gray-50/50 border-b border-gray-100">
-                    <th className="text-left py-2.5 px-4 font-medium text-gray-500">Channel</th>
-                    <th className="text-right py-2.5 px-4 font-medium text-gray-500">Distribution</th>
+                    <th className="text-left py-2.5 px-4 font-medium text-gray-500">Canal</th>
+                    <th className="text-right py-2.5 px-4 font-medium text-gray-500">Distribuição</th>
                     <th className="text-right py-2.5 px-4 font-medium text-gray-500">CPL</th>
-                    <th className="text-right py-2.5 px-4 font-medium text-gray-500">Required Leads</th>
-                    <th className="text-right py-2.5 px-4 font-medium text-gray-500">Required Budget</th>
+                    <th className="text-right py-2.5 px-4 font-medium text-gray-500">Leads Necessários</th>
+                    <th className="text-right py-2.5 px-4 font-medium text-gray-500">Budget Necessário</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">

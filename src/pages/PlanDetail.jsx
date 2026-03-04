@@ -17,6 +17,8 @@ import { Save, Users, DollarSign, TrendingUp, Target, ArrowLeft } from 'lucide-r
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
+const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
 export default function PlanDetail() {
   const params = new URLSearchParams(window.location.search);
   const planId = params.get('id');
@@ -58,93 +60,83 @@ export default function PlanDetail() {
   const totalInvestment = channels.reduce((s, c) => s + (c.budget_value || 0), 0);
 
   const updateField = (field, value) => setLocalPlan(p => ({ ...p, [field]: value }));
-
-  const handleSave = () => {
-    saveMut.mutate({ ...localPlan, total_investment: totalInvestment });
-  };
-
+  const handleSave = () => saveMut.mutate({ ...localPlan, total_investment: totalInvestment });
   const handleChannelsChange = (newChannels) => {
     setLocalPlan(p => ({ ...p, channels: newChannels, total_investment: newChannels.reduce((s, c) => s + (c.budget_value || 0), 0) }));
   };
 
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const STATUS_OPTIONS = [
+    { value: 'draft', label: 'Rascunho' },
+    { value: 'active', label: 'Ativo' },
+    { value: 'completed', label: 'Concluído' },
+  ];
+  const statusLabel = STATUS_OPTIONS.find(s => s.value === localPlan.status)?.label || 'Rascunho';
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
       <div className="mb-6">
         <Link to={createPageUrl('MediaPlans')} className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 mb-4">
-          <ArrowLeft className="w-3 h-3" /> Back to Plans
+          <ArrowLeft className="w-3 h-3" /> Voltar aos Planos
         </Link>
         <PageHeader
-          title={`${localPlan.client_name || 'Unnamed'} — ${MONTHS[(localPlan.period_month || 1) - 1]} ${localPlan.period_year}`}
-          description={`Segment: ${localPlan.segment || 'General'} · Status: ${localPlan.status || 'draft'}`}
+          title={`${localPlan.client_name || 'Sem nome'} — ${MESES[(localPlan.period_month || 1) - 1]} ${localPlan.period_year}`}
+          description={`Segmento: ${localPlan.segment || 'Geral'} · Status: ${statusLabel}`}
           actions={!readOnly && (
             <div className="flex gap-2">
               <Select value={localPlan.status || 'draft'} onValueChange={v => updateField('status', v)}>
-                <SelectTrigger className="w-32 h-9 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-36 h-9 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
+                  {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Button onClick={handleSave} className="gap-2 bg-blue-600 hover:bg-blue-700" disabled={saveMut.isPending}>
-                <Save className="w-4 h-4" /> Save
+                <Save className="w-4 h-4" /> Salvar
               </Button>
             </div>
           )}
         />
       </div>
 
-      {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Total Investment" value={`R$${totalInvestment.toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" />
-        <StatCard label="Expected Leads" value={consolidated.totals.total_leads.toLocaleString()} icon={Users} color="purple" />
-        <StatCard label="Expected Sales" value={Math.round(consolidated.totals.total_sales).toLocaleString()} icon={Target} color="orange" />
-        <StatCard label="Projected Revenue" value={`R$${Math.round(consolidated.totals.total_revenue).toLocaleString('pt-BR')}`} icon={TrendingUp} color="green" />
+        <StatCard label="Investimento Total" value={`R$${totalInvestment.toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" />
+        <StatCard label="Leads Esperados" value={consolidated.totals.total_leads.toLocaleString()} icon={Users} color="purple" />
+        <StatCard label="Vendas Esperadas" value={Math.round(consolidated.totals.total_sales).toLocaleString()} icon={Target} color="orange" />
+        <StatCard label="Receita Projetada" value={`R$${Math.round(consolidated.totals.total_revenue).toLocaleString('pt-BR')}`} icon={TrendingUp} color="green" />
       </div>
 
-      {/* Funnel Rates */}
       {!readOnly && (
         <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Funnel Assumptions</h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Premissas do Funil</h3>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <Label className="text-xs">Lead → Appointment (%)</Label>
+              <Label className="text-xs">Lead → Consulta (%)</Label>
               <Input type="number" step="0.01" min="0" max="1" value={localPlan.lead_to_appointment_rate || ''} onChange={e => updateField('lead_to_appointment_rate', Number(e.target.value))} className="mt-1" />
             </div>
             <div>
-              <Label className="text-xs">Appointment → Show-up (%)</Label>
+              <Label className="text-xs">Consulta → Comparecimento (%)</Label>
               <Input type="number" step="0.01" min="0" max="1" value={localPlan.appointment_to_show_rate || ''} onChange={e => updateField('appointment_to_show_rate', Number(e.target.value))} className="mt-1" />
             </div>
             <div>
-              <Label className="text-xs">Show-up → Sale (%)</Label>
+              <Label className="text-xs">Comparecimento → Venda (%)</Label>
               <Input type="number" step="0.01" min="0" max="1" value={localPlan.show_to_sale_rate || ''} onChange={e => updateField('show_to_sale_rate', Number(e.target.value))} className="mt-1" />
             </div>
             <div>
-              <Label className="text-xs">Average Ticket (R$)</Label>
+              <Label className="text-xs">Ticket Médio (R$)</Label>
               <Input type="number" value={localPlan.average_ticket || ''} onChange={e => updateField('average_ticket', Number(e.target.value))} className="mt-1" />
             </div>
           </div>
         </div>
       )}
 
-      {/* Channel Allocation */}
       <div className="mb-6">
         <ChannelEditor channels={channels} onChange={handleChannelsChange} totalInvestment={totalInvestment} readOnly={readOnly} />
       </div>
 
-      {/* Funnel Chart */}
       <div className="mb-6">
-        <FunnelChart data={consolidated.totals} title="Consolidated Funnel" />
+        <FunnelChart data={consolidated.totals} title="Funil Consolidado" />
       </div>
 
-      {/* Results Table */}
-      <ResultsTable
-        channelResults={consolidated.channelResults}
-        totals={consolidated.totals}
-        blended={consolidated}
-      />
+      <ResultsTable channelResults={consolidated.channelResults} totals={consolidated.totals} blended={consolidated} />
     </div>
   );
 }
