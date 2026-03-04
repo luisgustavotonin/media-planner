@@ -44,10 +44,10 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-900">Channel Allocation</h3>
+        <h3 className="text-sm font-semibold text-gray-900">Alocação de Canais</h3>
         {!readOnly && (
           <Button variant="outline" size="sm" onClick={addChannel} className="text-xs">
-            + Add Channel
+            + Adicionar Canal
           </Button>
         )}
       </div>
@@ -101,20 +101,20 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
               <div className="px-4 pb-4 pt-2 border-t border-gray-50 bg-gray-50/50">
                 <div className="flex items-center gap-3 mb-3">
                   <Switch checked={ch.use_custom_funnel || false} onCheckedChange={v => updateChannel(idx, 'use_custom_funnel', v)} disabled={readOnly} />
-                  <span className="text-xs text-gray-600">Custom funnel rates for this channel</span>
+                  <span className="text-xs text-gray-600">Taxas de funil personalizadas para este canal</span>
                 </div>
                 {ch.use_custom_funnel && (
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="text-[10px] text-gray-400">Lead→Apt</label>
+                      <label className="text-[10px] text-gray-400">Lead→Agend.</label>
                       <Input type="number" step="0.01" min="0" max="1" value={ch.lead_to_appointment_rate_override || ''} onChange={e => updateChannel(idx, 'lead_to_appointment_rate_override', Number(e.target.value))} className="h-8 text-xs" disabled={readOnly} />
                     </div>
                     <div>
-                      <label className="text-[10px] text-gray-400">Apt→Show</label>
+                      <label className="text-[10px] text-gray-400">Agend.→Compar.</label>
                       <Input type="number" step="0.01" min="0" max="1" value={ch.appointment_to_show_rate_override || ''} onChange={e => updateChannel(idx, 'appointment_to_show_rate_override', Number(e.target.value))} className="h-8 text-xs" disabled={readOnly} />
                     </div>
                     <div>
-                      <label className="text-[10px] text-gray-400">Show→Sale</label>
+                      <label className="text-[10px] text-gray-400">Compar.→Venda</label>
                       <Input type="number" step="0.01" min="0" max="1" value={ch.show_to_sale_rate_override || ''} onChange={e => updateChannel(idx, 'show_to_sale_rate_override', Number(e.target.value))} className="h-8 text-xs" disabled={readOnly} />
                     </div>
                   </div>
@@ -127,7 +127,7 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
 
       {/* Column Labels */}
       <div className="hidden sm:grid grid-cols-5 gap-3 px-4 text-[10px] text-gray-400 uppercase tracking-wider">
-        <span>Channel</span><span>Objective</span><span>Budget (R$)</span><span className="text-center">%</span><span>CPL (R$)</span>
+        <span>Canal</span><span>Objetivo</span><span>Budget (R$)</span><span className="text-center">%</span><span>CPL (R$)</span>
       </div>
     </div>
   );

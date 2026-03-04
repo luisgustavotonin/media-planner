@@ -4,8 +4,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 export default function FunnelChart({ data, title }) {
   const funnelData = [
     { stage: 'Leads', value: data?.total_leads || 0, fill: '#3b82f6' },
-    { stage: 'Appointments', value: data?.total_appointments || 0, fill: '#6366f1' },
-    { stage: 'Show-ups', value: data?.total_showups || 0, fill: '#8b5cf6' },
+    { stage: 'Agendamentos', value: data?.total_appointments || 0, fill: '#6366f1' },
+    { stage: 'Comparecimentos', value: data?.total_showups || 0, fill: '#8b5cf6' },
     { stage: 'Sales', value: Math.round(data?.total_sales || 0), fill: '#10b981' },
   ];
 

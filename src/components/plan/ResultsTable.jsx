@@ -8,22 +8,22 @@ export default function ResultsTable({ channelResults, totals, blended }) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-50">
-        <h3 className="text-sm font-semibold text-gray-900">Projection Results</h3>
+        <h3 className="text-sm font-semibold text-gray-900">Resultados Projetados</h3>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
             <tr className="bg-gray-50/50 border-b border-gray-100">
-              <th className="text-left py-2.5 px-4 font-medium text-gray-500">Channel</th>
+              <th className="text-left py-2.5 px-4 font-medium text-gray-500">Canal</th>
               <th className="text-right py-2.5 px-3 font-medium text-gray-500">Budget</th>
               <th className="text-right py-2.5 px-3 font-medium text-gray-500">Leads</th>
-              <th className="text-right py-2.5 px-3 font-medium text-gray-500">Appts</th>
-              <th className="text-right py-2.5 px-3 font-medium text-gray-500">Show-ups</th>
-              <th className="text-right py-2.5 px-3 font-medium text-gray-500">Sales</th>
-              <th className="text-right py-2.5 px-3 font-medium text-gray-500">Revenue</th>
+              <th className="text-right py-2.5 px-3 font-medium text-gray-500">Agendamentos</th>
+              <th className="text-right py-2.5 px-3 font-medium text-gray-500">Comparecimentos</th>
+              <th className="text-right py-2.5 px-3 font-medium text-gray-500">Vendas</th>
+              <th className="text-right py-2.5 px-3 font-medium text-gray-500">Receita</th>
               <th className="text-right py-2.5 px-3 font-medium text-gray-500">CPL</th>
               <th className="text-right py-2.5 px-3 font-medium text-gray-500">CPA</th>
-              <th className="text-right py-2.5 px-3 font-medium text-gray-500">Cost/Sale</th>
+              <th className="text-right py-2.5 px-3 font-medium text-gray-500">Custo/Venda</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
