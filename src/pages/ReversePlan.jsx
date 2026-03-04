@@ -7,8 +7,8 @@ import PageHeader from '../components/ui-custom/PageHeader';
 import StatCard from '../components/ui-custom/StatCard';
 import ChannelBadge from '../components/ui-custom/ChannelBadge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Target, DollarSign, Users, TrendingDown, Calculator } from 'lucide-react';
 
@@ -72,7 +72,7 @@ export default function ReversePlan() {
           </div>
           <div>
             <Label className="text-xs">Meta de Receita (R$)</Label>
-            <Input type="number" value={targetRevenue} onChange={e => setTargetRevenue(Number(e.target.value))} className="mt-1" />
+            <CurrencyInput value={targetRevenue} onChange={v => setTargetRevenue(v || 0)} prefix="R$" className="mt-1" />
           </div>
         </div>
 
@@ -84,8 +84,8 @@ export default function ReversePlan() {
           {distribution.map((ch, idx) => (
             <div key={idx} className="grid grid-cols-3 gap-3 items-center">
               <div><ChannelBadge channel={ch.channel_name} /></div>
-              <Input type="number" value={ch.percent} onChange={e => handleDistChange(idx, 'percent', e.target.value)} className="h-9 text-xs" placeholder="%" />
-              <Input type="number" value={ch.expected_cpl} onChange={e => handleDistChange(idx, 'expected_cpl', e.target.value)} className="h-9 text-xs" placeholder="CPL" />
+              <CurrencyInput value={ch.percent} onChange={v => handleDistChange(idx, 'percent', v)} className="text-xs" placeholder="%" />
+              <CurrencyInput value={ch.expected_cpl} onChange={v => handleDistChange(idx, 'expected_cpl', v)} prefix="R$" className="text-xs" placeholder="CPL" />
             </div>
           ))}
         </div>
