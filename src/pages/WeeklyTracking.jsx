@@ -6,8 +6,8 @@ import { calculateConsolidated, generateRecommendations } from '../components/ho
 import PageHeader from '../components/ui-custom/PageHeader';
 import StatCard from '../components/ui-custom/StatCard';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Save, AlertTriangle, CheckCircle, Info, TrendingUp, Target, DollarSign, Users } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -149,15 +149,15 @@ export default function WeeklyTracking() {
               </div>
               <div>
                 <Label className="text-xs">Investimento (R$)</Label>
-                <Input type="number" value={weekForm.investment_actual} onChange={e => setWeekForm(f => ({...f, investment_actual: Number(e.target.value)}))} className="mt-1" />
+                <CurrencyInput value={weekForm.investment_actual} onChange={v => setWeekForm(f => ({...f, investment_actual: v || 0}))} prefix="R$" className="mt-1" />
               </div>
               <div>
                 <Label className="text-xs">Leads</Label>
-                <Input type="number" value={weekForm.leads_actual} onChange={e => setWeekForm(f => ({...f, leads_actual: Number(e.target.value)}))} className="mt-1" />
+                <CurrencyInput value={weekForm.leads_actual} onChange={v => setWeekForm(f => ({...f, leads_actual: v || 0}))} className="mt-1" />
               </div>
               <div>
                 <Label className="text-xs">Agendamentos</Label>
-                <Input type="number" value={weekForm.appointments_actual} onChange={e => setWeekForm(f => ({...f, appointments_actual: Number(e.target.value)}))} className="mt-1" />
+                <CurrencyInput value={weekForm.appointments_actual} onChange={v => setWeekForm(f => ({...f, appointments_actual: v || 0}))} className="mt-1" />
               </div>
               <div className="flex items-end">
                 <Button onClick={() => saveMut.mutate(weekForm)} className="w-full gap-2 bg-blue-600 hover:bg-blue-700" disabled={saveMut.isPending}>
