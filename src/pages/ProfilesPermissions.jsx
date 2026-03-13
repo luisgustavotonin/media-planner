@@ -6,30 +6,30 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Shield, Plus, Pencil, Trash2, Check, X } from 'lucide-react';
+import { Shield, Plus, Pencil, Trash2, Eye, Pencil as EditIcon } from 'lucide-react';
 
-const ALL_PERMISSIONS = [
-  { key: 'visualizar_dashboard', label: 'Visualizar Dashboard', description: 'Acesso ao painel principal' },
-
-  { key: 'criar_clientes', label: 'Criar Clientes', description: 'Adicionar novos clientes' },
-  { key: 'editar_clientes', label: 'Editar Clientes', description: 'Modificar dados de clientes' },
-  { key: 'criar_planos', label: 'Criar Planos', description: 'Criar novos planos de mídia' },
-  { key: 'editar_planos', label: 'Editar Planos', description: 'Modificar planos existentes' },
-  { key: 'ver_planos', label: 'Ver Planos', description: 'Visualizar planos de mídia' },
-  { key: 'exportar_pdf', label: 'Exportar PDF', description: 'Gerar relatórios em PDF' },
-  { key: 'planejamento_reverso', label: 'Planejamento Reverso', description: 'Acessar módulo de planejamento reverso' },
-  { key: 'simulador_cenarios', label: 'Simulador de Cenários', description: 'Simular cenários otimista/realista/conservador' },
-  { key: 'acompanhamento_semanal', label: 'Acompanhamento Semanal', description: 'Lançar e ver dados semanais' },
-  { key: 'gerenciar_usuarios', label: 'Gerenciar Usuários', description: 'Convidar e gerenciar membros da equipe' },
-  { key: 'gerenciar_benchmarks', label: 'Gerenciar Benchmarks', description: 'Editar taxas e CPLs padrão' },
+// Each group: module name, view permission key, edit permission key (null = not applicable)
+const PERMISSION_GROUPS = [
+  { module: 'Dashboard',               view: 'visualizar_dashboard',             edit: null },
+  { module: 'Clientes',                view: 'visualizar_clientes',              edit: 'editar_clientes' },
+  { module: 'Planos de Mídia',         view: 'visualizar_planos',                edit: 'editar_planos' },
+  { module: 'Exportar PDF',            view: null,                               edit: 'exportar_pdf' },
+  { module: 'Planejamento Reverso',    view: 'visualizar_planejamento_reverso',   edit: 'editar_planejamento_reverso' },
+  { module: 'Simulador de Cenários',   view: 'visualizar_simulador_cenarios',     edit: 'editar_simulador_cenarios' },
+  { module: 'Acompanhamento Semanal',  view: 'visualizar_acompanhamento_semanal', edit: 'editar_acompanhamento_semanal' },
+  { module: 'Usuários',                view: 'visualizar_usuarios',              edit: 'gerenciar_usuarios' },
+  { module: 'Benchmarks',              view: 'visualizar_benchmarks',            edit: 'gerenciar_benchmarks' },
 ];
+
+const ALL_KEYS = [...new Set(PERMISSION_GROUPS.flatMap(g => [g.view, g.edit]).filter(Boolean))];
 
 const PROFILE_COLORS = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#6366f1','#ec4899'];
 
 const emptyProfile = {
   name: '', level: 1, description: '', color: '#3b82f6', status: 'ativo',
-  permissions: Object.fromEntries(ALL_PERMISSIONS.map(p => [p.key, false])),
+  permissions: Object.fromEntries(ALL_KEYS.map(k => [k, false])),
 };
 
 export default function ProfilesPermissions() {
@@ -61,7 +61,7 @@ export default function ProfilesPermissions() {
     setForm({
       name: p.name || '', level: p.level || 1, description: p.description || '',
       color: p.color || '#3b82f6', status: p.status || 'ativo',
-      permissions: { ...Object.fromEntries(ALL_PERMISSIONS.map(pm => [pm.key, false])), ...(p.permissions || {}) },
+      permissions: { ...Object.fromEntries(ALL_KEYS.map(k => [k, false])), ...(p.permissions || {}) },
     });
     setOpen(true);
   };
@@ -76,10 +76,29 @@ export default function ProfilesPermissions() {
     setForm(f => ({ ...f, permissions: { ...f.permissions, [key]: !f.permissions[key] } }));
   };
 
+  // When "editar" is checked, auto-check "visualizar" too
+  const handlePermChange = (key, group) => {
+    const isEdit = key === group.edit;
+    const isView = key === group.view;
+    const current = !!form.permissions?.[key];
+
+    if (isEdit && !current && group.view) {
+      // Checking edit → also check view
+      setForm(f => ({ ...f, permissions: { ...f.permissions, [key]: true, [group.view]: true } }));
+    } else if (isView && current && group.edit) {
+      // Unchecking view → also uncheck edit
+      setForm(f => ({ ...f, permissions: { ...f.permissions, [key]: false, [group.edit]: false } }));
+    } else {
+      togglePerm(key);
+    }
+  };
+
   const countPerms = (profile) => {
     if (!profile.permissions) return 0;
     return Object.values(profile.permissions).filter(Boolean).length;
   };
+
+  const hasPerm = (profile, key) => !!profile.permissions?.[key];
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
@@ -143,33 +162,49 @@ export default function ProfilesPermissions() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="text-left py-3 px-4 font-medium text-gray-500 w-56">Permissão</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-500 w-48">Módulo</th>
                   {profiles.map(p => (
-                    <th key={p.id} className="text-center py-3 px-4 font-semibold min-w-[100px]" style={{ color: p.color }}>
+                    <th key={p.id} className="text-center py-3 px-2 font-semibold min-w-[120px]" style={{ color: p.color }} colSpan={2}>
                       {p.name}
                     </th>
                   ))}
                 </tr>
+                <tr className="border-b border-gray-100 bg-gray-50/50">
+                  <th className="py-2 px-4"></th>
+                  {profiles.map(p => (
+                    <React.Fragment key={p.id}>
+                      <th className="py-2 px-2 text-center text-[10px] font-medium text-gray-400 w-12">
+                        <div className="flex items-center justify-center gap-1"><Eye className="w-3 h-3" /> Ver</div>
+                      </th>
+                      <th className="py-2 px-2 text-center text-[10px] font-medium text-gray-400 w-12">
+                        <div className="flex items-center justify-center gap-1"><EditIcon className="w-3 h-3" /> Editar</div>
+                      </th>
+                    </React.Fragment>
+                  ))}
+                </tr>
               </thead>
               <tbody>
-                {ALL_PERMISSIONS.map((perm, i) => (
-                  <tr key={perm.key} className={i % 2 === 0 ? 'bg-gray-50/30' : ''}>
-                    <td className="py-3 px-4">
-                      <p className="font-medium text-gray-800">{perm.label}</p>
-                      <p className="text-[10px] text-gray-400 mt-0.5">{perm.description}</p>
-                    </td>
-                    {profiles.map(p => {
-                      const has = p.permissions?.[perm.key];
-                      return (
-                        <td key={p.id} className="py-3 px-4 text-center">
-                          {has ? (
-                            <Check className="w-4 h-4 text-emerald-500 mx-auto" />
-                          ) : (
-                            <X className="w-4 h-4 text-gray-200 mx-auto" />
-                          )}
+                {PERMISSION_GROUPS.map((group, i) => (
+                  <tr key={group.module} className={i % 2 === 0 ? 'bg-gray-50/30' : ''}>
+                    <td className="py-3 px-4 font-medium text-gray-700">{group.module}</td>
+                    {profiles.map(p => (
+                      <React.Fragment key={p.id}>
+                        <td className="py-3 px-2 text-center">
+                          {group.view
+                            ? (hasPerm(p, group.view)
+                                ? <span className="inline-block w-4 h-4 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-600 text-[9px] leading-4 text-center">✓</span>
+                                : <span className="inline-block w-4 h-4 rounded-full bg-gray-100 border border-gray-200"></span>)
+                            : <span className="text-gray-200">—</span>}
                         </td>
-                      );
-                    })}
+                        <td className="py-3 px-2 text-center">
+                          {group.edit
+                            ? (hasPerm(p, group.edit)
+                                ? <span className="inline-block w-4 h-4 rounded-full bg-blue-100 border border-blue-300 text-blue-600 text-[9px] leading-4 text-center">✓</span>
+                                : <span className="inline-block w-4 h-4 rounded-full bg-gray-100 border border-gray-200"></span>)
+                            : <span className="text-gray-200">—</span>}
+                        </td>
+                      </React.Fragment>
+                    ))}
                   </tr>
                 ))}
               </tbody>
@@ -211,18 +246,37 @@ export default function ProfilesPermissions() {
             </div>
 
             <div>
-              <Label className="text-xs mb-3 block">Permissões</Label>
-              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                {ALL_PERMISSIONS.map(perm => (
-                  <div key={perm.key} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50">
-                    <div>
-                      <p className="text-xs font-medium text-gray-800">{perm.label}</p>
-                      <p className="text-[10px] text-gray-400">{perm.description}</p>
+              <Label className="text-xs mb-3 block">Permissões por Módulo</Label>
+              <div className="border border-gray-100 rounded-lg overflow-hidden">
+                {/* Header */}
+                <div className="grid grid-cols-3 bg-gray-50 px-3 py-2 border-b border-gray-100">
+                  <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Módulo</span>
+                  <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-center flex items-center justify-center gap-1"><Eye className="w-3 h-3" /> Visualizar</span>
+                  <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-center flex items-center justify-center gap-1"><EditIcon className="w-3 h-3" /> Editar</span>
+                </div>
+                {PERMISSION_GROUPS.map((group, i) => (
+                  <div key={group.module} className={`grid grid-cols-3 items-center px-3 py-2.5 ${i % 2 === 0 ? '' : 'bg-gray-50/40'}`}>
+                    <span className="text-xs font-medium text-gray-700">{group.module}</span>
+                    <div className="flex justify-center">
+                      {group.view
+                        ? <Checkbox
+                            checked={!!form.permissions?.[group.view]}
+                            onCheckedChange={() => handlePermChange(group.view, group)}
+                          />
+                        : <span className="text-gray-200 text-xs">—</span>}
                     </div>
-                    <Switch checked={!!form.permissions?.[perm.key]} onCheckedChange={() => togglePerm(perm.key)} />
+                    <div className="flex justify-center">
+                      {group.edit
+                        ? <Checkbox
+                            checked={!!form.permissions?.[group.edit]}
+                            onCheckedChange={() => handlePermChange(group.edit, group)}
+                          />
+                        : <span className="text-gray-200 text-xs">—</span>}
+                    </div>
                   </div>
                 ))}
               </div>
+              <p className="text-[10px] text-gray-400 mt-2">* Marcar "Editar" automaticamente ativa "Visualizar".</p>
             </div>
 
             <div className="flex items-center justify-between py-2">
