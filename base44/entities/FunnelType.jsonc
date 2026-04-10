@@ -9,47 +9,35 @@
     "description": {
       "type": "string"
     },
-    "has_appointment": {
-      "type": "boolean",
-      "default": true,
-      "description": "Possui etapa de Agendamento"
-    },
-    "appointment_label": {
-      "type": "string",
-      "default": "Agendamento",
-      "description": "Nome da etapa de agendamento"
-    },
-    "has_showup": {
-      "type": "boolean",
-      "default": true,
-      "description": "Possui etapa de Comparecimento"
-    },
-    "showup_label": {
-      "type": "string",
-      "default": "Comparecimento",
-      "description": "Nome da etapa de comparecimento"
-    },
-    "sale_label": {
-      "type": "string",
-      "default": "Venda",
-      "description": "Nome da etapa final (venda/convers\u00e3o)"
-    },
-    "lead_label": {
-      "type": "string",
-      "default": "Lead",
-      "description": "Nome da etapa de lead"
-    },
-    "default_lead_to_appointment_rate": {
-      "type": "number",
-      "description": "Taxa padr\u00e3o Lead\u2192Agendamento (0-1)"
-    },
-    "default_appointment_to_show_rate": {
-      "type": "number",
-      "description": "Taxa padr\u00e3o Agendamento\u2192Comparecimento (0-1)"
-    },
-    "default_show_to_sale_rate": {
-      "type": "number",
-      "description": "Taxa padr\u00e3o Comparecimento\u2192Venda (0-1)"
+    "stages": {
+      "type": "array",
+      "description": "Etapas do funil em ordem",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Identificador \u00fanico da etapa"
+          },
+          "label": {
+            "type": "string",
+            "description": "Nome da etapa exibido ao usu\u00e1rio"
+          },
+          "metric_type": {
+            "type": "string",
+            "enum": [
+              "quantidade",
+              "percentual",
+              "valor"
+            ],
+            "description": "Tipo de m\u00e9trica desta etapa"
+          },
+          "default_rate": {
+            "type": "number",
+            "description": "Taxa de convers\u00e3o padr\u00e3o da etapa anterior para esta (0-1), se aplic\u00e1vel"
+          }
+        }
+      }
     },
     "is_active": {
       "type": "boolean",
