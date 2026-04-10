@@ -48,6 +48,7 @@
  * The mainPage value must match a key in the PAGES object exactly.
  */
 import Benchmarks from './pages/Benchmarks';
+import FunnelTypes from './pages/FunnelTypes';
 import Clients from './pages/Clients';
 import Dashboard from './pages/Dashboard';
 import MediaPlans from './pages/MediaPlans';
@@ -62,6 +63,7 @@ import __Layout from './Layout.jsx';
 
 export const PAGES = {
     "Benchmarks": Benchmarks,
+    "FunnelTypes": FunnelTypes,
     "Clients": Clients,
     "Dashboard": Dashboard,
     "MediaPlans": MediaPlans,

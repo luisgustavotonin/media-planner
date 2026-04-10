@@ -6,7 +6,7 @@ import { usePermissions } from './components/hooks/usePermissions';
 import { 
   LayoutDashboard, Users, Building2, BarChart3, Target, 
   FlaskConical, CalendarDays, FileText, Settings, Menu, X, 
-  ChevronRight, LogOut, Activity, Shield
+  ChevronRight, LogOut, Activity, Shield, GitBranch
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
@@ -19,6 +19,7 @@ const navItems = [
   { name: 'Cenários', page: 'Scenarios', icon: FlaskConical, roles: ['admin', 'consultant'] },
   { name: 'Acomp. Semanal', page: 'WeeklyTracking', icon: CalendarDays, roles: ['admin', 'consultant'] },
   { name: 'Benchmarks', page: 'Benchmarks', icon: Settings, roles: ['admin'] },
+  { name: 'Tipos de Funil', page: 'FunnelTypes', icon: GitBranch, roles: ['admin'] },
   { name: 'Usuários', page: 'UserManagement', icon: Users, roles: ['admin'] },
   { name: 'Perfis e Permissões', page: 'ProfilesPermissions', icon: Shield, roles: ['admin'] },
 ];

@@ -1,0 +1,62 @@
+{
+  "name": "FunnelType",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do tipo de funil"
+    },
+    "description": {
+      "type": "string"
+    },
+    "has_appointment": {
+      "type": "boolean",
+      "default": true,
+      "description": "Possui etapa de Agendamento"
+    },
+    "appointment_label": {
+      "type": "string",
+      "default": "Agendamento",
+      "description": "Nome da etapa de agendamento"
+    },
+    "has_showup": {
+      "type": "boolean",
+      "default": true,
+      "description": "Possui etapa de Comparecimento"
+    },
+    "showup_label": {
+      "type": "string",
+      "default": "Comparecimento",
+      "description": "Nome da etapa de comparecimento"
+    },
+    "sale_label": {
+      "type": "string",
+      "default": "Venda",
+      "description": "Nome da etapa final (venda/convers\u00e3o)"
+    },
+    "lead_label": {
+      "type": "string",
+      "default": "Lead",
+      "description": "Nome da etapa de lead"
+    },
+    "default_lead_to_appointment_rate": {
+      "type": "number",
+      "description": "Taxa padr\u00e3o Lead\u2192Agendamento (0-1)"
+    },
+    "default_appointment_to_show_rate": {
+      "type": "number",
+      "description": "Taxa padr\u00e3o Agendamento\u2192Comparecimento (0-1)"
+    },
+    "default_show_to_sale_rate": {
+      "type": "number",
+      "description": "Taxa padr\u00e3o Comparecimento\u2192Venda (0-1)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name"
+  ]
+}
