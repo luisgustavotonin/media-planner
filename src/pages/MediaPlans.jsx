@@ -59,14 +59,22 @@ export default function MediaPlans() {
       const client = clients.find(c => c.id === d.client_id);
       const bm = benchmarks.find(b => b.segment === d.segment);
       const ft = funnelTypes.find(f => f.id === d.funnel_type_id);
+
+      // Pega as taxas padrão do FunnelType selecionado (etapas com default_rate)
+      const ftStages = ft?.stages || [];
+      const ftRates = ftStages.filter(s => s.default_rate != null).map(s => s.default_rate);
+      const lead_to_appointment_rate = ft ? (ftRates[0] ?? bm?.lead_to_appointment_rate ?? 0.35) : (bm?.lead_to_appointment_rate || 0.35);
+      const appointment_to_show_rate = ft ? (ftRates[1] ?? bm?.appointment_to_show_rate ?? 0.7) : (bm?.appointment_to_show_rate || 0.7);
+      const show_to_sale_rate = ft ? (ftRates[2] ?? bm?.show_to_sale_rate ?? 0.35) : (bm?.show_to_sale_rate || 0.35);
+
       return base44.entities.MediaPlan.create({
         ...d,
         client_name: client?.clinic_name || '',
         funnel_type_name: ft?.name || '',
         average_ticket: client?.average_ticket || 5000,
-        lead_to_appointment_rate: bm?.lead_to_appointment_rate || 0.35,
-        appointment_to_show_rate: bm?.appointment_to_show_rate || 0.7,
-        show_to_sale_rate: bm?.show_to_sale_rate || 0.35,
+        lead_to_appointment_rate,
+        appointment_to_show_rate,
+        show_to_sale_rate,
         channels: [
           { channel_name: 'Meta', channel_objective: 'Leads', budget_value: 0, budget_percent: 0, expected_cpl: bm?.meta_default_cpl || 40, use_custom_funnel: false },
           { channel_name: 'Google', channel_objective: 'Leads', budget_value: 0, budget_percent: 0, expected_cpl: bm?.google_default_cpl || 60, use_custom_funnel: false },

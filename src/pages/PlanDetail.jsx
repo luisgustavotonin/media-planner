@@ -35,6 +35,11 @@ export default function PlanDetail() {
     enabled: !!planId,
   });
 
+  const { data: funnelTypes = [] } = useQuery({
+    queryKey: ['funnelTypes'],
+    queryFn: () => base44.entities.FunnelType.list(),
+  });
+
   const [localPlan, setLocalPlan] = useState(null);
   useEffect(() => { if (plan) setLocalPlan({ ...plan }); }, [plan]);
 
@@ -49,6 +54,13 @@ export default function PlanDetail() {
   if (isLoading || !localPlan) {
     return <div className="flex items-center justify-center h-64"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>;
   }
+
+  const funnelType = funnelTypes.find(f => f.id === localPlan.funnel_type_id);
+  const funnelStages = funnelType?.stages || [];
+  // Monta labels dinâmicos das etapas de conversão (pares consecutivos)
+  const conversionLabels = funnelStages.length >= 2
+    ? funnelStages.slice(0, -1).map((s, i) => `${s.label} → ${funnelStages[i + 1].label}`)
+    : ['Lead → Agendamento', 'Agendamento → Comparecimento', 'Comparecimento → Venda'];
 
   const planFunnel = {
     lead_to_appointment_rate: localPlan.lead_to_appointment_rate || 0.35,
@@ -108,20 +120,31 @@ export default function PlanDetail() {
 
       {!readOnly && (
         <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Premissas do Funil</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-gray-900">Premissas do Funil</h3>
+            {funnelType && (
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">
+                {funnelType.name}
+              </span>
+            )}
+          </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <Label className="text-xs">Lead → Agendamento (%)</Label>
+              <Label className="text-xs">{conversionLabels[0]} (%)</Label>
               <PercentInput value={localPlan.lead_to_appointment_rate || 0} onChange={v => updateField('lead_to_appointment_rate', v)} className="mt-1" />
             </div>
-            <div>
-              <Label className="text-xs">Agendamento → Comparecimento (%)</Label>
-              <PercentInput value={localPlan.appointment_to_show_rate || 0} onChange={v => updateField('appointment_to_show_rate', v)} className="mt-1" />
-            </div>
-            <div>
-              <Label className="text-xs">Comparecimento → Venda (%)</Label>
-              <PercentInput value={localPlan.show_to_sale_rate || 0} onChange={v => updateField('show_to_sale_rate', v)} className="mt-1" />
-            </div>
+            {conversionLabels[1] && (
+              <div>
+                <Label className="text-xs">{conversionLabels[1]} (%)</Label>
+                <PercentInput value={localPlan.appointment_to_show_rate || 0} onChange={v => updateField('appointment_to_show_rate', v)} className="mt-1" />
+              </div>
+            )}
+            {conversionLabels[2] && (
+              <div>
+                <Label className="text-xs">{conversionLabels[2]} (%)</Label>
+                <PercentInput value={localPlan.show_to_sale_rate || 0} onChange={v => updateField('show_to_sale_rate', v)} className="mt-1" />
+              </div>
+            )}
             <div>
               <Label className="text-xs">Ticket Médio (R$)</Label>
               <CurrencyInput value={localPlan.average_ticket || 0} onChange={v => updateField('average_ticket', v)} prefix="R$" className="mt-1" />
