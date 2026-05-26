@@ -1,0 +1,149 @@
+{
+  "name": "MediaPlan",
+  "type": "object",
+  "properties": {
+    "client_id": {
+      "type": "string",
+      "description": "Reference to Client entity"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Denormalized client name for display"
+    },
+    "funnel_type_id": {
+      "type": "string",
+      "description": "Reference to FunnelType entity"
+    },
+    "funnel_type_name": {
+      "type": "string",
+      "description": "Denormalized funnel type name"
+    },
+    "period_month": {
+      "type": "number",
+      "description": "Month (1-12)"
+    },
+    "period_year": {
+      "type": "number",
+      "description": "Year"
+    },
+    "segment": {
+      "type": "string",
+      "enum": [
+        "implants",
+        "aesthetics",
+        "orthodontics",
+        "general",
+        "periodontics",
+        "endodontics",
+        "pediatric",
+        "other"
+      ]
+    },
+    "lead_to_appointment_rate": {
+      "type": "number"
+    },
+    "appointment_to_show_rate": {
+      "type": "number"
+    },
+    "show_to_sale_rate": {
+      "type": "number"
+    },
+    "average_ticket": {
+      "type": "number"
+    },
+    "total_investment": {
+      "type": "number"
+    },
+    "channels": {
+      "type": "array",
+      "description": "Channel allocation array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "channel_name": {
+            "type": "string"
+          },
+          "channel_objective": {
+            "type": "string"
+          },
+          "budget_value": {
+            "type": "number"
+          },
+          "budget_percent": {
+            "type": "number"
+          },
+          "expected_cpl": {
+            "type": "number"
+          },
+          "use_custom_funnel": {
+            "type": "boolean"
+          },
+          "lead_to_appointment_rate_override": {
+            "type": "number"
+          },
+          "appointment_to_show_rate_override": {
+            "type": "number"
+          },
+          "show_to_sale_rate_override": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "reverse_plan_enabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "target_revenue": {
+      "type": "number"
+    },
+    "reverse_channel_distribution": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "channel_name": {
+            "type": "string"
+          },
+          "percent": {
+            "type": "number"
+          },
+          "expected_cpl": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "scenario_adjustments": {
+      "type": "object",
+      "properties": {
+        "optimistic_cpl_adj": {
+          "type": "number"
+        },
+        "conservative_cpl_adj": {
+          "type": "number"
+        },
+        "optimistic_conv_adj": {
+          "type": "number"
+        },
+        "conservative_conv_adj": {
+          "type": "number"
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "active",
+        "completed"
+      ],
+      "default": "draft"
+    }
+  },
+  "required": [
+    "client_id",
+    "period_month",
+    "period_year"
+  ]
+}

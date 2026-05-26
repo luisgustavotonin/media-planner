@@ -44,19 +44,25 @@ export default function MediaPlans() {
     queryKey: ['benchmarks'],
     queryFn: () => base44.entities.Benchmark.list(),
   });
+  const { data: funnelTypes = [] } = useQuery({
+    queryKey: ['funnelTypes'],
+    queryFn: () => base44.entities.FunnelType.filter({ is_active: true }),
+  });
 
   const [form, setForm] = useState({
     client_id: '', period_month: new Date().getMonth() + 1, period_year: new Date().getFullYear(),
-    segment: 'general', status: 'draft',
+    segment: 'general', status: 'draft', funnel_type_id: '',
   });
 
   const createMut = useMutation({
     mutationFn: async (d) => {
       const client = clients.find(c => c.id === d.client_id);
       const bm = benchmarks.find(b => b.segment === d.segment);
+      const ft = funnelTypes.find(f => f.id === d.funnel_type_id);
       return base44.entities.MediaPlan.create({
         ...d,
         client_name: client?.clinic_name || '',
+        funnel_type_name: ft?.name || '',
         average_ticket: client?.average_ticket || 5000,
         lead_to_appointment_rate: bm?.lead_to_appointment_rate || 0.35,
         appointment_to_show_rate: bm?.appointment_to_show_rate || 0.7,
@@ -177,6 +183,23 @@ export default function MediaPlans() {
                   {ESPECIALIDADES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Tipo de Funil</Label>
+              <Select value={form.funnel_type_id} onValueChange={v => setForm({...form, funnel_type_id: v})}>
+                <SelectTrigger><SelectValue placeholder="Selecione o tipo de funil" /></SelectTrigger>
+                <SelectContent>
+                  {funnelTypes.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {form.funnel_type_id && (() => {
+                const ft = funnelTypes.find(f => f.id === form.funnel_type_id);
+                return ft?.stages ? (
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    {ft.stages.map(s => s.label).join(' → ')}
+                  </p>
+                ) : null;
+              })()}
             </div>
             <Button onClick={() => createMut.mutate(form)} className="w-full bg-blue-600 hover:bg-blue-700" disabled={!form.client_id || createMut.isPending}>
               Criar Plano
