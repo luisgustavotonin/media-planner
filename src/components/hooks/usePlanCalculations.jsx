@@ -1,4 +1,5 @@
 // Calcula métricas de um canal aplicando todas as taxas do funil em cascata
+// Retorna também stageValues: array com o volume em cada etapa [leads, stage1, stage2, ..., sales]
 export function calculateChannelMetrics(channel, conversionRates, averageTicket) {
   const rates = conversionRates || [];
   const budget = channel.budget_value || 0;
@@ -6,19 +7,23 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket)
 
   const leads = budget / cpl;
 
-  // Multiplica todas as taxas em cascata: leads × r0 × r1 × ... × rN
-  const finalConversionRate = rates.reduce((acc, r) => acc * (r || 0), 1);
-  const sales = leads * finalConversionRate;
+  // Calcula volume de cada etapa intermediária dinamicamente
+  const stageValues = [leads];
+  for (let i = 0; i < rates.length; i++) {
+    stageValues.push(stageValues[i] * (rates[i] || 0));
+  }
+  const sales = stageValues[stageValues.length - 1];
   const revenue = sales * averageTicket;
 
-  // Para exibição nas etapas intermediárias (retrocompatibilidade)
-  const appointments = leads * (rates[0] || 0);
-  const showups = appointments * (rates[1] || 0);
+  // Retrocompatibilidade
+  const appointments = stageValues[1] || 0;
+  const showups = stageValues[2] || 0;
 
   return {
     leads: Math.round(leads),
     appointments: Math.round(appointments),
     showups: Math.round(showups),
+    stageValues: stageValues.map(v => Math.round(v)),
     sales: Math.round(sales * 10) / 10,
     revenue: Math.round(revenue),
     cost_per_lead: leads > 0 ? budget / leads : 0,
@@ -35,14 +40,22 @@ export function calculateConsolidated(channels, conversionRates, averageTicket) 
     metrics: calculateChannelMetrics(ch, conversionRates, averageTicket),
   }));
 
-  const totals = channelResults.reduce((acc, ch) => ({
-    total_budget: acc.total_budget + (ch.budget_value || 0),
-    total_leads: acc.total_leads + ch.metrics.leads,
-    total_appointments: acc.total_appointments + ch.metrics.appointments,
-    total_showups: acc.total_showups + ch.metrics.showups,
-    total_sales: acc.total_sales + ch.metrics.sales,
-    total_revenue: acc.total_revenue + ch.metrics.revenue,
-  }), { total_budget: 0, total_leads: 0, total_appointments: 0, total_showups: 0, total_sales: 0, total_revenue: 0 });
+  const stageCount = (conversionRates || []).length + 1; // leads + N stages
+  const totalStageValues = Array(stageCount).fill(0);
+
+  const totals = channelResults.reduce((acc, ch) => {
+    ch.metrics.stageValues?.forEach((v, i) => { totalStageValues[i] = (totalStageValues[i] || 0) + v; });
+    return {
+      total_budget: acc.total_budget + (ch.budget_value || 0),
+      total_leads: acc.total_leads + ch.metrics.leads,
+      total_appointments: acc.total_appointments + ch.metrics.appointments,
+      total_showups: acc.total_showups + ch.metrics.showups,
+      total_sales: acc.total_sales + ch.metrics.sales,
+      total_revenue: acc.total_revenue + ch.metrics.revenue,
+    };
+  }, { total_budget: 0, total_leads: 0, total_appointments: 0, total_showups: 0, total_sales: 0, total_revenue: 0 });
+
+  totals.stageValues = totalStageValues;
 
   return {
     channelResults,

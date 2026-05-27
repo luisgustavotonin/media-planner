@@ -1,27 +1,33 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList, Cell } from 'recharts';
 
-const DEFAULT_STAGES = [
-  { label: 'Leads', key: 'total_leads', fill: '#3b82f6' },
-  { label: 'Agendamentos', key: 'total_appointments', fill: '#6366f1' },
-  { label: 'Comparecimentos', key: 'total_showups', fill: '#8b5cf6' },
-  { label: 'Vendas', key: 'total_sales', fill: '#10b981' },
-];
+const FILLS = ['#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#ec4899', '#10b981'];
 
-const FILLS = ['#3b82f6', '#6366f1', '#8b5cf6', '#10b981'];
+const DEFAULT_STAGES = ['Leads', 'Agendamentos', 'Comparecimentos', 'Vendas'];
+const DEFAULT_KEYS = ['total_leads', 'total_appointments', 'total_showups', 'total_sales'];
 
 export default function FunnelChart({ data, title, funnelStages }) {
   // funnelStages: array of { label } from FunnelType.stages
-  // Always use the 4 fixed data keys in order; just swap labels if funnelStages provided
-  const stageLabels = funnelStages && funnelStages.length >= 2
-    ? funnelStages.map(s => s.label)
-    : DEFAULT_STAGES.map(s => s.label);
+  // data.stageValues: dynamic array [leads, s1, s2, ..., sales] from calculateConsolidated
+  
+  let funnelData;
 
-  const funnelData = DEFAULT_STAGES.map((s, i) => ({
-    stage: stageLabels[i] || s.label,
-    value: Math.round(data?.[s.key] || 0),
-    fill: FILLS[i],
-  }));
+  if (funnelStages && funnelStages.length >= 2 && data?.stageValues?.length === funnelStages.length) {
+    // Modo dinâmico: usa stageValues + labels do funil
+    funnelData = funnelStages.map((s, i) => ({
+      stage: s.label,
+      value: data.stageValues[i] || 0,
+      fill: FILLS[i % FILLS.length],
+    }));
+  } else {
+    // Fallback: 4 etapas fixas
+    const labels = funnelStages?.length >= 2 ? funnelStages.map(s => s.label) : DEFAULT_STAGES;
+    funnelData = DEFAULT_KEYS.map((key, i) => ({
+      stage: labels[i] || DEFAULT_STAGES[i],
+      value: Math.round(data?.[key] || 0),
+      fill: FILLS[i % FILLS.length],
+    }));
+  }
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-6">
@@ -50,8 +56,8 @@ export default function FunnelChart({ data, title, funnelStages }) {
           </BarChart>
         </ResponsiveContainer>
       </div>
-      {/* Conversion rates */}
-      <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-gray-50">
+      {/* Conversion rates between stages */}
+      <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-gray-50 flex-wrap">
         {funnelData.slice(0, -1).map((stage, i) => {
           const next = funnelData[i + 1];
           const rate = stage.value > 0 ? ((next.value / stage.value) * 100).toFixed(1) : 0;
