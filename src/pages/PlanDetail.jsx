@@ -57,16 +57,47 @@ export default function PlanDetail() {
 
   const funnelType = funnelTypes.find(f => f.id === localPlan.funnel_type_id);
   const funnelStages = funnelType?.stages || [];
-  // Monta labels dinâmicos das etapas de conversão (pares consecutivos)
-  const conversionLabels = funnelStages.length >= 2
-    ? funnelStages.slice(0, -1).map((s, i) => `${s.label} → ${funnelStages[i + 1].label}`)
-    : ['Lead → Agendamento', 'Agendamento → Comparecimento', 'Comparecimento → Venda'];
 
-  const planFunnel = {
-    lead_to_appointment_rate: localPlan.lead_to_appointment_rate || 0.35,
-    appointment_to_show_rate: localPlan.appointment_to_show_rate || 0.7,
-    show_to_sale_rate: localPlan.show_to_sale_rate || 0.35,
+  // Pares de conversão dinâmicos baseados nas etapas do funil
+  const conversionPairs = funnelStages.length >= 2
+    ? funnelStages.slice(0, -1).map((s, i) => ({
+        label: `${s.label} → ${funnelStages[i + 1].label}`,
+        field: `conversion_rate_${i}`,
+      }))
+    : [
+        { label: 'Lead → Agendamento', field: 'conversion_rate_0' },
+        { label: 'Agendamento → Comparecimento', field: 'conversion_rate_1' },
+        { label: 'Comparecimento → Venda', field: 'conversion_rate_2' },
+      ];
+
+  // Lê as taxas do array dinâmico ou faz fallback para os campos legados
+  const getRate = (i) => {
+    if (localPlan.conversion_rates?.[i] !== undefined) return localPlan.conversion_rates[i];
+    // fallback legado
+    const legacy = [localPlan.lead_to_appointment_rate, localPlan.appointment_to_show_rate, localPlan.show_to_sale_rate];
+    return legacy[i] || 0;
   };
+
+  const updateRate = (i, value) => {
+    const rates = conversionPairs.map((_, idx) => getRate(idx));
+    rates[i] = value;
+    setLocalPlan(p => ({
+      ...p,
+      conversion_rates: rates,
+      // manter campos legados sincronizados para compatibilidade
+      lead_to_appointment_rate: rates[0] || 0,
+      appointment_to_show_rate: rates[1] || 0,
+      show_to_sale_rate: rates[2] || 0,
+    }));
+  };
+
+  // planFunnel usa sempre os primeiros 3 índices para cálculo (arquitetura atual)
+  const planFunnel = {
+    lead_to_appointment_rate: getRate(0) || 0.35,
+    appointment_to_show_rate: getRate(1) || 0.7,
+    show_to_sale_rate: getRate(2) || 0.35,
+  };
+
   const channels = localPlan.channels || [];
   const avgTicket = localPlan.average_ticket || 0;
   const consolidated = calculateConsolidated(channels, planFunnel, avgTicket);
@@ -129,22 +160,12 @@ export default function PlanDetail() {
             )}
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <Label className="text-xs">{conversionLabels[0]} (%)</Label>
-              <PercentInput value={localPlan.lead_to_appointment_rate || 0} onChange={v => updateField('lead_to_appointment_rate', v)} className="mt-1" />
-            </div>
-            {conversionLabels[1] && (
-              <div>
-                <Label className="text-xs">{conversionLabels[1]} (%)</Label>
-                <PercentInput value={localPlan.appointment_to_show_rate || 0} onChange={v => updateField('appointment_to_show_rate', v)} className="mt-1" />
+            {conversionPairs.map((pair, i) => (
+              <div key={pair.field}>
+                <Label className="text-xs">{pair.label} (%)</Label>
+                <PercentInput value={getRate(i)} onChange={v => updateRate(i, v)} className="mt-1" />
               </div>
-            )}
-            {conversionLabels[2] && (
-              <div>
-                <Label className="text-xs">{conversionLabels[2]} (%)</Label>
-                <PercentInput value={localPlan.show_to_sale_rate || 0} onChange={v => updateField('show_to_sale_rate', v)} className="mt-1" />
-              </div>
-            )}
+            ))}
             <div>
               <Label className="text-xs">Ticket Médio (R$)</Label>
               <CurrencyInput value={localPlan.average_ticket || 0} onChange={v => updateField('average_ticket', v)} prefix="R$" className="mt-1" />

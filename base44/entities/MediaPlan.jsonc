@@ -39,14 +39,24 @@
         "other"
       ]
     },
+    "conversion_rates": {
+      "type": "array",
+      "description": "Dynamic conversion rates for each funnel stage pair (index matches stage pair order)",
+      "items": {
+        "type": "number"
+      }
+    },
     "lead_to_appointment_rate": {
-      "type": "number"
+      "type": "number",
+      "description": "Legacy: conversion_rates[0]"
     },
     "appointment_to_show_rate": {
-      "type": "number"
+      "type": "number",
+      "description": "Legacy: conversion_rates[1]"
     },
     "show_to_sale_rate": {
-      "type": "number"
+      "type": "number",
+      "description": "Legacy: conversion_rates[2]"
     },
     "average_ticket": {
       "type": "number"
