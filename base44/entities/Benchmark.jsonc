@@ -1,0 +1,54 @@
+{
+  "name": "Benchmark",
+  "type": "object",
+  "properties": {
+    "segment": {
+      "type": "string",
+      "enum": [
+        "implants",
+        "aesthetics",
+        "orthodontics",
+        "general",
+        "periodontics",
+        "endodontics",
+        "pediatric",
+        "other"
+      ]
+    },
+    "lead_to_appointment_rate": {
+      "type": "number",
+      "description": "Default lead to appointment conversion rate (0-1)"
+    },
+    "appointment_to_show_rate": {
+      "type": "number",
+      "description": "Default appointment to show-up rate (0-1)"
+    },
+    "show_to_sale_rate": {
+      "type": "number",
+      "description": "Default show-up to sale rate (0-1)"
+    },
+    "meta_default_cpl": {
+      "type": "number",
+      "description": "Default CPL for Meta in BRL"
+    },
+    "google_default_cpl": {
+      "type": "number",
+      "description": "Default CPL for Google in BRL"
+    },
+    "tiktok_default_cpl": {
+      "type": "number",
+      "description": "Default CPL for TikTok in BRL"
+    },
+    "youtube_default_cpl": {
+      "type": "number",
+      "description": "Default CPL for YouTube in BRL"
+    },
+    "other_default_cpl": {
+      "type": "number",
+      "description": "Default CPL for Other channels in BRL"
+    }
+  },
+  "required": [
+    "segment"
+  ]
+}

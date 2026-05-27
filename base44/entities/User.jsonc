@@ -1,0 +1,22 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "consultant",
+        "client"
+      ],
+      "default": "consultant"
+    },
+    "assigned_client_id": {
+      "type": "string",
+      "description": "For client role users, the client entity they are linked to"
+    }
+  },
+  "required": [
+    "assigned_client_id"
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "name": "WeeklyActual",
+  "type": "object",
+  "properties": {
+    "plan_id": {
+      "type": "string",
+      "description": "Reference to MediaPlan"
+    },
+    "client_id": {
+      "type": "string"
+    },
+    "week_number": {
+      "type": "number",
+      "description": "Week number within the month (1-5)"
+    },
+    "week_start_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "investment_actual": {
+      "type": "number"
+    },
+    "leads_actual": {
+      "type": "number"
+    },
+    "appointments_actual": {
+      "type": "number"
+    },
+    "showups_actual": {
+      "type": "number"
+    },
+    "channel_actuals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "channel_name": {
+            "type": "string"
+          },
+          "investment": {
+            "type": "number"
+          },
+          "leads": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "plan_id",
+    "week_number"
+  ]
+}

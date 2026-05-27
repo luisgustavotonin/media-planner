@@ -158,7 +158,7 @@ export default function PlanDetail() {
       </div>
 
       <div className="mb-6">
-        <FunnelChart data={consolidated.totals} title="Funil Consolidado" />
+        <FunnelChart data={consolidated.totals} title="Funil Consolidado" funnelStages={funnelStages} />
       </div>
 
       <ResultsTable channelResults={consolidated.channelResults} totals={consolidated.totals} blended={consolidated} />

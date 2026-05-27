@@ -1,0 +1,70 @@
+{
+  "name": "Client",
+  "type": "object",
+  "properties": {
+    "clinic_name": {
+      "type": "string",
+      "description": "Name of the dental clinic"
+    },
+    "responsible_person": {
+      "type": "string",
+      "description": "Contact person name"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string",
+      "format": "email"
+    },
+    "city": {
+      "type": "string"
+    },
+    "specialty": {
+      "type": "string",
+      "enum": [
+        "implants",
+        "aesthetics",
+        "orthodontics",
+        "general",
+        "periodontics",
+        "endodontics",
+        "pediatric",
+        "other"
+      ]
+    },
+    "average_ticket": {
+      "type": "number",
+      "description": "Average revenue per sale in BRL"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "URL to uploaded clinic logo"
+    },
+    "primary_brand_color": {
+      "type": "string",
+      "description": "Primary brand color hex code"
+    },
+    "secondary_brand_color": {
+      "type": "string",
+      "description": "Secondary brand color hex code"
+    },
+    "assigned_user_email": {
+      "type": "string",
+      "description": "Email of the client user account linked to this clinic"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive"
+      ],
+      "default": "active"
+    }
+  },
+  "required": [
+    "clinic_name",
+    "specialty",
+    "average_ticket"
+  ]
+}

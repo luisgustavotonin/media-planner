@@ -1,0 +1,87 @@
+{
+  "name": "Profile",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do perfil"
+    },
+    "level": {
+      "type": "number",
+      "description": "N\u00edvel hier\u00e1rquico (1=maior acesso)"
+    },
+    "description": {
+      "type": "string"
+    },
+    "color": {
+      "type": "string",
+      "description": "Cor hex do perfil"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ativo",
+        "inativo"
+      ],
+      "default": "ativo"
+    },
+    "permissions": {
+      "type": "object",
+      "description": "Mapa de permiss\u00f5es: chave = permiss\u00e3o, valor = true/false",
+      "properties": {
+        "visualizar_dashboard": {
+          "type": "boolean"
+        },
+        "visualizar_clientes": {
+          "type": "boolean"
+        },
+        "editar_clientes": {
+          "type": "boolean"
+        },
+        "visualizar_planos": {
+          "type": "boolean"
+        },
+        "editar_planos": {
+          "type": "boolean"
+        },
+        "exportar_pdf": {
+          "type": "boolean"
+        },
+        "visualizar_planejamento_reverso": {
+          "type": "boolean"
+        },
+        "editar_planejamento_reverso": {
+          "type": "boolean"
+        },
+        "visualizar_simulador_cenarios": {
+          "type": "boolean"
+        },
+        "editar_simulador_cenarios": {
+          "type": "boolean"
+        },
+        "visualizar_acompanhamento_semanal": {
+          "type": "boolean"
+        },
+        "editar_acompanhamento_semanal": {
+          "type": "boolean"
+        },
+        "visualizar_usuarios": {
+          "type": "boolean"
+        },
+        "gerenciar_usuarios": {
+          "type": "boolean"
+        },
+        "visualizar_benchmarks": {
+          "type": "boolean"
+        },
+        "gerenciar_benchmarks": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "required": [
+    "name",
+    "level"
+  ]
+}

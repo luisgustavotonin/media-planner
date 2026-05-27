@@ -1,13 +1,31 @@
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList, Cell } from 'recharts';
 
-export default function FunnelChart({ data, title }) {
-  const funnelData = [
-    { stage: 'Leads', value: data?.total_leads || 0, fill: '#3b82f6' },
-    { stage: 'Agendamentos', value: data?.total_appointments || 0, fill: '#6366f1' },
-    { stage: 'Comparecimentos', value: data?.total_showups || 0, fill: '#8b5cf6' },
-    { stage: 'Sales', value: Math.round(data?.total_sales || 0), fill: '#10b981' },
-  ];
+const DEFAULT_STAGES = [
+  { label: 'Leads', key: 'total_leads', fill: '#3b82f6' },
+  { label: 'Agendamentos', key: 'total_appointments', fill: '#6366f1' },
+  { label: 'Comparecimentos', key: 'total_showups', fill: '#8b5cf6' },
+  { label: 'Vendas', key: 'total_sales', fill: '#10b981' },
+];
+
+const FILLS = ['#3b82f6', '#6366f1', '#8b5cf6', '#10b981'];
+
+export default function FunnelChart({ data, title, funnelStages }) {
+  // funnelStages: array of { label } from FunnelType.stages
+  // Map funnel stages to data keys in order
+  const stages = funnelStages && funnelStages.length >= 2
+    ? funnelStages.map((s, i) => ({
+        label: s.label,
+        fill: FILLS[i] || '#94a3b8',
+        key: DEFAULT_STAGES[i]?.key || null,
+      }))
+    : DEFAULT_STAGES;
+
+  const funnelData = stages.map(s => ({
+    stage: s.label,
+    value: s.key ? Math.round(data?.[s.key] || 0) : 0,
+    fill: s.fill,
+  }));
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-6">
@@ -18,11 +36,21 @@ export default function FunnelChart({ data, title }) {
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
             <XAxis dataKey="stage" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-            <Tooltip 
+            <Tooltip
               contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}
               formatter={(value) => [value.toLocaleString(), '']}
             />
-            <Bar dataKey="value" radius={[6, 6, 0, 0]} />
+            <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+              {funnelData.map((entry, index) => (
+                <Cell key={index} fill={entry.fill} />
+              ))}
+              <LabelList
+                dataKey="value"
+                position="top"
+                formatter={(v) => v > 0 ? v.toLocaleString('pt-BR') : ''}
+                style={{ fontSize: 11, fontWeight: 600, fill: '#475569' }}
+              />
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
