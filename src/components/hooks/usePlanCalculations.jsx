@@ -12,8 +12,9 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket)
   for (let i = 0; i < rates.length; i++) {
     stageValues.push(stageValues[i] * (rates[i] || 0));
   }
-  const sales = stageValues[stageValues.length - 1];
-  const revenue = sales * averageTicket;
+  const salesRaw = stageValues[stageValues.length - 1];
+  const salesRounded = Math.round(salesRaw);
+  const revenue = salesRounded * averageTicket;
 
   // Retrocompatibilidade
   const appointments = stageValues[1] || 0;
@@ -24,12 +25,12 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket)
     appointments: Math.round(appointments),
     showups: Math.round(showups),
     stageValues: stageValues.map(v => Math.round(v)),
-    sales: Math.round(sales * 10) / 10,
-    revenue: Math.round(revenue),
+    sales: salesRounded,
+    revenue,
     cost_per_lead: leads > 0 ? budget / leads : 0,
     cost_per_appointment: appointments > 0 ? budget / appointments : 0,
     cost_per_showup: showups > 0 ? budget / showups : 0,
-    cost_per_sale: sales > 0 ? budget / sales : 0,
+    cost_per_sale: salesRounded > 0 ? budget / salesRounded : 0,
     roi: budget > 0 ? ((revenue - budget) / budget) * 100 : 0,
   };
 }
