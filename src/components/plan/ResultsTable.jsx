@@ -4,6 +4,7 @@ import ChannelBadge from '../ui-custom/ChannelBadge';
 export default function ResultsTable({ channelResults, totals, blended }) {
   const fmt = v => typeof v === 'number' ? (v >= 1000 ? `R$${Math.round(v).toLocaleString('pt-BR')}` : `R$${v.toFixed(2)}`) : '—';
   const fmtN = v => typeof v === 'number' ? Math.round(v).toLocaleString('pt-BR') : '—';
+  const fmtRoas = (revenue, budget) => (budget > 0 ? (revenue / budget).toFixed(2) + 'x' : '—');
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -24,6 +25,7 @@ export default function ResultsTable({ channelResults, totals, blended }) {
               <th className="text-right py-2.5 px-3 font-medium text-gray-500">CPL</th>
               <th className="text-right py-2.5 px-3 font-medium text-gray-500">CPA</th>
               <th className="text-right py-2.5 px-3 font-medium text-gray-500">Custo/Venda</th>
+              <th className="text-right py-2.5 px-3 font-medium text-gray-500">ROAS</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -39,7 +41,8 @@ export default function ResultsTable({ channelResults, totals, blended }) {
                 <td className="py-2.5 px-3 text-right">{fmt(ch.metrics.cost_per_lead)}</td>
                 <td className="py-2.5 px-3 text-right">{fmt(ch.metrics.cost_per_appointment)}</td>
                 <td className="py-2.5 px-3 text-right">{fmt(ch.metrics.cost_per_sale)}</td>
-              </tr>
+                <td className="py-2.5 px-3 text-right font-medium text-blue-600">{fmtRoas(ch.metrics.revenue, ch.budget_value)}</td>
+                </tr>
             ))}
           </tbody>
           <tfoot>
@@ -54,6 +57,7 @@ export default function ResultsTable({ channelResults, totals, blended }) {
               <td className="py-3 px-3 text-right">{fmt(blended?.blended_cpl)}</td>
               <td className="py-3 px-3 text-right">{fmt(blended?.blended_cpa)}</td>
               <td className="py-3 px-3 text-right">{fmt(blended?.blended_cost_per_sale)}</td>
+              <td className="py-3 px-3 text-right text-blue-600">{fmtRoas(totals?.total_revenue, totals?.total_budget)}</td>
             </tr>
           </tfoot>
         </table>
