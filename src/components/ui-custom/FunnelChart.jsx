@@ -12,19 +12,15 @@ const FILLS = ['#3b82f6', '#6366f1', '#8b5cf6', '#10b981'];
 
 export default function FunnelChart({ data, title, funnelStages }) {
   // funnelStages: array of { label } from FunnelType.stages
-  // Map funnel stages to data keys in order
-  const stages = funnelStages && funnelStages.length >= 2
-    ? funnelStages.map((s, i) => ({
-        label: s.label,
-        fill: FILLS[i] || '#94a3b8',
-        key: DEFAULT_STAGES[i]?.key || null,
-      }))
-    : DEFAULT_STAGES;
+  // Always use the 4 fixed data keys in order; just swap labels if funnelStages provided
+  const stageLabels = funnelStages && funnelStages.length >= 2
+    ? funnelStages.map(s => s.label)
+    : DEFAULT_STAGES.map(s => s.label);
 
-  const funnelData = stages.map(s => ({
-    stage: s.label,
-    value: s.key ? Math.round(data?.[s.key] || 0) : 0,
-    fill: s.fill,
+  const funnelData = DEFAULT_STAGES.map((s, i) => ({
+    stage: stageLabels[i] || s.label,
+    value: Math.round(data?.[s.key] || 0),
+    fill: FILLS[i],
   }));
 
   return (
