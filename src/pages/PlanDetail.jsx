@@ -91,16 +91,12 @@ export default function PlanDetail() {
     }));
   };
 
-  // planFunnel usa sempre os primeiros 3 índices para cálculo (arquitetura atual)
-  const planFunnel = {
-    lead_to_appointment_rate: getRate(0) || 0.35,
-    appointment_to_show_rate: getRate(1) || 0.7,
-    show_to_sale_rate: getRate(2) || 0.35,
-  };
+  // Array com todas as taxas do funil em ordem (cascata completa)
+  const activeRates = conversionPairs.map((_, i) => getRate(i));
 
   const channels = localPlan.channels || [];
   const avgTicket = localPlan.average_ticket || 0;
-  const consolidated = calculateConsolidated(channels, planFunnel, avgTicket);
+  const consolidated = calculateConsolidated(channels, activeRates, avgTicket);
   const totalInvestment = channels.reduce((s, c) => s + (c.budget_value || 0), 0);
 
   const updateField = (field, value) => setLocalPlan(p => ({ ...p, [field]: value }));

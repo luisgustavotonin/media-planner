@@ -1,22 +1,19 @@
-export function calculateChannelMetrics(channel, planFunnel, averageTicket) {
-  const ltar = channel.use_custom_funnel && channel.lead_to_appointment_rate_override 
-    ? channel.lead_to_appointment_rate_override 
-    : planFunnel.lead_to_appointment_rate;
-  const atsr = channel.use_custom_funnel && channel.appointment_to_show_rate_override 
-    ? channel.appointment_to_show_rate_override 
-    : planFunnel.appointment_to_show_rate;
-  const stsr = channel.use_custom_funnel && channel.show_to_sale_rate_override 
-    ? channel.show_to_sale_rate_override 
-    : planFunnel.show_to_sale_rate;
-
+// Calcula métricas de um canal aplicando todas as taxas do funil em cascata
+export function calculateChannelMetrics(channel, conversionRates, averageTicket) {
+  const rates = conversionRates || [];
   const budget = channel.budget_value || 0;
   const cpl = channel.expected_cpl || 1;
-  
+
   const leads = budget / cpl;
-  const appointments = leads * ltar;
-  const showups = appointments * atsr;
-  const sales = showups * stsr;
+
+  // Multiplica todas as taxas em cascata: leads × r0 × r1 × ... × rN
+  const finalConversionRate = rates.reduce((acc, r) => acc * (r || 0), 1);
+  const sales = leads * finalConversionRate;
   const revenue = sales * averageTicket;
+
+  // Para exibição nas etapas intermediárias (retrocompatibilidade)
+  const appointments = leads * (rates[0] || 0);
+  const showups = appointments * (rates[1] || 0);
 
   return {
     leads: Math.round(leads),
@@ -32,10 +29,10 @@ export function calculateChannelMetrics(channel, planFunnel, averageTicket) {
   };
 }
 
-export function calculateConsolidated(channels, planFunnel, averageTicket) {
+export function calculateConsolidated(channels, conversionRates, averageTicket) {
   const channelResults = channels.map(ch => ({
     ...ch,
-    metrics: calculateChannelMetrics(ch, planFunnel, averageTicket),
+    metrics: calculateChannelMetrics(ch, conversionRates, averageTicket),
   }));
 
   const totals = channelResults.reduce((acc, ch) => ({
@@ -58,11 +55,16 @@ export function calculateConsolidated(channels, planFunnel, averageTicket) {
   };
 }
 
-export function calculateReversePlan(targetRevenue, averageTicket, planFunnel, channelDistribution) {
+export function calculateReversePlan(targetRevenue, averageTicket, conversionRates, channelDistribution) {
+  const finalRate = (conversionRates || []).reduce((acc, r) => acc * (r || 0), 1);
   const requiredSales = targetRevenue / averageTicket;
-  const requiredShowups = requiredSales / planFunnel.show_to_sale_rate;
-  const requiredAppointments = requiredShowups / planFunnel.appointment_to_show_rate;
-  const requiredLeads = requiredAppointments / planFunnel.lead_to_appointment_rate;
+  const requiredLeads = finalRate > 0 ? requiredSales / finalRate : 0;
+
+  // Para exibição intermediária (usa os 3 primeiros se disponíveis)
+  const r0 = conversionRates?.[0] || 0;
+  const r1 = conversionRates?.[1] || 0;
+  const requiredAppointments = requiredLeads * r0;
+  const requiredShowups = requiredAppointments * r1;
 
   const channelBudgets = channelDistribution.map(ch => {
     const chLeads = requiredLeads * (ch.percent / 100);
@@ -82,7 +84,7 @@ export function calculateReversePlan(targetRevenue, averageTicket, planFunnel, c
   };
 }
 
-export function calculateScenarios(channels, planFunnel, averageTicket, adjustments) {
+export function calculateScenarios(channels, conversionRates, averageTicket, adjustments) {
   const optCplAdj = adjustments?.optimistic_cpl_adj ?? -0.20;
   const conCplAdj = adjustments?.conservative_cpl_adj ?? 0.25;
   const optConvAdj = adjustments?.optimistic_conv_adj ?? 0.05;
@@ -93,12 +95,8 @@ export function calculateScenarios(channels, planFunnel, averageTicket, adjustme
       ...ch,
       expected_cpl: (ch.expected_cpl || 0) * (1 + cplMult),
     }));
-    const adjFunnel = {
-      lead_to_appointment_rate: Math.min(1, planFunnel.lead_to_appointment_rate + convAdj),
-      appointment_to_show_rate: Math.min(1, planFunnel.appointment_to_show_rate + convAdj),
-      show_to_sale_rate: Math.min(1, planFunnel.show_to_sale_rate + convAdj),
-    };
-    return { label, ...calculateConsolidated(adjChannels, adjFunnel, averageTicket) };
+    const adjRates = (conversionRates || []).map(r => Math.min(1, Math.max(0, r + convAdj)));
+    return { label, ...calculateConsolidated(adjChannels, adjRates, averageTicket) };
   };
 
   return {
@@ -142,28 +140,6 @@ export function generateRecommendations(channelResults, weeklyActuals, weeklyTar
       });
     }
   }
-
-  channelResults.forEach(ch => {
-    if (ch.channel_name === 'Meta' && ch.metrics.leads > 10) {
-      const aptRate = ch.use_custom_funnel ? ch.lead_to_appointment_rate_override : null;
-      if (aptRate && aptRate < 0.25) {
-        recommendations.push({
-          type: 'quality',
-          severity: 'medium',
-          message: `Meta is generating volume but appointment rate is low (${Math.round(aptRate * 100)}%). Review lead quality and consider adding pre-qualification steps in forms.`,
-          suggested_action: 'Add qualifying questions to Meta lead forms and review targeting.',
-        });
-      }
-    }
-    if (ch.channel_name === 'Google' && ch.metrics.cost_per_lead > 60) {
-      recommendations.push({
-        type: 'maintain',
-        severity: 'low',
-        message: `Google CPL is high (R$${Math.round(ch.metrics.cost_per_lead)}) but typically has higher close rates. Maintain minimum budget for bottom-funnel capture.`,
-        suggested_action: 'Keep at least 20% of total budget on Google for high-intent searches.',
-      });
-    }
-  });
 
   if (recommendations.length === 0) {
     recommendations.push({

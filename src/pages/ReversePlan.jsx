@@ -39,18 +39,20 @@ export default function ReversePlan() {
   };
 
   const handleCalculate = () => {
-    const funnel = selectedPlan ? {
-      lead_to_appointment_rate: selectedPlan.lead_to_appointment_rate || 0.35,
-      appointment_to_show_rate: selectedPlan.appointment_to_show_rate || 0.7,
-      show_to_sale_rate: selectedPlan.show_to_sale_rate || 0.35,
-    } : { lead_to_appointment_rate: 0.35, appointment_to_show_rate: 0.7, show_to_sale_rate: 0.35 };
+    const rates = selectedPlan?.conversion_rates?.length
+      ? selectedPlan.conversion_rates
+      : [
+          selectedPlan?.lead_to_appointment_rate || 0.35,
+          selectedPlan?.appointment_to_show_rate || 0.7,
+          selectedPlan?.show_to_sale_rate || 0.35,
+        ];
 
     const avgTicket = selectedPlan?.average_ticket || 5000;
     const dist = distribution.map(d => {
       const planCh = selectedPlan?.channels?.find(c => c.channel_name === d.channel_name);
       return { ...d, expected_cpl: planCh?.expected_cpl || d.expected_cpl };
     });
-    setResult(calculateReversePlan(targetRevenue, avgTicket, funnel, dist));
+    setResult(calculateReversePlan(targetRevenue, avgTicket, rates, dist));
   };
 
   const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;

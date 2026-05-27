@@ -23,12 +23,14 @@ export default function Scenarios() {
 
   let scenarios = null;
   if (plan && plan.channels?.length > 0) {
-    const funnel = {
-      lead_to_appointment_rate: plan.lead_to_appointment_rate || 0.35,
-      appointment_to_show_rate: plan.appointment_to_show_rate || 0.7,
-      show_to_sale_rate: plan.show_to_sale_rate || 0.35,
-    };
-    scenarios = calculateScenarios(plan.channels, funnel, plan.average_ticket || 5000, plan.scenario_adjustments);
+    const rates = plan.conversion_rates?.length
+      ? plan.conversion_rates
+      : [
+          plan.lead_to_appointment_rate || 0.35,
+          plan.appointment_to_show_rate || 0.7,
+          plan.show_to_sale_rate || 0.35,
+        ];
+    scenarios = calculateScenarios(plan.channels, rates, plan.average_ticket || 5000, plan.scenario_adjustments);
   }
 
   const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
