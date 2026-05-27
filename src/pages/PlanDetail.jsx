@@ -70,12 +70,12 @@ export default function PlanDetail() {
         { label: 'Comparecimento → Venda', field: 'conversion_rate_2' },
       ];
 
-  // Lê as taxas do array dinâmico ou faz fallback para os campos legados
+  // Lê as taxas do array dinâmico; fallback para campos legados apenas se conversion_rates não existir
+  const hasRatesArray = Array.isArray(localPlan.conversion_rates) && localPlan.conversion_rates.length > 0;
   const getRate = (i) => {
-    if (localPlan.conversion_rates?.[i] !== undefined) return localPlan.conversion_rates[i];
-    // fallback legado
+    if (hasRatesArray) return localPlan.conversion_rates[i] ?? 0;
     const legacy = [localPlan.lead_to_appointment_rate, localPlan.appointment_to_show_rate, localPlan.show_to_sale_rate];
-    return legacy[i] || 0;
+    return legacy[i] ?? 0;
   };
 
   const updateRate = (i, value) => {
