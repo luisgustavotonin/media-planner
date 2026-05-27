@@ -33,11 +33,10 @@ export default function Dashboard() {
   let totalRevenue = 0;
   myPlans.forEach(p => {
     if (p.channels && p.channels.length > 0) {
-      const consolidated = calculateConsolidated(p.channels, {
-        lead_to_appointment_rate: p.lead_to_appointment_rate || 0.35,
-        appointment_to_show_rate: p.appointment_to_show_rate || 0.7,
-        show_to_sale_rate: p.show_to_sale_rate || 0.35,
-      }, p.average_ticket || 0);
+      const rates = p.conversion_rates?.length
+        ? p.conversion_rates
+        : [p.lead_to_appointment_rate || 0.35, p.appointment_to_show_rate || 0.7, p.show_to_sale_rate || 0.35];
+      const consolidated = calculateConsolidated(p.channels, rates, p.average_ticket || 0);
       totalRevenue += consolidated.totals.total_revenue;
     }
   });
