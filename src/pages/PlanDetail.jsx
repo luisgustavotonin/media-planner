@@ -14,7 +14,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import PercentInput from '../components/ui-custom/PercentInput';
-import { Save, Users, DollarSign, TrendingUp, Target, ArrowLeft } from 'lucide-react';
+import { Save, Users, DollarSign, TrendingUp, Target, ArrowLeft, FileDown } from 'lucide-react';
+import { exportPlanToPdf } from '../components/plan/PlanPdfExport';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
@@ -121,19 +122,30 @@ export default function PlanDetail() {
         <PageHeader
           title={`${localPlan.client_name || 'Sem nome'} — ${MESES[(localPlan.period_month || 1) - 1]} ${localPlan.period_year}`}
           description={`Segmento: ${localPlan.segment || 'Geral'} · Status: ${statusLabel}`}
-          actions={!readOnly && (
+          actions={
             <div className="flex gap-2">
-              <Select value={localPlan.status || 'draft'} onValueChange={v => updateField('status', v)}>
-                <SelectTrigger className="w-36 h-9 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Button onClick={handleSave} className="gap-2 bg-blue-600 hover:bg-blue-700" disabled={saveMut.isPending}>
-                <Save className="w-4 h-4" /> Salvar
+              <Button
+                variant="outline"
+                className="gap-2 h-9 text-xs"
+                onClick={() => exportPlanToPdf({ localPlan, consolidated, totalInvestment, funnelStages, conversionPairs, getRate })}
+              >
+                <FileDown className="w-4 h-4" /> Exportar PDF
               </Button>
+              {!readOnly && (
+                <>
+                  <Select value={localPlan.status || 'draft'} onValueChange={v => updateField('status', v)}>
+                    <SelectTrigger className="w-36 h-9 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={handleSave} className="gap-2 bg-blue-600 hover:bg-blue-700" disabled={saveMut.isPending}>
+                    <Save className="w-4 h-4" /> Salvar
+                  </Button>
+                </>
+              )}
             </div>
-          )}
+          }
         />
       </div>
 
