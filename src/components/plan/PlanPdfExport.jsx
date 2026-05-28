@@ -1,5 +1,4 @@
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
@@ -17,90 +16,155 @@ function fmtPct(v) {
   return typeof v === 'number' ? (v * 100).toFixed(1) + '%' : '—';
 }
 
+function drawTable(doc, { startY, headers, rows, colWidths, pageW, marginL = 14 }) {
+  const rowH = 7;
+  const headerH = 8;
+  let y = startY;
+
+  // Header row
+  doc.setFillColor(37, 99, 235);
+  doc.rect(marginL, y, pageW - marginL * 2, headerH, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(6.5);
+  doc.setFont(undefined, 'bold');
+  let x = marginL;
+  headers.forEach((h, i) => {
+    const align = i === 0 ? 'left' : 'right';
+    const textX = align === 'left' ? x + 2 : x + colWidths[i] - 2;
+    doc.text(h, textX, y + 5.5, { align });
+    x += colWidths[i];
+  });
+  y += headerH;
+
+  // Data rows
+  doc.setFont(undefined, 'normal');
+  rows.forEach((row, ri) => {
+    // Alternate background
+    if (ri % 2 === 0) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(marginL, y, pageW - marginL * 2, rowH, 'F');
+    }
+    // Bold last row (total)
+    const isTotal = ri === rows.length - 1;
+    if (isTotal) {
+      doc.setFillColor(237, 242, 255);
+      doc.rect(marginL, y, pageW - marginL * 2, rowH, 'F');
+      doc.setFont(undefined, 'bold');
+    }
+
+    doc.setTextColor(30, 30, 30);
+    doc.setFontSize(6.5);
+    let cx = marginL;
+    row.forEach((cell, i) => {
+      const align = i === 0 ? 'left' : 'right';
+      const textX = align === 'left' ? cx + 2 : cx + colWidths[i] - 2;
+      doc.text(String(cell), textX, y + 5, { align });
+      cx += colWidths[i];
+    });
+
+    if (isTotal) doc.setFont(undefined, 'normal');
+
+    // Row border
+    doc.setDrawColor(226, 232, 240);
+    doc.line(marginL, y + rowH, pageW - marginL, y + rowH);
+    y += rowH;
+  });
+
+  return y;
+}
+
 export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment, funnelStages, conversionPairs, getRate }) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const marginL = 14;
   const mes = MESES[(localPlan.period_month || 1) - 1];
   const titulo = `${localPlan.client_name || 'Cliente'} — ${mes} ${localPlan.period_year}`;
 
-  // ── Header ──────────────────────────────────────────────
-  doc.setFillColor(37, 99, 235); // blue-600
+  // ── Header azul ──────────────────────────────────────────
+  doc.setFillColor(37, 99, 235);
   doc.rect(0, 0, pageW, 22, 'F');
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(15);
+  doc.setFontSize(14);
   doc.setFont(undefined, 'bold');
-  doc.text(titulo, 14, 10);
-  doc.setFontSize(8);
+  doc.text(titulo, marginL, 10);
+  doc.setFontSize(7.5);
   doc.setFont(undefined, 'normal');
-  doc.text(`Segmento: ${localPlan.segment || 'Geral'}  ·  Status: ${localPlan.status || 'draft'}  ·  Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 17);
+  doc.text(
+    `Segmento: ${localPlan.segment || 'Geral'}  ·  Status: ${localPlan.status || 'draft'}  ·  Gerado em: ${new Date().toLocaleDateString('pt-BR')}`,
+    marginL, 17
+  );
 
   let y = 30;
 
   // ── Cards de resumo ──────────────────────────────────────
-  doc.setTextColor(30, 30, 30);
   const cards = [
     { label: 'Investimento Total', value: `R$${totalInvestment.toLocaleString('pt-BR')}` },
     { label: 'Leads Esperados', value: fmtN(consolidated.totals.total_leads) },
     { label: 'Vendas Esperadas', value: fmtN(consolidated.totals.total_sales) },
     { label: 'Receita Projetada', value: `R$${Math.round(consolidated.totals.total_revenue).toLocaleString('pt-BR')}` },
   ];
-  const cardW = (pageW - 28) / cards.length;
+  const cardW = (pageW - marginL * 2 - 6) / cards.length;
   cards.forEach((c, i) => {
-    const x = 14 + i * (cardW + 2);
+    const cx = marginL + i * (cardW + 2);
     doc.setFillColor(248, 250, 252);
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(x, y, cardW, 16, 2, 2, 'FD');
+    doc.roundedRect(cx, y, cardW, 16, 2, 2, 'FD');
     doc.setFontSize(7);
     doc.setTextColor(100, 116, 139);
     doc.setFont(undefined, 'normal');
-    doc.text(c.label, x + 4, y + 6);
+    doc.text(c.label, cx + 4, y + 6);
     doc.setFontSize(11);
     doc.setTextColor(15, 23, 42);
     doc.setFont(undefined, 'bold');
-    doc.text(c.value, x + 4, y + 13);
+    doc.text(c.value, cx + 4, y + 13);
   });
-
   y += 22;
 
   // ── Premissas do Funil ───────────────────────────────────
   if (conversionPairs && conversionPairs.length > 0) {
-    doc.setFontSize(9);
+    doc.setFontSize(8.5);
     doc.setFont(undefined, 'bold');
     doc.setTextColor(30, 30, 30);
-    doc.text('Premissas do Funil', 14, y);
-    y += 4;
+    doc.text('Premissas do Funil', marginL, y);
+    y += 3;
 
     const premHeaders = [...conversionPairs.map(p => p.label), 'Ticket Médio'];
     const premValues = [...conversionPairs.map((_, i) => fmtPct(getRate(i))), fmt(localPlan.average_ticket)];
+    const premColW = (pageW - marginL * 2) / premHeaders.length;
+    const premColWidths = premHeaders.map(() => premColW);
 
-    doc.autoTable({
+    y = drawTable(doc, {
       startY: y,
-      head: [premHeaders],
-      body: [premValues],
-      styles: { fontSize: 7, cellPadding: 2.5 },
-      headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', halign: 'center' },
-      bodyStyles: { halign: 'center', textColor: [30, 30, 30] },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
-      margin: { left: 14, right: 14 },
+      headers: premHeaders,
+      rows: [premValues],
+      colWidths: premColWidths,
+      pageW,
+      marginL,
     });
-
-    y = doc.lastAutoTable.finalY + 6;
+    y += 6;
   }
 
   // ── Tabela de Resultados por Canal ───────────────────────
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setFont(undefined, 'bold');
   doc.setTextColor(30, 30, 30);
-  doc.text('Resultados Projetados por Canal', 14, y);
-  y += 4;
+  doc.text('Resultados Projetados por Canal', marginL, y);
+  y += 3;
 
   const middleCols = funnelStages && funnelStages.length >= 2
     ? funnelStages.slice(1, -1).map((s, i) => ({ label: s.label, stageIndex: i + 1 }))
     : [{ label: 'Agendamentos', stageIndex: 1 }, { label: 'Comparecimentos', stageIndex: 2 }];
 
-  const tableHead = ['Canal', 'Budget', 'Leads', ...middleCols.map(c => c.label), 'Vendas', 'Receita', 'CPL', 'CAC', 'ROAS'];
+  const tableHeaders = ['Canal', 'Budget', 'Leads', ...middleCols.map(c => c.label), 'Vendas', 'Receita', 'CPL', 'CAC', 'ROAS'];
+  const fixedCols = 3 + middleCols.length + 6; // total columns
+  const totalTableW = pageW - marginL * 2;
+  // Canal col wider, rest equal
+  const canalW = 28;
+  const restW = (totalTableW - canalW) / (tableHeaders.length - 1);
+  const colWidths = [canalW, ...tableHeaders.slice(1).map(() => restW)];
 
-  const tableBody = (consolidated.channelResults || []).map(ch => [
+  const tableRows = (consolidated.channelResults || []).map(ch => [
     ch.channel_name || '—',
     fmt(ch.budget_value),
     fmtN(ch.metrics.leads),
@@ -112,8 +176,7 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
     fmtRoas(ch.metrics.revenue, ch.budget_value),
   ]);
 
-  // Linha de total
-  tableBody.push([
+  tableRows.push([
     'Total',
     fmt(consolidated.totals?.total_budget),
     fmtN(consolidated.totals?.total_leads),
@@ -125,24 +188,7 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
     fmtRoas(consolidated.totals?.total_revenue, consolidated.totals?.total_budget),
   ]);
 
-  doc.autoTable({
-    startY: y,
-    head: [tableHead],
-    body: tableBody,
-    styles: { fontSize: 7, cellPadding: 2.5 },
-    headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', halign: 'right' },
-    columnStyles: { 0: { halign: 'left' } },
-    bodyStyles: { halign: 'right', textColor: [30, 30, 30] },
-    alternateRowStyles: { fillColor: [248, 250, 252] },
-    // Linha de total em negrito
-    didParseCell: (data) => {
-      if (data.row.index === tableBody.length - 1) {
-        data.cell.styles.fontStyle = 'bold';
-        data.cell.styles.fillColor = [237, 242, 255];
-      }
-    },
-    margin: { left: 14, right: 14 },
-  });
+  y = drawTable(doc, { startY: y, headers: tableHeaders, rows: tableRows, colWidths, pageW, marginL });
 
   // ── Footer ───────────────────────────────────────────────
   const pageCount = doc.internal.getNumberOfPages();
@@ -151,8 +197,8 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
     doc.setFontSize(7);
     doc.setTextColor(150, 150, 150);
     doc.setFont(undefined, 'normal');
-    doc.text(`Página ${i} de ${pageCount}`, pageW - 14, doc.internal.pageSize.getHeight() - 5, { align: 'right' });
-    doc.text('Media Planner — Performance Clinic', 14, doc.internal.pageSize.getHeight() - 5);
+    doc.text(`Página ${i} de ${pageCount}`, pageW - marginL, pageH - 5, { align: 'right' });
+    doc.text('Media Planner — Performance Clinic', marginL, pageH - 5);
   }
 
   const fileName = `plano_${(localPlan.client_name || 'cliente').replace(/\s+/g, '_')}_${mes}_${localPlan.period_year}.pdf`;
