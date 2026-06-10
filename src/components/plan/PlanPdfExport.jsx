@@ -2,6 +2,13 @@ import { jsPDF } from 'jspdf';
 
 const MESES = ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
+const SEGMENTOS = {
+  implants: 'Implantes', aesthetics: 'Estetica', orthodontics: 'Ortodontia',
+  general: 'Clinica Geral', periodontics: 'Periodontia', endodontics: 'Endodontia',
+  pediatric: 'Odontopediatria', other: 'Outros',
+};
+const STATUS_PT = { draft: 'Rascunho', active: 'Ativo', completed: 'Concluido' };
+
 // jsPDF Helvetica = Latin-1 subset — substitui caracteres fora do range com equivalentes legíveis
 const CHAR_MAP = {
   'à':'a','á':'a','â':'a','ã':'a','ä':'a','å':'a',
@@ -146,7 +153,7 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
   const titulo = safe(`${localPlan.client_name || 'Cliente'}  |  ${mes} ${localPlan.period_year}`);
 
   // ── Header marrom ─────────────────────────────────────────
-  const headerH = 26;
+  const headerH = 30;
   doc.setFillColor(...C.marrom);
   doc.rect(0, 0, pageW, headerH, 'F');
 
@@ -154,16 +161,22 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
   doc.setFillColor(...C.laranja);
   doc.rect(0, 0, 4, headerH, 'F');
 
+  // Subtítulo "Plano de Midia"
+  doc.setTextColor(...C.laranja);
+  doc.setFontSize(7.5);
+  doc.setFont(undefined, 'bold');
+  doc.text('PLANO DE MIDIA', marginL + 4, 8);
+
   doc.setTextColor(...C.linho);
   doc.setFontSize(15);
   doc.setFont(undefined, 'bold');
-  doc.text(titulo, marginL + 4, 11);
+  doc.text(titulo, marginL + 4, 16);
 
   doc.setFontSize(7.5);
   doc.setFont(undefined, 'normal');
   doc.setTextColor(...C.crema);
-  const segLabel = safe(`Segmento: ${localPlan.segment || 'Geral'}   Status: ${localPlan.status || 'draft'}   Gerado em: ${new Date().toLocaleDateString('pt-BR')}`);
-  doc.text(segLabel, marginL + 4, 19);
+  const segLabel = safe(`Segmento: ${SEGMENTOS[localPlan.segment] || localPlan.segment || 'Geral'}   Status: ${STATUS_PT[localPlan.status] || 'Rascunho'}   Gerado em: ${new Date().toLocaleDateString('pt-BR')}`);
+  doc.text(segLabel, marginL + 4, 23);
 
   let y = headerH + 8;
 

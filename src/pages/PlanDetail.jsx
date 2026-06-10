@@ -21,6 +21,13 @@ import { createPageUrl } from '@/utils';
 
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
+const SEGMENTOS = {
+  implants: 'Implantes', aesthetics: 'Estética', orthodontics: 'Ortodontia',
+  general: 'Clínica Geral', periodontics: 'Periodontia', endodontics: 'Endodontia',
+  pediatric: 'Odontopediatria', other: 'Outros',
+};
+const STATUS_PT = { draft: 'Rascunho', active: 'Ativo', completed: 'Concluído' };
+
 export default function PlanDetail() {
   const params = new URLSearchParams(window.location.search);
   const planId = params.get('id');
@@ -116,7 +123,8 @@ export default function PlanDetail() {
     { value: 'active', label: 'Ativo' },
     { value: 'completed', label: 'Concluído' },
   ];
-  const statusLabel = STATUS_OPTIONS.find(s => s.value === localPlan.status)?.label || 'Rascunho';
+  const statusLabel = STATUS_PT[localPlan.status] || 'Rascunho';
+  const segmentoLabel = SEGMENTOS[localPlan.segment] || localPlan.segment || 'Geral';
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
@@ -126,7 +134,7 @@ export default function PlanDetail() {
         </Link>
         <PageHeader
           title={`${localPlan.client_name || 'Sem nome'} — ${MESES[(localPlan.period_month || 1) - 1]} ${localPlan.period_year}`}
-          description={`Segmento: ${localPlan.segment || 'Geral'} · Status: ${statusLabel}`}
+          description={`Segmento: ${segmentoLabel} · Status: ${statusLabel}`}
           actions={
             <div className="flex gap-2">
               <Button
