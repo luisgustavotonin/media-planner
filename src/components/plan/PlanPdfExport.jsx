@@ -1,6 +1,15 @@
 import { jsPDF } from 'jspdf';
 
-const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MESES = ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+// jsPDF default font (Helvetica) only handles Latin-1 — strip diacritics to avoid garbled chars
+function safe(str) {
+  if (!str) return '';
+  return String(str)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')  // remove combining diacritics
+    .replace(/[^\x00-\xFF]/g, '?');   // replace any remaining non-Latin chars
+}
 
 function fmt(v) {
   if (typeof v !== 'number') return '—';
@@ -31,7 +40,7 @@ function drawTable(doc, { startY, headers, rows, colWidths, pageW, marginL = 14 
   headers.forEach((h, i) => {
     const align = i === 0 ? 'left' : 'right';
     const textX = align === 'left' ? x + 2 : x + colWidths[i] - 2;
-    doc.text(h, textX, y + 5.5, { align });
+    doc.text(safe(h), textX, y + 5.5, { align });
     x += colWidths[i];
   });
   y += headerH;
@@ -58,7 +67,7 @@ function drawTable(doc, { startY, headers, rows, colWidths, pageW, marginL = 14 
     row.forEach((cell, i) => {
       const align = i === 0 ? 'left' : 'right';
       const textX = align === 'left' ? cx + 2 : cx + colWidths[i] - 2;
-      doc.text(String(cell), textX, y + 5, { align });
+      doc.text(safe(String(cell)), textX, y + 5, { align });
       cx += colWidths[i];
     });
 
@@ -87,11 +96,11 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(14);
   doc.setFont(undefined, 'bold');
-  doc.text(titulo, marginL, 10);
+  doc.text(safe(titulo), marginL, 10);
   doc.setFontSize(7.5);
   doc.setFont(undefined, 'normal');
   doc.text(
-    `Segmento: ${localPlan.segment || 'Geral'}  ·  Status: ${localPlan.status || 'draft'}  ·  Gerado em: ${new Date().toLocaleDateString('pt-BR')}`,
+    safe(`Segmento: ${localPlan.segment || 'Geral'}  -  Status: ${localPlan.status || 'draft'}  -  Gerado em: ${new Date().toLocaleDateString('pt-BR')}`),
     marginL, 17
   );
 
@@ -105,7 +114,7 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
   const hasAnyTax = (localPlan.channels || []).some(c => (c.tax_percent || 0) > 0);
   const cards = [
     { label: 'Investimento Bruto', value: `R$${totalInvestment.toLocaleString('pt-BR')}` },
-    ...(hasAnyTax ? [{ label: 'Investimento Líquido', value: `R$${Math.round(netInvestment).toLocaleString('pt-BR')}` }] : []),
+    ...(hasAnyTax ? [{ label: 'Investimento Liquido', value: `R$${Math.round(netInvestment).toLocaleString('pt-BR')}` }] : []),
     { label: 'Leads Esperados', value: fmtN(consolidated.totals.total_leads) },
     { label: 'Vendas Esperadas', value: fmtN(consolidated.totals.total_sales) },
     { label: 'Receita Projetada', value: `R$${Math.round(consolidated.totals.total_revenue).toLocaleString('pt-BR')}` },
@@ -119,11 +128,11 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
     doc.setFontSize(7);
     doc.setTextColor(100, 116, 139);
     doc.setFont(undefined, 'normal');
-    doc.text(c.label, cx + 4, y + 6);
+    doc.text(safe(c.label), cx + 4, y + 6);
     doc.setFontSize(11);
     doc.setTextColor(15, 23, 42);
     doc.setFont(undefined, 'bold');
-    doc.text(c.value, cx + 4, y + 13);
+    doc.text(safe(c.value), cx + 4, y + 13);
   });
   y += 22;
 
@@ -135,8 +144,14 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
     doc.text('Premissas do Funil', marginL, y);
     y += 3;
 
-    const abbrevLabel = (l) => l.length > 14 ? l.substring(0, 13) + '.' : l;
-    const premHeaders = [...conversionPairs.map(p => abbrevLabel(p.label)), 'Ticket Médio'];
+    // Use only the destination stage name (strip arrows like "Lead → Contato" → "Contato")
+    const cleanLabel = (l) => {
+      const parts = String(l).split(/[-–—>→]+/);
+      const dest = parts[parts.length - 1].trim();
+      const short = dest.length > 12 ? dest.substring(0, 11) + '.' : dest;
+      return safe(short);
+    };
+    const premHeaders = [...conversionPairs.map(p => cleanLabel(p.label)), 'Ticket Medio'];
     const premValues = [...conversionPairs.map((_, i) => fmtPct(getRate(i))), fmt(localPlan.average_ticket)];
     const premColW = (pageW - marginL * 2) / premHeaders.length;
     const premColWidths = premHeaders.map(() => premColW);
@@ -156,15 +171,18 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
   doc.setFontSize(8.5);
   doc.setFont(undefined, 'bold');
   doc.setTextColor(30, 30, 30);
-  doc.text('Resultados Projetados por Canal', marginL, y);
+  doc.text('Resultados Projetados por Canal', marginL, y); // ASCII only — ok
   y += 3;
 
   const middleCols = funnelStages && funnelStages.length >= 2
     ? funnelStages.slice(1, -1).map((s, i) => ({ label: s.label, stageIndex: i + 1 }))
     : [{ label: 'Agendamentos', stageIndex: 1 }, { label: 'Comparecimentos', stageIndex: 2 }];
 
-  // Abreviar nomes longos de etapas para caber no PDF
-  const abbrev = (label) => label.length > 10 ? label.substring(0, 9) + '.' : label;
+  // Abreviar nomes longos de etapas para caber no PDF (sem acentos)
+  const abbrev = (label) => {
+    const s = safe(label);
+    return s.length > 9 ? s.substring(0, 8) + '.' : s;
+  };
   const tableHeaders = ['Canal', 'Budget', 'Leads', ...middleCols.map(c => abbrev(c.label)), 'Vendas', 'Receita', 'CPL', 'CAC', 'ROAS'];
   const totalTableW = pageW - marginL * 2;
   // Canal col wider, Receita slightly wider, rest equal
@@ -186,7 +204,7 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
   ];
 
   const tableRows = (consolidated.channelResults || []).map(ch => [
-    ch.channel_name || '—',
+    safe(ch.channel_name || '-'),
     fmt(ch.budget_value),
     fmtN(ch.metrics.leads),
     ...middleCols.map(col => fmtN(ch.metrics.stageValues?.[col.stageIndex])),
@@ -198,7 +216,7 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
   ]);
 
   tableRows.push([
-    'Total',
+    'Total', // ASCII — ok
     fmt(consolidated.totals?.total_budget),
     fmtN(consolidated.totals?.total_leads),
     ...middleCols.map(col => fmtN(consolidated.totals?.stageValues?.[col.stageIndex])),
@@ -218,8 +236,8 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
     doc.setFontSize(7);
     doc.setTextColor(150, 150, 150);
     doc.setFont(undefined, 'normal');
-    doc.text(`Página ${i} de ${pageCount}`, pageW - marginL, pageH - 5, { align: 'right' });
-    doc.text('Media Planner — Performance Clinic', marginL, pageH - 5);
+    doc.text(`Pagina ${i} de ${pageCount}`, pageW - marginL, pageH - 5, { align: 'right' });
+    doc.text('Media Planner - Performance Clinic', marginL, pageH - 5);
   }
 
   const fileName = `plano_${(localPlan.client_name || 'cliente').replace(/\s+/g, '_')}_${mes}_${localPlan.period_year}.pdf`;
