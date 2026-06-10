@@ -99,6 +99,11 @@ export default function PlanDetail() {
   const avgTicket = localPlan.average_ticket || 0;
   const consolidated = calculateConsolidated(channels, activeRates, avgTicket);
   const totalInvestment = channels.reduce((s, c) => s + (c.budget_value || 0), 0);
+  const netInvestment = channels.reduce((s, c) => {
+    const tax = (c.tax_percent || 0) / 100;
+    return s + (c.budget_value || 0) * (1 - tax);
+  }, 0);
+  const hasAnyTax = channels.some(c => (c.tax_percent || 0) > 0);
 
   const updateField = (field, value) => setLocalPlan(p => ({ ...p, [field]: value }));
   const handleSave = () => saveMut.mutate({ ...localPlan, total_investment: totalInvestment });
@@ -149,10 +154,12 @@ export default function PlanDetail() {
         />
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Investimento Total" value={`R$${totalInvestment.toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" />
+      <div className={`grid grid-cols-2 gap-4 mb-6 ${hasAnyTax ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
+        <StatCard label="Investimento Bruto" value={`R$${totalInvestment.toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" />
+        {hasAnyTax && (
+          <StatCard label="Investimento Líquido" value={`R$${Math.round(netInvestment).toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" sublabel="após impostos" />
+        )}
         <StatCard label="Leads Esperados" value={consolidated.totals.total_leads.toLocaleString()} icon={Users} color="purple" />
-
         <StatCard label="Vendas Esperadas" value={Math.round(consolidated.totals.total_sales).toLocaleString()} icon={Target} color="orange" />
         <StatCard label="Receita Projetada" value={`R$${Math.round(consolidated.totals.total_revenue).toLocaleString('pt-BR')}`} icon={TrendingUp} color="green" />
       </div>

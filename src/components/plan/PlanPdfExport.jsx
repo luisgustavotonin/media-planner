@@ -98,8 +98,14 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
   let y = 30;
 
   // ── Cards de resumo ──────────────────────────────────────
+  const netInvestment = (localPlan.channels || []).reduce((s, c) => {
+    const tax = (c.tax_percent || 0) / 100;
+    return s + (c.budget_value || 0) * (1 - tax);
+  }, 0);
+  const hasAnyTax = (localPlan.channels || []).some(c => (c.tax_percent || 0) > 0);
   const cards = [
-    { label: 'Investimento Total', value: `R$${totalInvestment.toLocaleString('pt-BR')}` },
+    { label: 'Investimento Bruto', value: `R$${totalInvestment.toLocaleString('pt-BR')}` },
+    ...(hasAnyTax ? [{ label: 'Investimento Líquido', value: `R$${Math.round(netInvestment).toLocaleString('pt-BR')}` }] : []),
     { label: 'Leads Esperados', value: fmtN(consolidated.totals.total_leads) },
     { label: 'Vendas Esperadas', value: fmtN(consolidated.totals.total_sales) },
     { label: 'Receita Projetada', value: `R$${Math.round(consolidated.totals.total_revenue).toLocaleString('pt-BR')}` },
@@ -129,7 +135,8 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
     doc.text('Premissas do Funil', marginL, y);
     y += 3;
 
-    const premHeaders = [...conversionPairs.map(p => p.label), 'Ticket Médio'];
+    const abbrevLabel = (l) => l.length > 14 ? l.substring(0, 13) + '.' : l;
+    const premHeaders = [...conversionPairs.map(p => abbrevLabel(p.label)), 'Ticket Médio'];
     const premValues = [...conversionPairs.map((_, i) => fmtPct(getRate(i))), fmt(localPlan.average_ticket)];
     const premColW = (pageW - marginL * 2) / premHeaders.length;
     const premColWidths = premHeaders.map(() => premColW);
@@ -156,13 +163,27 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
     ? funnelStages.slice(1, -1).map((s, i) => ({ label: s.label, stageIndex: i + 1 }))
     : [{ label: 'Agendamentos', stageIndex: 1 }, { label: 'Comparecimentos', stageIndex: 2 }];
 
-  const tableHeaders = ['Canal', 'Budget', 'Leads', ...middleCols.map(c => c.label), 'Vendas', 'Receita', 'CPL', 'CAC', 'ROAS'];
-  const fixedCols = 3 + middleCols.length + 6; // total columns
+  // Abreviar nomes longos de etapas para caber no PDF
+  const abbrev = (label) => label.length > 10 ? label.substring(0, 9) + '.' : label;
+  const tableHeaders = ['Canal', 'Budget', 'Leads', ...middleCols.map(c => abbrev(c.label)), 'Vendas', 'Receita', 'CPL', 'CAC', 'ROAS'];
   const totalTableW = pageW - marginL * 2;
-  // Canal col wider, rest equal
-  const canalW = 28;
-  const restW = (totalTableW - canalW) / (tableHeaders.length - 1);
-  const colWidths = [canalW, ...tableHeaders.slice(1).map(() => restW)];
+  // Canal col wider, Receita slightly wider, rest equal
+  const canalW = 30;
+  const receitaW = 22;
+  const budgetW = 20;
+  const otherCount = tableHeaders.length - 3; // all except Canal, Budget, Receita
+  const otherW = (totalTableW - canalW - receitaW - budgetW) / otherCount;
+  // Build colWidths: Canal, Budget, Leads, ...middles, Vendas, Receita, CPL, CAC, ROAS
+  const colWidths = [
+    canalW,
+    budgetW,
+    ...tableHeaders.slice(2, -4).map(() => otherW), // Leads + middles
+    otherW, // Vendas
+    receitaW, // Receita
+    otherW, // CPL
+    otherW, // CAC
+    otherW, // ROAS
+  ];
 
   const tableRows = (consolidated.channelResults || []).map(ch => [
     ch.channel_name || '—',

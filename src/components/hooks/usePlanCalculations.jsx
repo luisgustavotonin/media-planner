@@ -3,9 +3,11 @@
 export function calculateChannelMetrics(channel, conversionRates, averageTicket) {
   const rates = conversionRates || [];
   const budget = channel.budget_value || 0;
+  const taxRate = (channel.tax_percent || 0) / 100;
+  const netBudget = budget * (1 - taxRate);
   const cpl = channel.expected_cpl || 1;
 
-  const leads = budget / cpl;
+  const leads = netBudget / cpl;
 
   // Calcula volume de cada etapa intermediária dinamicamente
   const stageValues = [leads];

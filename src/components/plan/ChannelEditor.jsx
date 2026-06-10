@@ -57,7 +57,7 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
         {channels.map((ch, idx) => (
           <div key={idx} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
             <div className="flex items-center gap-3 p-4">
-              <div className="flex-1 grid grid-cols-2 sm:grid-cols-5 gap-3 items-center">
+              <div className="flex-1 grid grid-cols-2 sm:grid-cols-6 gap-3 items-center">
                 <div>
                   {readOnly ? <ChannelBadge channel={ch.channel_name} /> : (
                     <Select value={ch.channel_name} onValueChange={v => updateChannel(idx, 'channel_name', v)}>
@@ -84,6 +84,20 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                 <div>
                   <CurrencyInput value={ch.expected_cpl || 0} onChange={v => updateChannel(idx, 'expected_cpl', v)}
                     placeholder="CPL R$" prefix="R$" className="text-xs" disabled={readOnly} />
+                </div>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={ch.tax_percent || ''}
+                    onChange={e => updateChannel(idx, 'tax_percent', parseFloat(e.target.value) || 0)}
+                    placeholder="0"
+                    disabled={readOnly}
+                    className="w-full h-9 border border-gray-200 rounded-md text-xs px-2 pr-6 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50"
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
                 </div>
               </div>
               <div className="flex items-center gap-1">
@@ -127,8 +141,8 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
       </div>
 
       {/* Column Labels */}
-      <div className="hidden sm:grid grid-cols-5 gap-3 px-4 text-[10px] text-gray-400 uppercase tracking-wider">
-        <span>Canal</span><span>Objetivo</span><span>Budget (R$)</span><span className="text-center">%</span><span>CPL (R$)</span>
+      <div className="hidden sm:grid grid-cols-6 gap-3 px-4 text-[10px] text-gray-400 uppercase tracking-wider">
+        <span>Canal</span><span>Objetivo</span><span>Budget (R$)</span><span className="text-center">%</span><span>CPL (R$)</span><span>Imposto</span>
       </div>
     </div>
   );
