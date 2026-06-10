@@ -10,6 +10,7 @@ export default function ResultsTable({ channelResults, totals, blended, funnelSt
   const fmt = v => typeof v === 'number' ? (v >= 1000 ? `R$${Math.round(v).toLocaleString('pt-BR')}` : `R$${v.toFixed(2)}`) : '—';
   const fmtN = v => typeof v === 'number' ? Math.round(v).toLocaleString('pt-BR') : '—';
   const fmtRoas = (revenue, budget) => (budget > 0 ? (revenue / budget).toFixed(2) + 'x' : '—');
+  const netBudget = (ch) => { const tax = (ch.tax_percent || 0) / 100; return (ch.budget_value || 0) * (1 - tax); };
 
   // Colunas intermediárias dinâmicas: etapas entre Leads (índice 0) e Vendas (última)
   const middleCols = funnelStages && funnelStages.length >= 2
@@ -60,7 +61,7 @@ export default function ResultsTable({ channelResults, totals, blended, funnelSt
             {channelResults?.map((ch, i) => (
               <tr key={i} className="hover:bg-gray-50/50">
                 <td className="py-2.5 px-4"><ChannelBadge channel={ch.channel_name} /></td>
-                <td className="py-2.5 px-3 text-right font-medium">{fmt(ch.budget_value)}</td>
+                <td className="py-2.5 px-3 text-right font-medium">{fmt(netBudget(ch))}</td>
                 <td className="py-2.5 px-3 text-right">{fmtN(ch.metrics.leads)}</td>
                 {middleCols.map((col, j) => (
                   <td key={j} className="py-2.5 px-3 text-right">{getMiddleValue(ch, col)}</td>
@@ -69,14 +70,14 @@ export default function ResultsTable({ channelResults, totals, blended, funnelSt
                 <td className="py-2.5 px-3 text-right font-medium text-emerald-600">{fmt(ch.metrics.revenue)}</td>
                 <td className="py-2.5 px-3 text-right">{fmt(ch.metrics.cost_per_lead)}</td>
                 <td className="py-2.5 px-3 text-right">{fmt(ch.metrics.cost_per_sale)}</td>
-                <td className="py-2.5 px-3 text-right font-medium text-blue-600">{fmtRoas(ch.metrics.revenue, ch.budget_value)}</td>
+                <td className="py-2.5 px-3 text-right font-medium text-blue-600">{fmtRoas(ch.metrics.revenue, netBudget(ch))}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr className="bg-gray-50 border-t border-gray-200 font-semibold">
               <td className="py-3 px-4 text-gray-900">Total</td>
-              <td className="py-3 px-3 text-right">{fmt(totals?.total_budget)}</td>
+              <td className="py-3 px-3 text-right">{fmt(totals?.total_net_budget ?? totals?.total_budget)}</td>
               <td className="py-3 px-3 text-right">{fmtN(totals?.total_leads)}</td>
               {middleCols.map((col, j) => (
                 <td key={j} className="py-3 px-3 text-right">{getTotalMiddleValue(col)}</td>
@@ -85,7 +86,7 @@ export default function ResultsTable({ channelResults, totals, blended, funnelSt
               <td className="py-3 px-3 text-right text-emerald-600">{fmt(totals?.total_revenue)}</td>
               <td className="py-3 px-3 text-right">{fmt(blended?.blended_cpl)}</td>
               <td className="py-3 px-3 text-right">{fmt(blended?.blended_cost_per_sale)}</td>
-              <td className="py-3 px-3 text-right text-blue-600">{fmtRoas(totals?.total_revenue, totals?.total_budget)}</td>
+              <td className="py-3 px-3 text-right text-blue-600">{fmtRoas(totals?.total_revenue, totals?.total_net_budget ?? totals?.total_budget)}</td>
             </tr>
           </tfoot>
         </table>

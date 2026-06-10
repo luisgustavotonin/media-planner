@@ -48,26 +48,29 @@ export function calculateConsolidated(channels, conversionRates, averageTicket) 
 
   const totals = channelResults.reduce((acc, ch) => {
     ch.metrics.stageValues?.forEach((v, i) => { totalStageValues[i] = (totalStageValues[i] || 0) + v; });
+    const taxRate = (ch.tax_percent || 0) / 100;
+    const net = (ch.budget_value || 0) * (1 - taxRate);
     return {
       total_budget: acc.total_budget + (ch.budget_value || 0),
+      total_net_budget: acc.total_net_budget + net,
       total_leads: acc.total_leads + ch.metrics.leads,
       total_appointments: acc.total_appointments + ch.metrics.appointments,
       total_showups: acc.total_showups + ch.metrics.showups,
       total_sales: acc.total_sales + ch.metrics.sales,
       total_revenue: acc.total_revenue + ch.metrics.revenue,
     };
-  }, { total_budget: 0, total_leads: 0, total_appointments: 0, total_showups: 0, total_sales: 0, total_revenue: 0 });
+  }, { total_budget: 0, total_net_budget: 0, total_leads: 0, total_appointments: 0, total_showups: 0, total_sales: 0, total_revenue: 0 });
 
   totals.stageValues = totalStageValues;
 
   return {
     channelResults,
     totals,
-    blended_cpl: totals.total_leads > 0 ? totals.total_budget / totals.total_leads : 0,
-    blended_cpa: totals.total_appointments > 0 ? totals.total_budget / totals.total_appointments : 0,
-    blended_cps: totals.total_showups > 0 ? totals.total_budget / totals.total_showups : 0,
-    blended_cost_per_sale: totals.total_sales > 0 ? totals.total_budget / totals.total_sales : 0,
-    overall_roi: totals.total_budget > 0 ? ((totals.total_revenue - totals.total_budget) / totals.total_budget) * 100 : 0,
+    blended_cpl: totals.total_leads > 0 ? totals.total_net_budget / totals.total_leads : 0,
+    blended_cpa: totals.total_appointments > 0 ? totals.total_net_budget / totals.total_appointments : 0,
+    blended_cps: totals.total_showups > 0 ? totals.total_net_budget / totals.total_showups : 0,
+    blended_cost_per_sale: totals.total_sales > 0 ? totals.total_net_budget / totals.total_sales : 0,
+    overall_roi: totals.total_net_budget > 0 ? ((totals.total_revenue - totals.total_net_budget) / totals.total_net_budget) * 100 : 0,
   };
 }
 
