@@ -326,6 +326,90 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
 
   y = drawTable(doc, { startY: y, headers: tableHeaders, rows: tableRows, colWidths, pageW, marginL });
 
+  // ── Campanhas Meta ───────────────────────────────────────
+  const FUNNEL_STAGES_PDF = { topo: 'Topo (Reconhecimento)', meio: 'Meio (Consideracao)', fundo: 'Fundo (Conversao)' };
+  const metaChannels = (localPlan.channels || []).filter(c => c.channel_name === 'Meta' && (c.strategies || []).length > 0);
+  if (metaChannels.length > 0) {
+    doc.addPage();
+    let my = 0;
+
+    // Header página Meta
+    doc.setFillColor(...C.marrom);
+    doc.rect(0, 0, pageW, headerH, 'F');
+    doc.setFillColor(...C.laranja);
+    doc.rect(0, 0, 4, headerH, 'F');
+    doc.setTextColor(...C.laranja);
+    doc.setFontSize(7.5);
+    doc.setFont(undefined, 'bold');
+    doc.text('PLANO DE MIDIA', marginL + 4, 8);
+    doc.setTextColor(...C.linho);
+    doc.setFontSize(15);
+    doc.text(titulo, marginL + 4, 16);
+    doc.setFontSize(7.5);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(...C.crema);
+    doc.text(safe('Estrutura de Campanhas Meta Ads'), marginL + 4, 23);
+    my = headerH + 8;
+
+    for (const metaCh of metaChannels) {
+      // Título do canal
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(...C.marrom);
+      doc.text(safe(`Meta Ads — ${metaCh.channel_objective || 'Leads'} | Budget: ${fmt(metaCh.budget_value)}`), marginL, my);
+      doc.setDrawColor(...C.laranja);
+      doc.setLineWidth(0.5);
+      doc.line(marginL, my + 1.5, pageW - marginL, my + 1.5);
+      doc.setLineWidth(0.2);
+      my += 7;
+
+      for (const camp of (metaCh.strategies || [])) {
+        if (my > pageH - 30) { doc.addPage(); my = 14; }
+
+        const stageLabel = FUNNEL_STAGES_PDF[camp.funnel_stage] || safe(camp.funnel_stage || '');
+        const campTotal = (camp.adsets || []).reduce((s, a) => s + (a.budget_value || 0), 0);
+
+        // Cabeçalho da campanha
+        doc.setFillColor(...C.savana);
+        doc.roundedRect(marginL, my, pageW - marginL * 2, 8, 1.5, 1.5, 'F');
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(...C.linho);
+        doc.text(safe(camp.name || 'Campanha sem nome'), marginL + 4, my + 5.5);
+        doc.text(safe(`${stageLabel} | ${fmt(campTotal)}`), pageW - marginL - 4, my + 5.5, { align: 'right' });
+        my += 10;
+
+        if ((camp.adsets || []).length === 0) {
+          doc.setFontSize(7);
+          doc.setFont(undefined, 'normal');
+          doc.setTextColor(...C.savana);
+          doc.text('Nenhum conjunto adicionado.', marginL + 4, my + 4);
+          my += 8;
+          continue;
+        }
+
+        // Tabela de conjuntos
+        const adsetHeaders = ['Conjunto de Anuncio', 'Budget Mensal', 'Budget/Dia', 'Objetivo', 'Publico', 'Faixa Etaria', 'Formato', 'Posicionamento'];
+        const adsetColW = [60, 24, 24, 32, 38, 25, 28, 38]; // total ~269mm = pageW(297) - margins(14*2)
+        const adsetRows = (camp.adsets || []).map(a => [
+          safe(a.name || '-'),
+          fmt(a.budget_value),
+          fmt((a.budget_value || 0) / (localPlan.duration_days || 30)),
+          safe(a.params?.objetivo || '-'),
+          safe(a.params?.publico || '-'),
+          safe(a.params?.faixa_etaria || '-'),
+          safe(a.params?.formato || '-'),
+          safe(a.params?.posicionamento || '-'),
+        ]);
+
+        if (my + 9 + adsetRows.length * 7.5 > pageH - 16) { doc.addPage(); my = 14; }
+        my = drawTable(doc, { startY: my, headers: adsetHeaders, rows: adsetRows, colWidths: adsetColW, pageW, marginL, lastRowBold: false });
+        my += 6;
+      }
+      my += 4;
+    }
+  }
+
   // ── Footer ───────────────────────────────────────────────
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {

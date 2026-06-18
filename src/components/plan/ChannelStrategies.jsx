@@ -20,7 +20,7 @@ const fmtBRL = (n) => `R$ ${(n || 0).toLocaleString('pt-BR', { minimumFractionDi
 const fmtDaily = (budget, days) => days > 0 ? fmtBRL(budget / days) : fmtBRL(0);
 
 // ─── Ad Set (Conjunto de Anúncios) ───────────────────────────────────────────
-function AdSet({ adset, days, onChange, onRemove, readOnly }) {
+function AdSet({ adset, days, onChange, onRemove, readOnly, maxBudget }) {
   const [open, setOpen] = useState(false);
 
   const updateField = (field, val) => onChange({ ...adset, [field]: val });
@@ -42,7 +42,16 @@ function AdSet({ adset, days, onChange, onRemove, readOnly }) {
           className="flex-1 h-7 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50"
         />
         <div className="w-36">
-          <CurrencyInput value={adset.budget_value || 0} onChange={v => updateField('budget_value', v)} prefix="R$" className="text-xs h-7" disabled={readOnly} />
+          <CurrencyInput
+            value={adset.budget_value || 0}
+            onChange={v => {
+              const capped = maxBudget !== undefined ? Math.min(Number(v), maxBudget) : Number(v);
+              updateField('budget_value', capped);
+            }}
+            prefix="R$"
+            className={`text-xs h-7 ${maxBudget !== undefined && (adset.budget_value || 0) > maxBudget ? 'border-red-400' : ''}`}
+            disabled={readOnly}
+          />
         </div>
         <div className="text-right w-24 shrink-0">
           <span className="text-[10px] text-gray-400">por dia</span>
@@ -89,7 +98,7 @@ function ParamField({ label, value, onChange, placeholder, readOnly }) {
 }
 
 // ─── Campaign ────────────────────────────────────────────────────────────────
-function Campaign({ campaign, days, onChange, onRemove, readOnly }) {
+function Campaign({ campaign, days, onChange, onRemove, readOnly, channelRemaining = 0 }) {
   const [open, setOpen] = useState(true);
 
   const updateField = (field, val) => onChange({ ...campaign, [field]: val });
@@ -163,16 +172,20 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly }) {
           {(campaign.adsets || []).length === 0 && (
             <p className="text-[11px] text-gray-400">Nenhum conjunto adicionado.</p>
           )}
-          {(campaign.adsets || []).map((adset, idx) => (
-            <AdSet
-              key={idx}
-              adset={adset}
-              days={days}
-              onChange={updated => updateAdSet(idx, updated)}
-              onRemove={() => removeAdSet(idx)}
-              readOnly={readOnly}
-            />
-          ))}
+          {(campaign.adsets || []).map((adset, idx) => {
+            const maxForAdset = (adset.budget_value || 0) + Math.max(0, channelRemaining);
+            return (
+              <AdSet
+                key={idx}
+                adset={adset}
+                days={days}
+                onChange={updated => updateAdSet(idx, updated)}
+                onRemove={() => removeAdSet(idx)}
+                readOnly={readOnly}
+                maxBudget={maxForAdset}
+              />
+            );
+          })}
         </div>
       )}
     </div>
@@ -230,6 +243,7 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
             onChange={updated => updateCampaign(idx, updated)}
             onRemove={() => removeCampaign(idx)}
             readOnly={readOnly}
+            channelRemaining={remaining}
           />
         ))}
       </div>
