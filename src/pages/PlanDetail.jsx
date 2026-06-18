@@ -49,14 +49,24 @@ export default function PlanDetail() {
   });
 
   const [localPlan, setLocalPlan] = useState(null);
-  useEffect(() => { if (plan) setLocalPlan({ ...plan }); }, [plan]);
+  const [isSaving, setIsSaving] = useState(false);
+  useEffect(() => {
+    // Só sincroniza com o servidor se não houver edições locais em andamento
+    if (plan && !isSaving) setLocalPlan(prev => prev === null ? { ...plan } : prev);
+  }, [plan]);
 
   const saveMut = useMutation({
     mutationFn: (data) => {
-      const { id, created_date, updated_date, created_by, ...rest } = data;
+      const { id, created_date, updated_date, created_by, created_by_id, ...rest } = data;
       return base44.entities.MediaPlan.update(planId, rest);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plan', planId] }),
+    onSuccess: (savedData) => {
+      // Atualiza localPlan com o dado retornado do servidor (fonte da verdade)
+      if (savedData) setLocalPlan({ ...savedData });
+      setIsSaving(false);
+      queryClient.invalidateQueries({ queryKey: ['plan', planId] });
+    },
+    onError: () => setIsSaving(false),
   });
 
   if (isLoading || !localPlan) {
@@ -114,7 +124,10 @@ export default function PlanDetail() {
   const hasAnyTax = channels.some(c => (c.tax_percent || 0) > 0);
 
   const updateField = (field, value) => setLocalPlan(p => ({ ...p, [field]: value }));
-  const handleSave = () => saveMut.mutate({ ...localPlan, total_investment: totalInvestment });
+  const handleSave = () => {
+    setIsSaving(true);
+    saveMut.mutate({ ...localPlan, total_investment: totalInvestment });
+  };
   const handleChannelsChange = (newChannels) => {
     setLocalPlan(p => ({ ...p, channels: newChannels, total_investment: newChannels.reduce((s, c) => s + (c.budget_value || 0), 0) }));
   };
