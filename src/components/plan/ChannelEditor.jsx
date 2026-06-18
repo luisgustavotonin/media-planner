@@ -135,13 +135,15 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                     </div>
                   </div>
                 )}
-                <ChannelStrategies
-                  strategies={ch.strategies || []}
-                  channelBudget={ch.budget_value || 0}
-                  days={days}
-                  readOnly={readOnly}
-                  onChange={(newStrategies) => updateChannel(idx, 'strategies', newStrategies)}
-                />
+                {ch.channel_name === 'Meta' && (
+                  <ChannelStrategies
+                    strategies={ch.strategies || []}
+                    channelBudget={ch.budget_value || 0}
+                    days={days}
+                    readOnly={readOnly}
+                    onChange={(newStrategies) => updateChannel(idx, 'strategies', newStrategies)}
+                  />
+                )}
               </div>
             )}
           </div>

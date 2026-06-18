@@ -81,10 +81,7 @@ export default function MediaPlans() {
         lead_to_appointment_rate: conversion_rates[0] || 0.35,
         appointment_to_show_rate: conversion_rates[1] || 0.7,
         show_to_sale_rate: conversion_rates[2] || 0.35,
-        channels: [
-          { channel_name: 'Meta', channel_objective: 'Leads', budget_value: 0, budget_percent: 0, expected_cpl: bm?.meta_default_cpl || 40, use_custom_funnel: false },
-          { channel_name: 'Google', channel_objective: 'Leads', budget_value: 0, budget_percent: 0, expected_cpl: bm?.google_default_cpl || 60, use_custom_funnel: false },
-        ],
+        channels: [],
         total_investment: 0,
       });
     },
