@@ -30,7 +30,7 @@ export default function MediaPlans() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
+  const [selectedClientId, setSelectedClientId] = useState('');
 
   const { data: plans = [], isLoading } = useQuery({
     queryKey: ['plans'],
@@ -100,8 +100,8 @@ export default function MediaPlans() {
     isClientRole ? plans.filter(p => p.client_id === user?.assigned_client_id) :
     plans.filter(p => p.created_by === user?.email);
 
-  const filtered = myPlans.filter(p => (p.client_name || '').toLowerCase().includes(search.toLowerCase()));
   const myClients = user?.role === 'admin' ? clients : clients.filter(c => c.created_by === user?.email);
+  const filtered = selectedClientId ? myPlans.filter(p => p.client_id === selectedClientId) : [];
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
@@ -115,13 +115,22 @@ export default function MediaPlans() {
         )}
       />
 
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <Input placeholder="Buscar planos..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 bg-white" />
+      <div className="mb-6 max-w-sm">
+        <Label className="text-xs text-gray-500 mb-1.5 block">Cliente</Label>
+        <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+          <SelectTrigger className="bg-white">
+            <SelectValue placeholder="Selecione um cliente para ver os planos" />
+          </SelectTrigger>
+          <SelectContent>
+            {myClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
 
-      {filtered.length === 0 ? (
-        <EmptyState icon={BarChart3} title="Nenhum plano de mídia" description="Crie seu primeiro plano para começar a projetar resultados." />
+      {!selectedClientId ? (
+        <EmptyState icon={Search} title="Selecione um cliente" description="Escolha um cliente acima para visualizar os planos de mídia dele." />
+      ) : filtered.length === 0 ? (
+        <EmptyState icon={BarChart3} title="Nenhum plano de mídia" description="Este cliente ainda não possui planos. Crie o primeiro para começar." />
       ) : (
         <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50">
           {filtered.map(plan => (
