@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { BarChart3, Plus, Search, Target, Trash2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -29,6 +29,7 @@ const STATUS_LABELS = { active: 'ativo', draft: 'rascunho', completed: 'concluí
 export default function MediaPlans() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState('');
 
@@ -87,7 +88,11 @@ export default function MediaPlans() {
         total_investment: 0,
       });
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['plans'] }); setOpen(false); },
+    onSuccess: (newPlan) => {
+      queryClient.invalidateQueries({ queryKey: ['plans'] });
+      setOpen(false);
+      navigate(createPageUrl(`PlanDetail?id=${newPlan.id}`));
+    },
   });
 
   const deleteMut = useMutation({
@@ -108,8 +113,8 @@ export default function MediaPlans() {
       <PageHeader
         title="Planos de Mídia"
         description="Crie e gerencie planos de mídia multicanal."
-        actions={!isClientRole && (
-          <Button onClick={() => setOpen(true)} className="gap-2 bg-blue-600 hover:bg-blue-700">
+        actions={!isClientRole && selectedClientId && (
+          <Button onClick={() => { setForm(f => ({ ...f, client_id: selectedClientId })); setOpen(true); }} className="gap-2 bg-blue-600 hover:bg-blue-700">
             <Plus className="w-4 h-4" /> Novo Plano
           </Button>
         )}
