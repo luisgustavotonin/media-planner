@@ -102,6 +102,7 @@ export default function PlanDetail() {
   // Array com todas as taxas do funil em ordem (cascata completa)
   const activeRates = conversionPairs.map((_, i) => getRate(i));
 
+  const daysInMonth = new Date(localPlan.period_year || new Date().getFullYear(), localPlan.period_month || 1, 0).getDate();
   const channels = localPlan.channels || [];
   const avgTicket = localPlan.average_ticket || 0;
   const consolidated = calculateConsolidated(channels, activeRates, avgTicket);
@@ -198,7 +199,7 @@ export default function PlanDetail() {
       )}
 
       <div className="mb-6">
-        <ChannelEditor channels={channels} onChange={handleChannelsChange} totalInvestment={totalInvestment} readOnly={readOnly} />
+        <ChannelEditor channels={channels} onChange={handleChannelsChange} totalInvestment={totalInvestment} readOnly={readOnly} days={daysInMonth} />
       </div>
 
       <div className="mb-6">

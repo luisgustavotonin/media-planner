@@ -6,11 +6,12 @@ import { Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import ChannelBadge from '../ui-custom/ChannelBadge';
 import CurrencyInput from '../ui-custom/CurrencyInput';
 import PercentInput from '../ui-custom/PercentInput';
+import ChannelStrategies from './ChannelStrategies';
 
 const CHANNELS = ['Meta', 'Google', 'TikTok', 'YouTube', 'Other'];
 const OBJECTIVES = ['Leads', 'Remarketing', 'Awareness', 'Traffic'];
 
-export default function ChannelEditor({ channels, onChange, totalInvestment, readOnly }) {
+export default function ChannelEditor({ channels, onChange, totalInvestment, readOnly, days = 30 }) {
   const [expandedIdx, setExpandedIdx] = React.useState(null);
 
   const updateChannel = (idx, field, value) => {
@@ -119,7 +120,7 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                   <span className="text-xs text-gray-600">Taxas de funil personalizadas para este canal</span>
                 </div>
                 {ch.use_custom_funnel && (
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-3 gap-3 mb-4">
                     <div>
                       <label className="text-[10px] text-gray-400">Lead→Agend.</label>
                       <PercentInput value={ch.lead_to_appointment_rate_override || 0} onChange={v => updateChannel(idx, 'lead_to_appointment_rate_override', v)} className="h-8 text-xs" disabled={readOnly} />
@@ -134,6 +135,13 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                     </div>
                   </div>
                 )}
+                <ChannelStrategies
+                  strategies={ch.strategies || []}
+                  channelBudget={ch.budget_value || 0}
+                  days={days}
+                  readOnly={readOnly}
+                  onChange={(newStrategies) => updateChannel(idx, 'strategies', newStrategies)}
+                />
               </div>
             )}
           </div>
