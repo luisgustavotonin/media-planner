@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import PercentInput from '../components/ui-custom/PercentInput';
-import { Save, Users, DollarSign, TrendingUp, Target, ArrowLeft, FileDown, Braces } from 'lucide-react';
+import { Save, Users, DollarSign, TrendingUp, Target, ArrowLeft, FileDown } from 'lucide-react';
 import { exportPlanToPdf } from '../components/plan/PlanPdfExport';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -132,31 +132,6 @@ export default function PlanDetail() {
     setLocalPlan(p => ({ ...p, channels: newChannels, total_investment: newChannels.reduce((s, c) => s + (c.budget_value || 0), 0) }));
   };
 
-  const handleExportJson = () => {
-    const exportData = {
-      plano: localPlan,
-      funil: {
-        etapas: funnelStages,
-        taxas: conversionPairs.map((pair, i) => ({ label: pair.label, taxa: getRate(i) })),
-      },
-      resultados: {
-        totais: consolidated.totals,
-        por_canal: consolidated.channelResults,
-        blended_cpl: consolidated.blended_cpl,
-        blended_cac: consolidated.blended_cost_per_sale,
-        investimento_total: totalInvestment,
-        investimento_liquido: netInvestment,
-      },
-    };
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `plano_${(localPlan.client_name || 'cliente').replace(/\s+/g, '_')}_${localPlan.period_month}_${localPlan.period_year}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const STATUS_OPTIONS = [
     { value: 'draft', label: 'Rascunho' },
     { value: 'active', label: 'Ativo' },
@@ -176,13 +151,6 @@ export default function PlanDetail() {
           description={`Segmento: ${segmentoLabel} · Status: ${statusLabel}`}
           actions={
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="gap-2 h-9 text-xs"
-                onClick={handleExportJson}
-              >
-                <Braces className="w-4 h-4" /> Exportar JSON
-              </Button>
               <Button
                 variant="outline"
                 className="gap-2 h-9 text-xs"
