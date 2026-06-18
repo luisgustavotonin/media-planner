@@ -41,28 +41,29 @@
     },
     "conversion_rates": {
       "type": "array",
-      "description": "Dynamic conversion rates for each funnel stage pair (index matches stage pair order)",
+      "description": "Dynamic conversion rates for each funnel stage pair",
       "items": {
         "type": "number"
       }
     },
     "lead_to_appointment_rate": {
-      "type": "number",
-      "description": "Legacy: conversion_rates[0]"
+      "type": "number"
     },
     "appointment_to_show_rate": {
-      "type": "number",
-      "description": "Legacy: conversion_rates[1]"
+      "type": "number"
     },
     "show_to_sale_rate": {
-      "type": "number",
-      "description": "Legacy: conversion_rates[2]"
+      "type": "number"
     },
     "average_ticket": {
       "type": "number"
     },
     "total_investment": {
       "type": "number"
+    },
+    "duration_days": {
+      "type": "number",
+      "description": "Dias do m\u00eas para c\u00e1lculo de budget di\u00e1rio"
     },
     "channels": {
       "type": "array",
@@ -85,35 +86,12 @@
           "expected_cpl": {
             "type": "number"
           },
+          "tax_percent": {
+            "type": "number",
+            "description": "Percentual de imposto sobre o budget"
+          },
           "use_custom_funnel": {
             "type": "boolean"
-          },
-          "strategies": {
-            "type": "array",
-            "description": "Sub-estrat\u00e9gias do canal divididas por etapa do funil",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "description": "Nome da campanha/estrat\u00e9gia"
-                },
-                "funnel_stage": {
-                  "type": "string",
-                  "enum": [
-                    "topo",
-                    "meio",
-                    "fundo",
-                    "remarketing"
-                  ],
-                  "description": "Etapa do funil"
-                },
-                "budget_value": {
-                  "type": "number",
-                  "description": "Verba alocada para esta estrat\u00e9gia"
-                }
-              }
-            }
           },
           "lead_to_appointment_rate_override": {
             "type": "number"
@@ -123,6 +101,74 @@
           },
           "show_to_sale_rate_override": {
             "type": "number"
+          },
+          "strategies": {
+            "type": "array",
+            "description": "Campanhas do canal divididas por etapa do funil",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "funnel_stage": {
+                  "type": "string",
+                  "enum": [
+                    "topo",
+                    "meio",
+                    "fundo",
+                    "remarketing"
+                  ]
+                },
+                "budget_value": {
+                  "type": "number"
+                },
+                "adsets": {
+                  "type": "array",
+                  "description": "Conjuntos de an\u00fancios da campanha",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "budget_value": {
+                        "type": "number"
+                      },
+                      "params": {
+                        "type": "object",
+                        "properties": {
+                          "objetivo": {
+                            "type": "string"
+                          },
+                          "publico": {
+                            "type": "string"
+                          },
+                          "faixa_etaria": {
+                            "type": "string"
+                          },
+                          "genero": {
+                            "type": "string"
+                          },
+                          "localizacao": {
+                            "type": "string"
+                          },
+                          "formato": {
+                            "type": "string"
+                          },
+                          "posicionamento": {
+                            "type": "string"
+                          },
+                          "observacoes": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
