@@ -63,17 +63,7 @@ export default function UsuariosPage() {
         const perfil = perfis.find(p => p.id === data.perfil_id);
         const role = perfil?.nome === 'Master' ? 'admin' : 'user';
         await base44.users.inviteUser(data.email, role);
-        for (const clienteId of data.clientes) {
-          await base44.entities.UserClient.create({
-            user_id: 'temp_' + data.email,
-            user_email: data.email,
-            user_nome: data.nome,
-            client_id: clienteId,
-            perfil_id: data.perfil_id,
-            status: 'APROVADO'
-          });
-        }
-        toast.success('Usuário incluído com sucesso!');
+        toast.success('Usuário incluído com sucesso! Aguardando confirmação do convite.');
       }
     },
     onSuccess: () => {
