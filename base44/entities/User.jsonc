@@ -14,9 +14,26 @@
     "assigned_client_id": {
       "type": "string",
       "description": "For client role users, the client entity they are linked to"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ativo",
+        "inativo"
+      ],
+      "default": "inativo",
+      "description": "Status do usu\u00e1rio no sistema"
+    },
+    "profile_id": {
+      "type": "string",
+      "description": "Reference to Profile entity"
+    },
+    "units": {
+      "type": "array",
+      "description": "IDs dos clientes que o usu\u00e1rio tem acesso",
+      "items": {
+        "type": "string"
+      }
     }
-  },
-  "required": [
-    "assigned_client_id"
-  ]
+  }
 }
