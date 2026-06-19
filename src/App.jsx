@@ -30,9 +30,7 @@ const AuthenticatedApp = () => {
   // Handle authentication errors
   if (authError) {
     if (authError.type === 'user_not_registered') {
-      // Allow access even if not explicitly registered
-      console.warn('User not registered but allowing access');
-      // return <UserNotRegisteredError />;
+      return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
       // Redirect to login automatically
       navigateToLogin();

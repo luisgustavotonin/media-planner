@@ -56,8 +56,6 @@ import PlanDetail from './pages/PlanDetail';
 import ReversePlan from './pages/ReversePlan';
 import Scenarios from './pages/Scenarios';
 import WeeklyTracking from './pages/WeeklyTracking';
-import Usuarios from './pages/Usuarios';
-import Perfis from './pages/Perfis';
 import __Layout from './Layout.jsx';
 
 
@@ -71,8 +69,6 @@ export const PAGES = {
     "ReversePlan": ReversePlan,
     "Scenarios": Scenarios,
     "WeeklyTracking": WeeklyTracking,
-    "Usuarios": Usuarios,
-    "Perfis": Perfis,
 }
 
 export const pagesConfig = {
