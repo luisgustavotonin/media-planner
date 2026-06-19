@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../components/hooks/useAuth';
-import { useUserAccess } from '../components/hooks/useUserAccess';
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
 import { Button } from '@/components/ui/button';
@@ -24,7 +23,6 @@ export default function MediaPlans() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { filterClientsByAccess, isInactive } = useUserAccess();
   const [open, setOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState('');
@@ -98,8 +96,7 @@ export default function MediaPlans() {
 
   const isClientRole = user?.role === 'client';
 
-   const myClients = filterClientsByAccess(allClients);
-   const myPlans = plans.filter(p => myClients.some(c => c.id === p.client_id));
+  const myPlans = plans.filter(p => allClients.some(c => c.id === p.client_id));
   const clientPlans = myPlans.filter(p => p.client_id === selectedClientId);
   const selectedPlan = myPlans.find(p => p.id === selectedPlanId);
 
@@ -108,15 +105,6 @@ export default function MediaPlans() {
     value: b.segment,
     label: b.segment_label || b.segment,
   }));
-
-  // Se usuário está inativo, não renderizar
-  if (isInactive) {
-    return (
-      <div className="p-6 lg:p-8 max-w-7xl mx-auto text-center">
-        <p className="text-gray-500">Acesso negado. Usuário inativo.</p>
-      </div>
-    );
-  }
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
@@ -139,10 +127,10 @@ export default function MediaPlans() {
               <SelectValue placeholder="Selecione um cliente..." />
             </SelectTrigger>
             <SelectContent>
-              {myClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
+              {allClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
             </SelectContent>
-          </Select>
-        </div>
+            </Select>
+            </div>
 
         {/* Passo 2: Plano */}
         {selectedClientId && (
@@ -205,7 +193,7 @@ export default function MediaPlans() {
               <Select value={form.client_id} onValueChange={v => setForm({...form, client_id: v})}>
                 <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
                 <SelectContent>
-                  {myClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
+                  {allClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

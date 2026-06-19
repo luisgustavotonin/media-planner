@@ -53,10 +53,8 @@ import Clients from './pages/Clients';
 import Dashboard from './pages/Dashboard';
 import MediaPlans from './pages/MediaPlans';
 import PlanDetail from './pages/PlanDetail';
-import ProfilesPermissions from './pages/ProfilesPermissions';
 import ReversePlan from './pages/ReversePlan';
 import Scenarios from './pages/Scenarios';
-import UserManagement from './pages/UserManagement';
 import WeeklyTracking from './pages/WeeklyTracking';
 import __Layout from './Layout.jsx';
 
@@ -68,10 +66,8 @@ export const PAGES = {
     "Dashboard": Dashboard,
     "MediaPlans": MediaPlans,
     "PlanDetail": PlanDetail,
-    "ProfilesPermissions": ProfilesPermissions,
     "ReversePlan": ReversePlan,
     "Scenarios": Scenarios,
-    "UserManagement": UserManagement,
     "WeeklyTracking": WeeklyTracking,
 }
 

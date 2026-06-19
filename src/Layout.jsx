@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { useAuth } from './components/hooks/useAuth';
-import { usePermissions } from './components/hooks/usePermissions';
 import { 
-  LayoutDashboard, Users, Building2, BarChart3, Target, 
-  FlaskConical, CalendarDays, FileText, Settings, Menu, X, 
-  ChevronRight, LogOut, Activity, Shield, GitBranch
+  LayoutDashboard, Building2, BarChart3, Target, 
+  FlaskConical, CalendarDays, Settings, Menu, X, 
+  ChevronRight, LogOut, Activity, GitBranch
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
@@ -20,46 +19,14 @@ const navItems = [
   { name: 'Acomp. Semanal', page: 'WeeklyTracking', icon: CalendarDays, roles: ['admin', 'consultant'] },
   { name: 'Benchmarks', page: 'Benchmarks', icon: Settings, roles: ['admin'] },
   { name: 'Tipos de Funil', page: 'FunnelTypes', icon: GitBranch, roles: ['admin'] },
-  { name: 'Usuários', page: 'UserManagement', icon: Users, roles: ['admin'] },
-  { name: 'Perfis e Permissões', page: 'ProfilesPermissions', icon: Shield, roles: ['admin'] },
 ];
 
 export default function Layout({ children, currentPageName }) {
   const { user, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const role = user?.role || 'consultant';
-  const [profile, setProfile] = useState(null);
 
-  React.useEffect(() => {
-    if (user?.profile_id && user.role !== 'admin') {
-      base44.entities.Profile.list().then(profiles => {
-        const p = profiles.find(pr => pr.id === user.profile_id);
-        setProfile(p);
-      });
-    } else if (user?.role === 'admin') {
-      setProfile({ permissions: {} });
-    }
-  }, [user]);
-
-  const perms = usePermissions(user, profile);
-  const permissionMap = {
-    'Dashboard': 'visualizar_dashboard',
-    'Clients': 'visualizar_clientes',
-    'MediaPlans': 'visualizar_planos',
-    'ReversePlan': 'visualizar_planejamento_reverso',
-    'Scenarios': 'visualizar_simulador_cenarios',
-    'WeeklyTracking': 'visualizar_acompanhamento_semanal',
-    'Benchmarks': 'visualizar_benchmarks',
-    'FunnelTypes': 'visualizar_tipos_funil',
-    'UserManagement': 'visualizar_usuarios',
-    'ProfilesPermissions': 'visualizar_permissoes',
-  };
-
-  const filteredNav = navItems.filter(item => {
-    if (role === 'admin') return true;
-    const permKey = permissionMap[item.page];
-    return permKey ? perms[permKey] : item.roles.includes(role);
-  });
+  const filteredNav = navItems.filter(item => item.roles.includes(role));
 
   if (loading) {
     return (

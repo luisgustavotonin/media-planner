@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../components/hooks/useAuth';
-import { useUserAccess } from '../components/hooks/useUserAccess';
 import { calculateReversePlan } from '../components/hooks/usePlanCalculations';
 import PageHeader from '../components/ui-custom/PageHeader';
 import StatCard from '../components/ui-custom/StatCard';
@@ -18,7 +17,6 @@ const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out'
 
 export default function ReversePlan() {
   const { user } = useAuth();
-  const { filterClientsByAccess, isInactive } = useUserAccess();
   const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [targetRevenue, setTargetRevenue] = useState(0);
@@ -38,8 +36,7 @@ export default function ReversePlan() {
     queryFn: () => base44.entities.MediaPlan.list('-created_date'),
   });
 
-  const myClients = filterClientsByAccess(allClients);
-  const myPlans = plans.filter(p => myClients.some(c => c.id === p.client_id));
+  const myPlans = plans.filter(p => allClients.some(c => c.id === p.client_id));
 
   const clientPlans = myPlans.filter(p => p.client_id === selectedClientId);
   const selectedPlan = myPlans.find(p => p.id === selectedPlanId);
@@ -99,15 +96,6 @@ export default function ReversePlan() {
   const fmtPct = v => `${(v * 100).toFixed(1)}%`;
   const canCalculate = selectedPlanId && targetRevenue > 0 && distribution.length > 0 && planTicket > 0;
 
-  // Se usuário está inativo, não renderizar
-  if (isInactive) {
-    return (
-      <div className="p-6 lg:p-8 max-w-7xl mx-auto text-center">
-        <p className="text-gray-500">Acesso negado. Usuário inativo.</p>
-      </div>
-    );
-  }
-
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto">
       <PageHeader title="Planejamento Reverso" description="Selecione um cliente e plano de mídia para calcular o investimento necessário." />
@@ -121,13 +109,13 @@ export default function ReversePlan() {
               <SelectValue placeholder="Selecione um cliente..." />
             </SelectTrigger>
             <SelectContent>
-              {myClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
+              {allClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
             </SelectContent>
-          </Select>
-        </div>
+            </Select>
+            </div>
 
-        {/* Passo 2: Plano */}
-        {selectedClientId && (
+            {/* Passo 2: Plano */}
+            {selectedClientId && (
           <div className="mb-5">
             <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">2. Selecione o Plano de Mídia</Label>
             {clientPlans.length === 0 ? (
