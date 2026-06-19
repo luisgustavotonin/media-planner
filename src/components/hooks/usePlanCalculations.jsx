@@ -1,7 +1,20 @@
 // Calcula métricas de um canal aplicando todas as taxas do funil em cascata
 // Retorna também stageValues: array com o volume em cada etapa [leads, stage1, stage2, ..., sales]
 export function calculateChannelMetrics(channel, conversionRates, averageTicket) {
-  const rates = conversionRates || [];
+  // Se o canal tem taxas personalizadas ativas, usa os overrides do canal
+  let rates = conversionRates || [];
+  if (channel.use_custom_funnel) {
+    const overrides = [
+      channel.lead_to_appointment_rate_override,
+      channel.appointment_to_show_rate_override,
+      channel.show_to_sale_rate_override,
+    ];
+    // PercentInput armazena em 0-100, conversionRates são 0-1 → dividir por 100
+    rates = rates.map((r, i) => {
+      const ov = overrides[i];
+      return (ov !== undefined && ov !== null) ? ov / 100 : r;
+    });
+  }
   const budget = channel.budget_value || 0;
   const taxRate = (channel.tax_percent || 0) / 100;
   const netBudget = budget * (1 - taxRate);
