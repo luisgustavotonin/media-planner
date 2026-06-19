@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Building2, Plus, Search, MapPin, Phone, Mail, Pencil, Trash2 } from 'lucide-react';
 
 const ESPECIALIDADES = [
@@ -22,7 +23,7 @@ const ESPECIALIDADES = [
   { value: 'other', label: 'Outro' },
 ];
 
-const emptyClient = { clinic_name: '', responsible_person: '', phone: '', email: '', city: '', specialty: 'general', average_ticket: 5000, primary_brand_color: '#3b82f6', secondary_brand_color: '#1e40af', logo_url: '' };
+const emptyClient = { clinic_name: '', responsible_person: '', phone: '', email: '', city: '', specialty: 'general', average_ticket: 5000, primary_brand_color: '#3b82f6', secondary_brand_color: '#1e40af', logo_url: '', units: [] };
 
 export default function Clients() {
   const { user } = useAuth();
@@ -67,8 +68,15 @@ export default function Clients() {
 
   const handleEdit = (client) => {
     setEditing(client);
-    setForm({ clinic_name: client.clinic_name || '', responsible_person: client.responsible_person || '', phone: client.phone || '', email: client.email || '', city: client.city || '', specialty: client.specialty || 'general', average_ticket: client.average_ticket || 5000, primary_brand_color: client.primary_brand_color || '#3b82f6', secondary_brand_color: client.secondary_brand_color || '#1e40af', logo_url: client.logo_url || '' });
+    setForm({ clinic_name: client.clinic_name || '', responsible_person: client.responsible_person || '', phone: client.phone || '', email: client.email || '', city: client.city || '', specialty: client.specialty || 'general', average_ticket: client.average_ticket || 5000, primary_brand_color: client.primary_brand_color || '#3b82f6', secondary_brand_color: client.secondary_brand_color || '#1e40af', logo_url: client.logo_url || '', units: client.units || [] });
     setOpen(true);
+  };
+
+  const toggleUnit = (clientId) => {
+    setForm(f => {
+      const units = f.units.includes(clientId) ? f.units.filter(u => u !== clientId) : [...f.units, clientId];
+      return { ...f, units };
+    });
   };
 
   const handleLogoUpload = async (e) => {
@@ -198,6 +206,19 @@ export default function Clients() {
                 {form.logo_url && <img src={form.logo_url} alt="" className="w-12 h-12 rounded-lg object-cover" />}
                 <Input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploading} />
               </div>
+            </div>
+            <div>
+              <Label className="text-xs">Unidades (Clientes)</Label>
+              <div className="mt-1 border border-gray-200 rounded-lg overflow-hidden max-h-48 overflow-y-auto divide-y divide-gray-50">
+                {clients.filter(c => !editing || c.id !== editing.id).map(c => (
+                  <label key={c.id} className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-gray-50">
+                    <Checkbox checked={form.units.includes(c.id)} onCheckedChange={() => toggleUnit(c.id)} />
+                    <Building2 className="w-3 h-3 text-gray-400" />
+                    <span className="text-xs text-gray-700">{c.clinic_name}</span>
+                  </label>
+                ))}
+              </div>
+              {form.units.length > 0 && <p className="text-[10px] text-gray-400 mt-1">{form.units.length} unidade(s) selecionada(s)</p>}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
