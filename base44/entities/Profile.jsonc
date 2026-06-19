@@ -79,6 +79,18 @@
         },
         "gerenciar_benchmarks": {
           "type": "boolean"
+        },
+        "visualizar_tipos_funil": {
+          "type": "boolean"
+        },
+        "editar_tipos_funil": {
+          "type": "boolean"
+        },
+        "visualizar_permissoes": {
+          "type": "boolean"
+        },
+        "gerenciar_permissoes": {
+          "type": "boolean"
         }
       }
     }

@@ -17,6 +17,10 @@ export function usePermissions(user, profile) {
       gerenciar_usuarios: false,
       visualizar_benchmarks: false,
       gerenciar_benchmarks: false,
+      visualizar_tipos_funil: false,
+      editar_tipos_funil: false,
+      visualizar_permissoes: false,
+      gerenciar_permissoes: false,
     };
   }
   
@@ -39,6 +43,10 @@ export function usePermissions(user, profile) {
       gerenciar_usuarios: true,
       visualizar_benchmarks: true,
       gerenciar_benchmarks: true,
+      visualizar_tipos_funil: true,
+      editar_tipos_funil: true,
+      visualizar_permissoes: true,
+      gerenciar_permissoes: true,
     };
   }
   
