@@ -4,16 +4,11 @@
   "properties": {
     "segment": {
       "type": "string",
-      "enum": [
-        "implants",
-        "aesthetics",
-        "orthodontics",
-        "general",
-        "periodontics",
-        "endodontics",
-        "pediatric",
-        "other"
-      ]
+      "description": "Chave interna do segmento"
+    },
+    "segment_label": {
+      "type": "string",
+      "description": "Nome exibido do segmento (edit\u00e1vel)"
     },
     "lead_to_appointment_rate": {
       "type": "number",
@@ -34,18 +29,6 @@
     "google_default_cpl": {
       "type": "number",
       "description": "Default CPL for Google in BRL"
-    },
-    "tiktok_default_cpl": {
-      "type": "number",
-      "description": "Default CPL for TikTok in BRL"
-    },
-    "youtube_default_cpl": {
-      "type": "number",
-      "description": "Default CPL for YouTube in BRL"
-    },
-    "other_default_cpl": {
-      "type": "number",
-      "description": "Default CPL for Other channels in BRL"
     }
   },
   "required": [

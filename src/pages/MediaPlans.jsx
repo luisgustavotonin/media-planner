@@ -14,16 +14,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-const ESPECIALIDADES = [
-  { value: 'implants', label: 'Implantes' },
-  { value: 'aesthetics', label: 'Estética' },
-  { value: 'orthodontics', label: 'Ortodontia' },
-  { value: 'general', label: 'Clínica Geral' },
-  { value: 'periodontics', label: 'Periodontia' },
-  { value: 'endodontics', label: 'Endodontia' },
-  { value: 'pediatric', label: 'Odontopediatria' },
-  { value: 'other', label: 'Outro' },
-];
+// Especialidades agora vêm dos benchmarks cadastrados (carregados abaixo)
 const STATUS_LABELS = { active: 'ativo', draft: 'rascunho', completed: 'concluído' };
 
 export default function MediaPlans() {
@@ -104,6 +95,12 @@ export default function MediaPlans() {
 
   const myClients = user?.role === 'admin' ? clients : clients.filter(c => c.created_by === user?.email);
   const filtered = selectedClientId ? myPlans.filter(p => p.client_id === selectedClientId) : [];
+
+  // Segmentos baseados nos benchmarks cadastrados
+  const ESPECIALIDADES = benchmarks.map(b => ({
+    value: b.segment,
+    label: b.segment_label || b.segment,
+  }));
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">

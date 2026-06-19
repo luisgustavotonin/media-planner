@@ -4,16 +4,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../components/ui-custom/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import PercentInput from '../components/ui-custom/PercentInput';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Pencil } from 'lucide-react';
-
-const SEGMENTOS_PT = {
-  implants: 'Implantes', aesthetics: 'Estética', orthodontics: 'Ortodontia',
-  general: 'Clínica Geral', periodontics: 'Periodontia', endodontics: 'Endodontia',
-  pediatric: 'Odontopediatria', other: 'Outro',
-};
 
 export default function Benchmarks() {
   const queryClient = useQueryClient();
@@ -37,6 +32,7 @@ export default function Benchmarks() {
     updateMut.mutate({ id: editing.id, d: data });
   };
   const fmtPct = v => v ? `${(v * 100).toFixed(0)}%` : '—';
+  const getLabel = b => b.segment_label || b.segment;
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
@@ -53,24 +49,18 @@ export default function Benchmarks() {
                 <th className="text-center py-3 px-3 text-xs font-medium text-gray-500">Comparec.→Venda</th>
                 <th className="text-center py-3 px-3 text-xs font-medium text-gray-500">CPL Meta</th>
                 <th className="text-center py-3 px-3 text-xs font-medium text-gray-500">CPL Google</th>
-                <th className="text-center py-3 px-3 text-xs font-medium text-gray-500">CPL TikTok</th>
-                <th className="text-center py-3 px-3 text-xs font-medium text-gray-500">CPL YouTube</th>
-                <th className="text-center py-3 px-3 text-xs font-medium text-gray-500">CPL Outro</th>
                 <th className="py-3 px-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {benchmarks.map(b => (
                 <tr key={b.id} className="hover:bg-gray-50/50">
-                  <td className="py-3 px-4 font-medium text-gray-900">{SEGMENTOS_PT[b.segment] || b.segment}</td>
+                  <td className="py-3 px-4 font-medium text-gray-900">{getLabel(b)}</td>
                   <td className="py-3 px-3 text-center text-gray-600">{fmtPct(b.lead_to_appointment_rate)}</td>
                   <td className="py-3 px-3 text-center text-gray-600">{fmtPct(b.appointment_to_show_rate)}</td>
                   <td className="py-3 px-3 text-center text-gray-600">{fmtPct(b.show_to_sale_rate)}</td>
-                  <td className="py-3 px-3 text-center text-gray-600">R${b.meta_default_cpl || 0}</td>
-                  <td className="py-3 px-3 text-center text-gray-600">R${b.google_default_cpl || 0}</td>
-                  <td className="py-3 px-3 text-center text-gray-600">R${b.tiktok_default_cpl || 0}</td>
-                  <td className="py-3 px-3 text-center text-gray-600">R${b.youtube_default_cpl || 0}</td>
-                  <td className="py-3 px-3 text-center text-gray-600">R${b.other_default_cpl || 0}</td>
+                  <td className="py-3 px-3 text-center text-gray-600">{b.meta_default_cpl ? `R$${b.meta_default_cpl}` : '—'}</td>
+                  <td className="py-3 px-3 text-center text-gray-600">{b.google_default_cpl ? `R$${b.google_default_cpl}` : '—'}</td>
                   <td className="py-3 px-3">
                     <button onClick={() => handleEdit(b)} className="p-1.5 rounded-md hover:bg-gray-100">
                       <Pencil className="w-3.5 h-3.5 text-gray-400" />
@@ -86,9 +76,19 @@ export default function Benchmarks() {
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Editar Benchmark — {SEGMENTOS_PT[form.segment] || form.segment}</DialogTitle>
+            <DialogTitle>Editar Benchmark — {getLabel(form)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4">
+            <div>
+              <Label className="text-xs">Nome do Segmento</Label>
+              <Input
+                value={form.segment_label || ''}
+                onChange={e => setForm({...form, segment_label: e.target.value})}
+                placeholder={form.segment}
+                className="mt-1"
+              />
+              <p className="text-[10px] text-gray-400 mt-1">Este nome aparecerá na seleção de segmento nos planos de mídia.</p>
+            </div>
             <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Taxas de Conversão</h4>
             <div className="grid grid-cols-3 gap-3">
               <div>
@@ -106,7 +106,7 @@ export default function Benchmarks() {
             </div>
             <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">CPL Padrão (R$)</h4>
             <div className="grid grid-cols-2 gap-3">
-              {[{key:'meta',label:'Meta'},{key:'google',label:'Google'},{key:'tiktok',label:'TikTok'},{key:'youtube',label:'YouTube'},{key:'other',label:'Outro'}].map(ch => (
+              {[{key:'meta',label:'Meta'},{key:'google',label:'Google'}].map(ch => (
                 <div key={ch.key}>
                   <Label className="text-xs">{ch.label}</Label>
                   <CurrencyInput value={form[`${ch.key}_default_cpl`] || 0} onChange={v => setForm({...form, [`${ch.key}_default_cpl`]: v})} prefix="R$" />

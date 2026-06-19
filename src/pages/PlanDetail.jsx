@@ -48,6 +48,11 @@ export default function PlanDetail() {
     queryFn: () => base44.entities.FunnelType.list(),
   });
 
+  const { data: benchmarks = [] } = useQuery({
+    queryKey: ['benchmarks'],
+    queryFn: () => base44.entities.Benchmark.list(),
+  });
+
   const [localPlan, setLocalPlan] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   useEffect(() => {
@@ -74,6 +79,7 @@ export default function PlanDetail() {
   }
 
   const funnelType = funnelTypes.find(f => f.id === localPlan.funnel_type_id);
+  const benchmark = benchmarks.find(b => b.segment === localPlan.segment);
   const funnelStages = funnelType?.stages || [];
 
   // Pares de conversão dinâmicos baseados nas etapas do funil
@@ -207,6 +213,43 @@ export default function PlanDetail() {
               <Label className="text-xs">Ticket Médio (R$)</Label>
               <CurrencyInput value={localPlan.average_ticket || 0} onChange={v => updateField('average_ticket', v)} prefix="R$" className="mt-1" />
             </div>
+          </div>
+        </div>
+      )}
+
+      {benchmark && (
+        <div className="bg-amber-50 border border-amber-100 rounded-xl p-5 mb-6">
+          <h3 className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-3">
+            Benchmark do Segmento — {benchmark.segment_label || benchmark.segment}
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 text-xs">
+            {[
+              { label: 'Lead → Agend.', bmVal: benchmark.lead_to_appointment_rate, planVal: getRate(0), fmt: v => `${(v * 100).toFixed(0)}%` },
+              { label: 'Agend. → Compar.', bmVal: benchmark.appointment_to_show_rate, planVal: getRate(1), fmt: v => `${(v * 100).toFixed(0)}%` },
+              { label: 'Compar. → Venda', bmVal: benchmark.show_to_sale_rate, planVal: getRate(2), fmt: v => `${(v * 100).toFixed(0)}%` },
+              { label: 'CPL Meta', bmVal: benchmark.meta_default_cpl, planVal: channels.find(c => c.channel_name === 'Meta')?.expected_cpl, fmt: v => `R$${v}` },
+              { label: 'CPL Google', bmVal: benchmark.google_default_cpl, planVal: channels.find(c => c.channel_name === 'Google')?.expected_cpl, fmt: v => `R$${v}` },
+            ].map((item, i) => {
+              if (!item.bmVal) return null;
+              const delta = item.planVal && item.bmVal ? ((item.planVal - item.bmVal) / item.bmVal) * 100 : null;
+              const isGood = delta !== null && (i < 3 ? delta > 0 : delta < 0); // taxas: maior é melhor; CPL: menor é melhor
+              return (
+                <div key={i} className="bg-white rounded-lg p-3 border border-amber-100">
+                  <p className="text-gray-400 mb-1">{item.label}</p>
+                  <p className="font-semibold text-gray-700">Benchmark: {item.fmt(item.bmVal)}</p>
+                  {item.planVal != null && item.planVal !== 0 && (
+                    <>
+                      <p className="text-gray-500">Plano: {item.fmt(item.planVal)}</p>
+                      {delta !== null && (
+                        <p className={`font-semibold mt-1 ${isGood ? 'text-emerald-600' : 'text-red-500'}`}>
+                          {delta > 0 ? '+' : ''}{delta.toFixed(1)}%
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
