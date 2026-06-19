@@ -171,22 +171,20 @@ export default function UserManagement() {
             <div>
               <Label className="text-xs">Unidades com Acesso</Label>
               <div className="mt-1 border border-gray-200 rounded-lg overflow-hidden">
-                <div
+                <label
                   className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100"
-                  onClick={toggleAllUnits}
                 >
                   <Checkbox
                     checked={form.units.length === clients.length && clients.length > 0}
                     onCheckedChange={toggleAllUnits}
                   />
                   <span className="text-xs font-medium text-gray-700">Todas as unidades</span>
-                </div>
+                </label>
                 <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
                   {clients.map(c => (
-                    <div
+                    <label
                       key={c.id}
                       className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-gray-50"
-                      onClick={() => toggleUnit(c.id)}
                     >
                       <Checkbox
                         checked={form.units.includes(c.id)}
@@ -194,7 +192,7 @@ export default function UserManagement() {
                       />
                       <Building2 className="w-3 h-3 text-gray-400" />
                       <span className="text-xs text-gray-700">{c.clinic_name}</span>
-                    </div>
+                    </label>
                   ))}
                 </div>
               </div>

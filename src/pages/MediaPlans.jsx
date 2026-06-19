@@ -17,12 +17,15 @@ const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov'
 // Especialidades agora vêm dos benchmarks cadastrados (carregados abaixo)
 const STATUS_LABELS = { active: 'ativo', draft: 'rascunho', completed: 'concluído' };
 
+const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
 export default function MediaPlans() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('all');
 
   const { data: plans = [], isLoading } = useQuery({
     queryKey: ['plans'],
@@ -97,7 +100,13 @@ export default function MediaPlans() {
     plans.filter(p => p.created_by === user?.email);
 
   const myClients = user?.role === 'admin' ? clients : clients.filter(c => c.created_by === user?.email);
-  const filtered = selectedClientId ? myPlans.filter(p => p.client_id === selectedClientId) : [];
+  const filtered = selectedClientId
+    ? myPlans.filter(p => {
+        if (p.client_id !== selectedClientId) return false;
+        if (selectedMonth !== 'all' && String(p.period_month) !== selectedMonth) return false;
+        return true;
+      })
+    : [];
 
   // Segmentos baseados nos benchmarks cadastrados
   const ESPECIALIDADES = benchmarks.map(b => ({
@@ -117,16 +126,34 @@ export default function MediaPlans() {
         )}
       />
 
-      <div className="mb-6 max-w-sm">
-        <Label className="text-xs text-gray-500 mb-1.5 block">Cliente</Label>
-        <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-          <SelectTrigger className="bg-white">
-            <SelectValue placeholder="Selecione um cliente para ver os planos" />
-          </SelectTrigger>
-          <SelectContent>
-            {myClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
-          </SelectContent>
-        </Select>
+      <div className="mb-6 flex flex-wrap gap-3 items-end">
+        <div className="w-72">
+          <Label className="text-xs text-gray-500 mb-1.5 block">Cliente</Label>
+          <Select value={selectedClientId} onValueChange={v => { setSelectedClientId(v); setSelectedMonth('all'); }}>
+            <SelectTrigger className="bg-white">
+              <SelectValue placeholder="Selecione um cliente para ver os planos" />
+            </SelectTrigger>
+            <SelectContent>
+              {myClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        {selectedClientId && (
+          <div className="w-44">
+            <Label className="text-xs text-gray-500 mb-1.5 block">Mês</Label>
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="bg-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os meses</SelectItem>
+                {MESES_FULL.map((m, i) => (
+                  <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       {!selectedClientId ? (
