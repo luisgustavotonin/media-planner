@@ -2,7 +2,7 @@
 // Retorna também stageValues: array com o volume em cada etapa [leads, stage1, stage2, ..., sales]
 export function calculateChannelMetrics(channel, conversionRates, averageTicket) {
   // Se o canal tem taxas personalizadas ativas, usa os overrides do canal
-  let rates = conversionRates || [];
+  let rates = Array.isArray(conversionRates) ? conversionRates : [];
   if (channel.use_custom_funnel) {
     const overrides = [
       channel.lead_to_appointment_rate_override,
