@@ -43,11 +43,15 @@ export default function UserManagement() {
     if (!form.email) return;
     setInviting(true);
     try {
-      await base44.users.inviteUser(form.email, form.role);
-      toast.success(`Convite enviado para ${form.email}!`);
-      setInviteOpen(false);
-      setForm({ full_name: '', email: '', role: 'consultant', profile_id: '', units: [] });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      const response = await base44.functions.invoke('inviteUser', { email: form.email, role: form.role });
+      if (response.data?.success) {
+        toast.success(`Convite enviado para ${form.email}!`);
+        setInviteOpen(false);
+        setForm({ full_name: '', email: '', role: 'consultant', profile_id: '', units: [] });
+        queryClient.invalidateQueries({ queryKey: ['users'] });
+      } else {
+        toast.error('Erro ao enviar convite. Tente novamente.');
+      }
     } catch (err) {
       toast.error('Erro ao enviar convite. Verifique o e-mail e tente novamente.');
     } finally {
