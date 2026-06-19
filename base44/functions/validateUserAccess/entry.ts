@@ -6,37 +6,35 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     
     if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ authorized_client_ids: [], is_admin: false }, { status: 401 });
     }
 
-    // Admin vê todos os clientes
+    // Se é admin, retorna todos os clientes
     if (user.role === 'admin') {
       const allClients = await base44.asServiceRole.entities.Client.list();
       return Response.json({
         authorized_client_ids: allClients.map(c => c.id),
         is_admin: true,
-        user_status: user.status,
-        user_units: user.units || []
+        user_id: user.id,
+        user_email: user.email
       });
     }
 
-    // Usuário secundário: retorna os clientes que ele tem acesso (units)
-    const authorizedIds = user.units && Array.isArray(user.units) ? user.units : [];
+    // Para usuário secundário, retorna apenas os units dele
+    const clientIds = Array.isArray(user.units) ? user.units : [];
     
     return Response.json({
-      authorized_client_ids: authorizedIds,
+      authorized_client_ids: clientIds,
       is_admin: false,
-      user_status: user.status,
-      user_units: user.units || []
+      user_id: user.id,
+      user_email: user.email
     });
   } catch (error) {
-    console.error('[validateUserAccess] Error:', error);
+    console.error('[validateUserAccess]', error.message);
     return Response.json({
-      error: error.message || 'Erro ao validar acesso',
       authorized_client_ids: [],
       is_admin: false,
-      user_status: null,
-      user_units: []
+      error: error.message
     }, { status: 500 });
   }
 });
