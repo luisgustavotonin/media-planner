@@ -14,10 +14,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import PercentInput from '../components/ui-custom/PercentInput';
-import { Save, Users, DollarSign, TrendingUp, Target, ArrowLeft, FileDown } from 'lucide-react';
+import { Save, Users, DollarSign, TrendingUp, Target, ArrowLeft, FileDown, Trash2 } from 'lucide-react';
 import { exportPlanToPdf } from '../components/plan/PlanPdfExport';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { toast } from 'sonner';
 
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
@@ -34,6 +35,7 @@ export default function PlanDetail() {
   const { user } = useAuth();
   const perms = usePermissions(user);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const readOnly = perms.canViewOnly;
 
   const { data: plan, isLoading } = useQuery({
@@ -73,6 +75,24 @@ export default function PlanDetail() {
     },
     onError: () => setIsSaving(false),
   });
+
+  const deleteMut = useMutation({
+    mutationFn: () => base44.entities.MediaPlan.delete(planId),
+    onSuccess: () => {
+      toast.success('Plano de mídia deletado com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['plans'] });
+      navigate(createPageUrl('MediaPlans'));
+    },
+    onError: () => {
+      toast.error('Erro ao deletar plano de mídia');
+    }
+  });
+
+  const handleDelete = () => {
+    if (window.confirm('Tem certeza que deseja deletar este plano de mídia? Esta ação não pode ser desfeita.')) {
+      deleteMut.mutate();
+    }
+  };
 
   if (isLoading || !localPlan) {
     return <div className="flex items-center justify-center h-64"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>;
@@ -175,6 +195,9 @@ export default function PlanDetail() {
                       {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  <Button onClick={handleDelete} variant="outline" className="gap-2 h-9 text-xs text-red-600 hover:text-red-700 hover:bg-red-50" disabled={deleteMut.isPending}>
+                    <Trash2 className="w-4 h-4" /> {deleteMut.isPending ? 'Deletando...' : 'Deletar'}
+                  </Button>
                   <Button onClick={handleSave} className="gap-2 bg-blue-600 hover:bg-blue-700" disabled={saveMut.isPending}>
                     <Save className="w-4 h-4" /> Salvar
                   </Button>
