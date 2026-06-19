@@ -60,7 +60,7 @@ export default function Layout({ children, currentPageName }) {
               </div>
               <div>
                 <h1 className="text-sm font-semibold text-gray-900 tracking-tight">Media Planner</h1>
-                <p className="text-[10px] text-gray-400 tracking-wider uppercase">Performance Clinic</p>
+                <p className="text-[10px] text-gray-400 tracking-wider uppercase">LVL Performance</p>
               </div>
             </div>
             <button className="lg:hidden p-1" onClick={() => setSidebarOpen(false)}>
