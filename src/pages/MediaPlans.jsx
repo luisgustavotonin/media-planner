@@ -95,11 +95,17 @@ export default function MediaPlans() {
   });
 
   const isClientRole = user?.role === 'client';
-  const myPlans = user?.role === 'admin' ? plans :
-    isClientRole ? plans.filter(p => p.client_id === user?.assigned_client_id) :
-    plans.filter(p => p.created_by === user?.email);
 
-  const myClients = user?.role === 'admin' ? clients : clients.filter(c => c.created_by === user?.email);
+   // Se user tem units, filtra por units; caso contrário usa created_by
+   const userUnits = user?.units || [];
+   const myPlans = user?.role === 'admin' ? plans :
+     isClientRole ? plans.filter(p => p.client_id === user?.assigned_client_id) :
+     userUnits.length > 0 ? plans.filter(p => userUnits.includes(p.client_id)) :
+     plans.filter(p => p.created_by === user?.email);
+
+   const myClients = user?.role === 'admin' ? clients : 
+     userUnits.length > 0 ? clients.filter(c => userUnits.includes(c.id)) :
+     clients.filter(c => c.created_by === user?.email);
   const clientPlans = myPlans.filter(p => p.client_id === selectedClientId);
   const selectedPlan = myPlans.find(p => p.id === selectedPlanId);
 

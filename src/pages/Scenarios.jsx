@@ -34,8 +34,15 @@ export default function Scenarios() {
     queryFn: () => base44.entities.MediaPlan.list('-created_date'),
   });
 
-  const myClients = user?.role === 'admin' ? clients : clients.filter(c => c.created_by === user?.email);
-  const myPlans = user?.role === 'admin' ? plans : plans.filter(p => p.created_by === user?.email);
+  const userUnits = user?.units || [];
+
+  const myClients = user?.role === 'admin' ? clients :
+    userUnits.length > 0 ? clients.filter(c => userUnits.includes(c.id)) :
+    clients.filter(c => c.created_by === user?.email);
+
+  const myPlans = user?.role === 'admin' ? plans :
+    userUnits.length > 0 ? plans.filter(p => userUnits.includes(p.client_id)) :
+    plans.filter(p => p.created_by === user?.email);
 
   const clientPlans = myPlans.filter(p => p.client_id === selectedClientId);
   const plan = myPlans.find(p => p.id === selectedPlanId);
