@@ -11,16 +11,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Shield, Plus, Pencil, Trash2, Eye, Pencil as EditIcon } from 'lucide-react';
 
 // Each group: module name, view permission key, edit permission key (null = not applicable)
+// Ordem exata do menu lateral
 const PERMISSION_GROUPS = [
   { module: 'Dashboard',               view: 'visualizar_dashboard',             edit: null },
   { module: 'Clientes',                view: 'visualizar_clientes',              edit: 'editar_clientes' },
   { module: 'Planos de Mídia',         view: 'visualizar_planos',                edit: 'editar_planos' },
-  { module: 'Exportar PDF',            view: null,                               edit: 'exportar_pdf' },
   { module: 'Planejamento Reverso',    view: 'visualizar_planejamento_reverso',   edit: 'editar_planejamento_reverso' },
-  { module: 'Simulador de Cenários',   view: 'visualizar_simulador_cenarios',     edit: 'editar_simulador_cenarios' },
-  { module: 'Acompanhamento Semanal',  view: 'visualizar_acompanhamento_semanal', edit: 'editar_acompanhamento_semanal' },
-  { module: 'Usuários',                view: 'visualizar_usuarios',              edit: 'gerenciar_usuarios' },
+  { module: 'Cenários',                view: 'visualizar_simulador_cenarios',     edit: 'editar_simulador_cenarios' },
+  { module: 'Acomp. Semanal',          view: 'visualizar_acompanhamento_semanal', edit: 'editar_acompanhamento_semanal' },
   { module: 'Benchmarks',              view: 'visualizar_benchmarks',            edit: 'gerenciar_benchmarks' },
+  { module: 'Tipos de Funil',          view: 'visualizar_tipos_funil',           edit: 'editar_tipos_funil' },
+  { module: 'Usuários',                view: 'visualizar_usuarios',              edit: 'gerenciar_usuarios' },
+  { module: 'Perfis e Permissões',     view: 'visualizar_permissoes',            edit: 'gerenciar_permissoes' },
 ];
 
 const ALL_KEYS = [...new Set(PERMISSION_GROUPS.flatMap(g => [g.view, g.edit]).filter(Boolean))];
@@ -57,13 +59,18 @@ export default function ProfilesPermissions() {
   });
 
   const handleEdit = (p) => {
-    setEditing(p);
-    setForm({
-      name: p.name || '', level: p.level || 1, description: p.description || '',
-      color: p.color || '#3b82f6', status: p.status || 'ativo',
-      permissions: { ...Object.fromEntries(ALL_KEYS.map(k => [k, false])), ...(p.permissions || {}) },
-    });
-    setOpen(true);
+   // Não permite editar perfil Master (admin)
+   if (p.level === 1) {
+     alert('O perfil Master não pode ser editado.');
+     return;
+   }
+   setEditing(p);
+   setForm({
+     name: p.name || '', level: p.level || 1, description: p.description || '',
+     color: p.color || '#3b82f6', status: p.status || 'ativo',
+     permissions: { ...Object.fromEntries(ALL_KEYS.map(k => [k, false])), ...(p.permissions || {}) },
+   });
+   setOpen(true);
   };
 
   const handleSubmit = () => {
@@ -127,10 +134,20 @@ export default function ProfilesPermissions() {
                 </div>
               </div>
               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => handleEdit(profile)} className="p-1.5 rounded-md hover:bg-gray-100">
+                <button 
+                  onClick={() => handleEdit(profile)} 
+                  className={`p-1.5 rounded-md ${profile.level === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
+                  disabled={profile.level === 1}
+                  title={profile.level === 1 ? 'Perfil Master não pode ser editado' : ''}
+                >
                   <Pencil className="w-3.5 h-3.5 text-gray-400" />
                 </button>
-                <button onClick={() => deleteMut.mutate(profile.id)} className="p-1.5 rounded-md hover:bg-red-50">
+                <button 
+                  onClick={() => deleteMut.mutate(profile.id)} 
+                  className={`p-1.5 rounded-md ${profile.level === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50'}`}
+                  disabled={profile.level === 1}
+                  title={profile.level === 1 ? 'Perfil Master não pode ser deletado' : ''}
+                >
                   <Trash2 className="w-3.5 h-3.5 text-red-400" />
                 </button>
               </div>

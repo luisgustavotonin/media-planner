@@ -103,63 +103,51 @@ export default function UserManagement() {
       />
 
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="px-6 py-4 border-b border-gray-100 bg-white">
+          <h3 className="text-sm font-semibold text-gray-900">Lista de Usuários</h3>
+        </div>
+        <table className="w-full text-xs">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50/50">
-              <th className="text-left py-3 px-6 font-semibold text-gray-700">NOME</th>
-              <th className="text-left py-3 px-6 font-semibold text-gray-700">E-MAIL</th>
-              <th className="text-left py-3 px-6 font-semibold text-gray-700">PERFIL</th>
-              <th className="text-left py-3 px-6 font-semibold text-gray-700">UNIDADES</th>
-              <th className="text-left py-3 px-6 font-semibold text-gray-700">STATUS</th>
-              <th className="text-center py-3 px-6 font-semibold text-gray-700">AÇÕES</th>
+            <tr className="border-b border-gray-100">
+              <th className="text-left py-3 px-6 font-semibold text-gray-700 uppercase tracking-wider">NOME</th>
+              <th className="text-left py-3 px-6 font-semibold text-gray-700 uppercase tracking-wider">E-MAIL</th>
+              <th className="text-left py-3 px-6 font-semibold text-gray-700 uppercase tracking-wider">PERFIL</th>
+              <th className="text-left py-3 px-6 font-semibold text-gray-700 uppercase tracking-wider">UNIDADES</th>
+              <th className="text-left py-3 px-6 font-semibold text-gray-700 uppercase tracking-wider">STATUS</th>
+              <th className="text-center py-3 px-6 font-semibold text-gray-700 uppercase tracking-wider">AÇÕES</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {users.map(u => {
               const profile = profiles.find(p => p.id === u.profile_id);
+              const unitCount = u.units?.length || 0;
               return (
-                <tr key={u.id} className="hover:bg-gray-50/30 transition-colors">
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-semibold text-gray-600">{u.full_name?.[0]?.toUpperCase() || u.email?.[0]?.toUpperCase()}</span>
-                      </div>
-                      <span className="font-medium text-gray-900">{u.full_name || 'Sem nome'}</span>
-                    </div>
+                <tr key={u.id}>
+                  <td className="py-3 px-6 text-gray-900">{u.full_name || u.email}</td>
+                  <td className="py-3 px-6 text-gray-600">{u.email}</td>
+                  <td className="py-3 px-6">
+                    {profile ? (
+                      <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full" style={{ backgroundColor: `${profile.color}20`, color: profile.color }}>
+                        {profile.name}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
                   </td>
-                  <td className="py-4 px-6">
-                    <span className="text-gray-600">{u.email}</span>
+                  <td className="py-3 px-6 text-gray-600">{unitCount === 0 ? 'Todas' : `${unitCount} unidade${unitCount > 1 ? '(s)' : ''}`}</td>
+                  <td className="py-3 px-6">
+                    <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">Ativo</span>
                   </td>
-                  <td className="py-4 px-6">
-                    <Select value={u.profile_id || ''} onValueChange={(val) => handleProfileChange(u.id, val)}>
-                      <SelectTrigger className="w-40 h-8">
-                        <SelectValue placeholder="Sem perfil" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {profiles.map(p => (
-                          <SelectItem key={p.id} value={p.id}>
-                            <div className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
-                              {p.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className="py-4 px-6">
-                    <span className="text-gray-600 text-xs">{u.units?.length || 0} unidade(s)</span>
-                  </td>
-                  <td className="py-4 px-6">
-                    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">Ativo</span>
-                  </td>
-                  <td className="py-4 px-6 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <button className="p-1.5 rounded-md hover:bg-gray-100 transition-colors" title="Editar">
-                        <Pencil className="w-4 h-4 text-gray-400" />
+                  <td className="py-3 px-6 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <button className="p-1 hover:bg-gray-100 rounded" title="Editar">
+                        <Pencil className="w-3.5 h-3.5 text-gray-400" />
                       </button>
-                      <button className="p-1.5 rounded-md hover:bg-red-50 transition-colors" title="Remover">
-                        <Trash2 className="w-4 h-4 text-red-400" />
+                      <button className="p-1 hover:bg-gray-100 rounded" title="Compartilhar">
+                        <Eye className="w-3.5 h-3.5 text-gray-400" />
+                      </button>
+                      <button className="p-1 hover:bg-red-50 rounded" title="Remover">
+                        <Trash2 className="w-3.5 h-3.5 text-red-400" />
                       </button>
                     </div>
                   </td>
