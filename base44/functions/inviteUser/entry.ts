@@ -38,8 +38,8 @@ Deno.serve(async (req) => {
 
     // Envia convite através do SDK
     console.log(`[inviteUser] Inviting: ${email}, role: ${role}, profile: ${profile.name}`);
-    const inviteResult = await base44.asServiceRole.users.inviteUser(email, role);
-    console.log(`[inviteUser] Invite sent:`, inviteResult);
+    await base44.users.inviteUser(email, role);
+    console.log(`[inviteUser] Invite sent for ${email}`);
 
     // Aguarda um pouco para sincronização
     let createdUser = null;
