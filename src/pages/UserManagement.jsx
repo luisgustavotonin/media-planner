@@ -66,11 +66,12 @@ export default function UserManagement() {
         }
       }
       
-      // Atualiza perfil e nome
+      // Atualiza perfil e nome via function
       if (createdUser) {
         const updateData = { profile_id: form.profile_id };
         if (form.full_name) updateData.full_name = form.full_name;
-        await base44.asServiceRole.entities.User.update(createdUser.id, updateData);
+        const response = await base44.functions.invoke('updateUser', { userId: createdUser.id, data: updateData });
+        if (response.data?.error) throw new Error(response.data.error);
       }
       
       return { success: true };
