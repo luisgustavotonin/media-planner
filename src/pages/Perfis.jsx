@@ -64,12 +64,11 @@ export default function PerfisPage() {
   const [perfilSelecionado, setPerfilSelecionado] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data: perfis = [] } = useQuery({
+  const { data: perfis = [], isLoading } = useQuery({
     queryKey: ['access-profiles'],
-    queryFn: () => base44.entities.AccessProfile.list()
+    queryFn: () => base44.entities.AccessProfile.list(),
+    retry: false
   });
-
-  const perfisOrdenados = [...perfis].sort((a, b) => (a.nivel_hierarquico || 5) - (b.nivel_hierarquico || 5));
 
   const salvarPerfilMutation = useMutation({
     mutationFn: async (data) => {
@@ -96,6 +95,19 @@ export default function PerfisPage() {
       queryClient.invalidateQueries(['access-profiles']);
     }
   });
+
+  if (isLoading) {
+    return (
+      <div className="p-6 lg:p-8 max-w-7xl mx-auto flex items-center justify-center h-96">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-slate-500">Carregando perfis...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const perfisOrdenados = [...(perfis || [])].sort((a, b) => (a.nivel_hierarquico || 5) - (b.nivel_hierarquico || 5));
 
   const togglePermissaoMatrix = async (perfil, key) => {
     const novasPermissoes = {

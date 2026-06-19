@@ -19,22 +19,25 @@ export default function UsuariosPage() {
   const [clienteSelecionado, setClienteSelecionado] = useState('');
   const queryClient = useQueryClient();
 
-  const { data: vinculos = [] } = useQuery({
+  const { data: vinculos = [], isLoading: loadingVinculos } = useQuery({
     queryKey: ['user-client'],
-    queryFn: () => base44.entities.UserClient.list()
+    queryFn: () => base44.entities.UserClient.list(),
+    retry: false
   });
 
-  const { data: clientes = [] } = useQuery({
+  const { data: clientes = [], isLoading: loadingClientes } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
       const data = await base44.entities.Client.list();
       return data.sort((a, b) => (a.clinic_name || '').localeCompare(b.clinic_name || '', 'pt-BR'));
-    }
+    },
+    retry: false
   });
 
-  const { data: perfis = [] } = useQuery({
+  const { data: perfis = [], isLoading: loadingPerfis } = useQuery({
     queryKey: ['access-profiles'],
-    queryFn: () => base44.entities.AccessProfile.filter({ ativo: true })
+    queryFn: () => base44.entities.AccessProfile.filter({ ativo: true }),
+    retry: false
   });
 
   const salvarUsuarioMutation = useMutation({
@@ -152,6 +155,19 @@ export default function UsuariosPage() {
     },
     onSuccess: () => queryClient.invalidateQueries(['user-client'])
   });
+
+  const isLoading = loadingVinculos || loadingClientes || loadingPerfis;
+
+  if (isLoading) {
+    return (
+      <div className="p-6 lg:p-8 max-w-7xl mx-auto flex items-center justify-center h-96">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-slate-500">Carregando usuários...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
