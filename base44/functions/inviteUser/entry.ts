@@ -26,11 +26,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Perfil não encontrado' }, { status: 400 });
     }
 
-    // NUNCA cria como admin por invite - sempre consultant ou client baseado no level
-    let role = 'consultant';
-    if (profile.level >= 4) role = 'client';
-    
-    console.log(`[inviteUser] Profile level: ${profile.level}, assigned role: ${role}`);
+    console.log(`[inviteUser] Profile level: ${profile.level}`);
 
     // Verifica se o usuário já existe
     const existingUsers = await base44.asServiceRole.entities.User.filter({ email });
@@ -38,45 +34,35 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Usuário com este email já existe' }, { status: 400 });
     }
 
-    // Envia convite através do SDK
-    console.log(`[inviteUser] Inviting: ${email}, role: ${role}, profile: ${profile.name}`);
-    await base44.users.inviteUser(email, role);
-    console.log(`[inviteUser] Invite sent for ${email}`);
+    // 1. Envia convite por email através do SDK (role deve ser 'user')
+    console.log(`[inviteUser] Sending email invite for: ${email}, profile: ${profile.name}`);
+    await base44.users.inviteUser(email, 'user');
+    console.log(`[inviteUser] Email invite sent`);
 
-    // Aguarda um pouco para sincronização
-    let createdUser = null;
-    for (let i = 0; i < 10; i++) {
-      await new Promise(r => setTimeout(r, 300));
-      const users = await base44.asServiceRole.entities.User.filter({ email });
-      if (users?.length > 0) {
-        createdUser = users[0];
-        console.log(`[inviteUser] User found on attempt ${i + 1}: ${createdUser.id}`);
-        break;
-      }
+    // 2. Cria o usuário direto no banco com status inativo e perfil
+    // Para consultants/admins, usa um cliente padrão (obrigatório)
+    let clientId = '';
+    const clients = await base44.asServiceRole.entities.Client.list();
+    if (clients?.length > 0) {
+      clientId = clients[0].id;
     }
-
-    // Atualiza o usuário com profile, nome e status inativo
-    if (createdUser) {
-      try {
-        const updateData = { 
-          profile_id,
-          status: 'inativo'  // Criado inativo, só ativa quando admin liberar
-        };
-        if (full_name) updateData.full_name = full_name;
-        await base44.asServiceRole.entities.User.update(createdUser.id, updateData);
-        console.log(`[inviteUser] Updated user ${createdUser.id} with profile_id, status=inativo, and full_name`);
-      } catch (updateErr) {
-        console.error(`[inviteUser] Error updating user:`, updateErr.message);
-      }
-    } else {
-      console.warn(`[inviteUser] User not found after polling - may need manual profile assignment`);
-    }
+    
+    const newUser = await base44.asServiceRole.entities.User.create({
+      email,
+      full_name: full_name || email,
+      profile_id,
+      status: 'inativo',
+      assigned_client_id: clientId
+    });
+    
+    console.log(`[inviteUser] User created in DB: ${newUser.id} with status=inativo and profile=${profile.name}`);
 
     return Response.json({ 
       success: true,
       message: 'Convite enviado com sucesso',
       email,
-      userId: createdUser?.id
+      userId: newUser.id,
+      user: newUser
     });
   } catch (error) {
     console.error('[inviteUser] Fatal error:', error);
