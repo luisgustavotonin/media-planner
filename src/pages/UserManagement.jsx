@@ -255,24 +255,26 @@ export default function UserManagement() {
               <Label className="text-xs">Nome</Label>
               <Input value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} placeholder="João da Silva" className="mt-1" />
             </div>
-            <div>
-              <Label className="text-xs">Perfil de Acesso</Label>
-              <Select value={form.profile_id} onValueChange={v => setForm({...form, profile_id: v})}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Selecione o perfil" />
-                </SelectTrigger>
-                <SelectContent>
-                  {profiles.map(p => (
-                    <SelectItem key={p.id} value={p.id}>
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
-                        {p.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {!isCurrentUserRow(editingUserId) && (
+              <div>
+                <Label className="text-xs">Perfil de Acesso</Label>
+                <Select value={form.profile_id} onValueChange={v => setForm({...form, profile_id: v})}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Selecione o perfil" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {profiles.map(p => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
+                          {p.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={() => setEditingUserId(null)}>Cancelar</Button>
               <Button onClick={handleSaveEdit} className="bg-blue-600 hover:bg-blue-700" disabled={updateUserMut.isPending}>
@@ -315,6 +317,25 @@ export default function UserManagement() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Unidades com Acesso</Label>
+              <div className="mt-1 border border-gray-200 rounded-lg overflow-hidden">
+                <label className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100">
+                  <Checkbox checked={form.units.length === clients.length && clients.length > 0} onCheckedChange={toggleAllUnits} />
+                  <span className="text-xs font-medium text-gray-700">Todas as unidades</span>
+                </label>
+                <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
+                  {clients.map(c => (
+                    <label key={c.id} className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-gray-50">
+                      <Checkbox checked={form.units.includes(c.id)} onCheckedChange={() => toggleUnit(c.id)} />
+                      <Building2 className="w-3 h-3 text-gray-400" />
+                      <span className="text-xs text-gray-700">{c.clinic_name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              {form.units.length > 0 && <p className="text-[10px] text-gray-400 mt-1">{form.units.length} unidade(s) selecionada(s)</p>}
             </div>
             <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
               <p className="text-xs text-blue-700">

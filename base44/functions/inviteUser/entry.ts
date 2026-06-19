@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Email e profile_id são obrigatórios' }, { status: 400 });
     }
 
-    // Determina role baseado no profile
+    // Busca o perfil para determinar o role
     const profiles = await base44.asServiceRole.entities.Profile.filter({ id: profile_id });
     const profile = profiles?.[0];
     
@@ -36,41 +36,48 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Usuário com este email já existe' }, { status: 400 });
     }
 
-    // Envia convite para o usuário
-    console.log(`Inviting user: ${email} with role: ${role}`);
-    await base44.asServiceRole.users.inviteUser(email, role);
-    
-    // Aguarda a criação do usuário no sistema (máx 3 segundos)
-    let newUser = null;
-    for (let i = 0; i < 6; i++) {
-      await new Promise(r => setTimeout(r, 500));
+    // Envia convite através do SDK
+    console.log(`[inviteUser] Inviting: ${email}, role: ${role}, profile: ${profile.name}`);
+    const inviteResult = await base44.asServiceRole.users.inviteUser(email, role);
+    console.log(`[inviteUser] Invite sent:`, inviteResult);
+
+    // Aguarda um pouco para sincronização
+    let createdUser = null;
+    for (let i = 0; i < 10; i++) {
+      await new Promise(r => setTimeout(r, 300));
       const users = await base44.asServiceRole.entities.User.filter({ email });
       if (users?.length > 0) {
-        newUser = users[0];
-        console.log(`Found new user: ${newUser.id}`);
+        createdUser = users[0];
+        console.log(`[inviteUser] User found on attempt ${i + 1}: ${createdUser.id}`);
         break;
       }
     }
 
-    // Se encontrou o usuário, atualiza com profile e full_name
-    if (newUser) {
-      const updateData = { profile_id };
-      if (full_name) updateData.full_name = full_name;
-      
-      await base44.asServiceRole.entities.User.update(newUser.id, updateData);
-      console.log(`Updated user ${newUser.id} with profile and full_name`);
+    // Atualiza o usuário com profile e nome se foi criado
+    if (createdUser) {
+      try {
+        const updateData = { profile_id };
+        if (full_name) updateData.full_name = full_name;
+        await base44.asServiceRole.entities.User.update(createdUser.id, updateData);
+        console.log(`[inviteUser] Updated user ${createdUser.id} with profile and full_name`);
+      } catch (updateErr) {
+        console.error(`[inviteUser] Error updating user:`, updateErr.message);
+      }
     } else {
-      console.warn(`User creation took too long, convite sent but profile may need manual assignment`);
+      console.warn(`[inviteUser] User not found after polling - may need manual profile assignment`);
     }
 
     return Response.json({ 
-      success: true, 
-      message: 'Convite enviado com sucesso' 
+      success: true,
+      message: 'Convite enviado com sucesso',
+      email,
+      userId: createdUser?.id
     });
   } catch (error) {
-    console.error('Invite error:', error);
+    console.error('[inviteUser] Fatal error:', error);
     return Response.json({ 
-      error: error.message || 'Erro ao enviar convite' 
+      error: error.message || 'Erro ao enviar convite',
+      details: error.stack
     }, { status: 500 });
   }
 });
