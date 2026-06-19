@@ -22,9 +22,17 @@ export default function WeeklyTracking() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedPlanId, setSelectedPlanId] = useState('');
+  const [weekForm, setWeekForm] = useState({ week_number: 1, investment_actual: 0, leads_actual: 0, appointments_actual: 0, showups_actual: 0 });
 
-  const { data: plans = [] } = useQuery({ queryKey: ['plans'], queryFn: () => base44.entities.MediaPlan.list('-created_date') });
-  const { data: allActuals = [] } = useQuery({ queryKey: ['weeklyActuals'], queryFn: () => base44.entities.WeeklyActual.list() });
+  const { data: plans = [], isLoading: plansLoading } = useQuery({
+    queryKey: ['plans'],
+    queryFn: () => base44.entities.MediaPlan.list('-created_date'),
+  });
+
+  const { data: allActuals = [], isLoading: actualsLoading } = useQuery({
+    queryKey: ['weeklyActuals'],
+    queryFn: () => base44.entities.WeeklyActual.list(),
+  });
 
   const myPlans = user?.role === 'admin' ? plans : plans.filter(p => p.created_by === user?.email);
   const plan = myPlans.find(p => p.id === selectedPlanId);
@@ -33,12 +41,10 @@ export default function WeeklyTracking() {
   let consolidated = null;
   let weeklyTargets = [];
   if (plan && plan.channels?.length > 0) {
-    const funnel = {
-      lead_to_appointment_rate: plan.lead_to_appointment_rate || 0.35,
-      appointment_to_show_rate: plan.appointment_to_show_rate || 0.7,
-      show_to_sale_rate: plan.show_to_sale_rate || 0.35,
-    };
-    consolidated = calculateConsolidated(plan.channels, funnel, plan.average_ticket || 5000);
+    const rates = Array.isArray(plan.conversion_rates) && plan.conversion_rates.length
+      ? plan.conversion_rates
+      : [plan.lead_to_appointment_rate || 0.35, plan.appointment_to_show_rate || 0.7, plan.show_to_sale_rate || 0.35];
+    consolidated = calculateConsolidated(plan.channels, rates, plan.average_ticket || 5000);
     for (let w = 1; w <= 4; w++) {
       weeklyTargets.push({
         week: w,
@@ -49,8 +55,6 @@ export default function WeeklyTracking() {
       });
     }
   }
-
-  const [weekForm, setWeekForm] = useState({ week_number: 1, investment_actual: 0, leads_actual: 0, appointments_actual: 0, showups_actual: 0 });
 
   const saveMut = useMutation({
     mutationFn: (data) => {
@@ -67,7 +71,13 @@ export default function WeeklyTracking() {
   useEffect(() => {
     const existing = actuals.find(a => a.week_number === weekForm.week_number);
     if (existing) {
-      setWeekForm({ week_number: existing.week_number, investment_actual: existing.investment_actual || 0, leads_actual: existing.leads_actual || 0, appointments_actual: existing.appointments_actual || 0, showups_actual: existing.showups_actual || 0 });
+      setWeekForm({
+        week_number: existing.week_number,
+        investment_actual: existing.investment_actual || 0,
+        leads_actual: existing.leads_actual || 0,
+        appointments_actual: existing.appointments_actual || 0,
+        showups_actual: existing.showups_actual || 0,
+      });
     } else {
       setWeekForm(f => ({ ...f, investment_actual: 0, leads_actual: 0, appointments_actual: 0, showups_actual: 0 }));
     }
@@ -91,6 +101,17 @@ export default function WeeklyTracking() {
   const recommendations = plan && consolidated ? generateRecommendations(consolidated.channelResults, actuals, weeklyTargets) : [];
   const pctOf = (actual, target) => target > 0 ? Math.round((actual / target) * 100) : 0;
 
+  if (plansLoading || actualsLoading) {
+    return (
+      <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+        <PageHeader title="Acompanhamento Semanal" description="Acompanhe o desempenho real vs metas planejadas." />
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
       <PageHeader title="Acompanhamento Semanal" description="Acompanhe o desempenho real vs metas planejadas." />
@@ -98,12 +119,30 @@ export default function WeeklyTracking() {
       <div className="mb-8">
         <Label className="text-xs">Selecione o Plano de Mídia</Label>
         <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
-          <SelectTrigger className="w-full max-w-md mt-1"><SelectValue placeholder="Escolha um plano..." /></SelectTrigger>
+          <SelectTrigger className="w-full max-w-md mt-1">
+            <SelectValue placeholder="Escolha um plano..." />
+          </SelectTrigger>
           <SelectContent>
-            {myPlans.map(p => <SelectItem key={p.id} value={p.id}>{p.client_name} — {p.period_month}/{p.period_year}</SelectItem>)}
+            {myPlans.map(p => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.client_name} — {p.period_month}/{p.period_year}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
+
+      {!selectedPlanId && (
+        <div className="border-2 border-dashed border-gray-200 rounded-xl p-12 text-center text-gray-400 text-sm">
+          Selecione um plano de mídia para visualizar o acompanhamento semanal.
+        </div>
+      )}
+
+      {selectedPlanId && !consolidated && (
+        <div className="border-2 border-dashed border-gray-200 rounded-xl p-12 text-center text-gray-400 text-sm">
+          O plano selecionado não possui canais configurados. Adicione canais no Plano de Mídia para acompanhar.
+        </div>
+      )}
 
       {plan && consolidated && (
         <>
@@ -161,7 +200,7 @@ export default function WeeklyTracking() {
               </div>
               <div className="flex items-end">
                 <Button onClick={() => saveMut.mutate(weekForm)} className="w-full gap-2 bg-blue-600 hover:bg-blue-700" disabled={saveMut.isPending}>
-                  <Save className="w-4 h-4" /> Salvar
+                  <Save className="w-4 h-4" /> {saveMut.isPending ? 'Salvando...' : 'Salvar'}
                 </Button>
               </div>
             </div>
