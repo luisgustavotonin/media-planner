@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Plus, Shield, UserCheck, Mail, Building2, Pencil, Trash2 } from 'lucide-react';
+import { Users, Plus, UserCheck, Building2, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -41,40 +41,43 @@ export default function UserManagement() {
   });
 
   const inviteMut = useMutation({
-     mutationFn: async () => {
-       if (!form.email || !form.profile_id) throw new Error('Email e perfil são obrigatórios');
+    mutationFn: async () => {
+      if (!form.email || !form.profile_id) {
+        throw new Error('Email e perfil são obrigatórios');
+      }
 
-       const inviteResponse = await base44.functions.invoke('inviteUser', { 
-         email: form.email, 
-         profile_id: form.profile_id, 
-         full_name: form.full_name,
-         units: form.units
-       });
-       if (inviteResponse.data?.error) throw new Error(inviteResponse.data.error);
+      const response = await base44.functions.invoke('inviteUser', {
+        email: form.email,
+        full_name: form.full_name,
+        profile_id: form.profile_id,
+        units: form.units
+      });
 
-       return inviteResponse.data;
-     },
-     onSuccess: () => {
-       toast.success('Convite enviado com sucesso!');
-       setInviteOpen(false);
-       setForm({ email: '', full_name: '', profile_id: '', units: [] });
-       queryClient.invalidateQueries({ queryKey: ['users'] });
-     },
-     onError: (err) => {
-       toast.error(err.message || 'Erro ao enviar convite');
-     }
-   });
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Usuário criado com sucesso!');
+      setInviteOpen(false);
+      setForm({ email: '', full_name: '', profile_id: '', units: [] });
+      // Refetch users immediately
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (err) => {
+      toast.error(err.message || 'Erro ao criar usuário');
+    }
+  });
 
   const updateUserMut = useMutation({
     mutationFn: async ({ userId, data }) => {
-      try {
-        const response = await base44.functions.invoke('updateUser', { userId, data });
-        if (response.data?.error) throw new Error(response.data.error);
-        return response.data;
-      } catch (err) {
-        console.error('Update error:', err);
-        throw err;
+      const response = await base44.functions.invoke('updateUser', { userId, data });
+      if (response.data?.error) {
+        throw new Error(response.data.error);
       }
+      return response.data;
     },
     onSuccess: () => {
       toast.success('Usuário atualizado com sucesso!');
@@ -83,21 +86,20 @@ export default function UserManagement() {
       queryClient.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (err) => {
-      console.error('Mutation error:', err);
       toast.error(err?.message || 'Erro ao atualizar usuário');
     }
   });
 
   const deleteUserMut = useMutation({
     mutationFn: async (userId) => {
-      try {
-        const response = await base44.functions.invoke('updateUser', { userId, data: { deleted: true } });
-        if (response.data?.error) throw new Error(response.data.error);
-        return response.data;
-      } catch (err) {
-        console.error('Delete error:', err);
-        throw err;
+      const response = await base44.functions.invoke('updateUser', {
+        userId,
+        data: { deleted: true }
+      });
+      if (response.data?.error) {
+        throw new Error(response.data.error);
       }
+      return response.data;
     },
     onSuccess: () => {
       toast.success('Usuário deletado com sucesso!');
@@ -115,9 +117,9 @@ export default function UserManagement() {
 
   const handleEditClick = (user) => {
     setEditingUserId(user.id);
-    setForm({ 
-      email: user.email, 
-      full_name: user.full_name || '', 
+    setForm({
+      email: user.email,
+      full_name: user.full_name || '',
       profile_id: user.profile_id || '',
       units: user.units || []
     });
@@ -125,22 +127,22 @@ export default function UserManagement() {
 
   const handleSaveEdit = () => {
     const isCurrent = isCurrentUserRow(editingUserId);
-    
+
     if (isCurrent && !form.full_name) {
       toast.error('Preencha o nome');
       return;
     }
-    if (!isCurrent && !form.full_name && !form.profile_id) {
+    if (!isCurrent && !form.full_name && !form.profile_id && form.units.length === 0) {
       toast.error('Preencha ao menos um campo');
       return;
     }
-    
-    const updateData = {};
-     if (form.full_name) updateData.full_name = form.full_name;
-     if (form.profile_id) updateData.profile_id = form.profile_id;
-     if (form.units.length > 0) updateData.units = form.units;
 
-     updateUserMut.mutate({ userId: editingUserId, data: updateData });
+    const updateData = {};
+    if (form.full_name) updateData.full_name = form.full_name;
+    if (form.profile_id) updateData.profile_id = form.profile_id;
+    if (form.units.length >= 0) updateData.units = form.units;
+
+    updateUserMut.mutate({ userId: editingUserId, data: updateData });
   };
 
   const toggleUnit = (id) => {
@@ -158,10 +160,6 @@ export default function UserManagement() {
   };
 
   const isCurrentUserRow = (userId) => currentUser?.id === userId;
-  const getProfileLabel = (profileId) => {
-    const profile = profiles.find(p => p.id === profileId);
-    return profile?.name || 'Sem perfil';
-  };
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
@@ -169,7 +167,14 @@ export default function UserManagement() {
         title="Usuários"
         description="Gerencie os usuários e seus acessos ao sistema."
         actions={
-          <Button onClick={() => { setEditingUserId(null); setForm({ email: '', full_name: '', profile_id: '', units: [] }); setInviteOpen(true); }} className="gap-2 bg-red-500 hover:bg-red-600">
+          <Button
+            onClick={() => {
+              setEditingUserId(null);
+              setForm({ email: '', full_name: '', profile_id: '', units: [] });
+              setInviteOpen(true);
+            }}
+            className="gap-2 bg-red-500 hover:bg-red-600"
+          >
             <Plus className="w-4 h-4" /> Incluir Usuário
           </Button>
         }
@@ -193,9 +198,9 @@ export default function UserManagement() {
           <tbody className="divide-y divide-gray-50">
             {users.map(u => {
               const profile = profiles.find(p => p.id === u.profile_id);
-              const unitCount = u.units?.length || 0;
+              const clientCount = u.units?.length || 0;
               const isCurrent = isCurrentUserRow(u.id);
-              
+
               return (
                 <tr key={u.id} className={isCurrent ? 'bg-amber-50' : ''}>
                   <td className="py-3 px-6 text-gray-900 font-medium">{u.full_name || u.email}</td>
@@ -213,7 +218,7 @@ export default function UserManagement() {
                       <span className="text-gray-400">—</span>
                     )}
                   </td>
-                  <td className="py-3 px-6 text-gray-600">{unitCount === 0 ? 'Todos' : `${unitCount} cliente${unitCount > 1 ? '(s)' : ''}`}</td>
+                  <td className="py-3 px-6 text-gray-600">{clientCount === 0 ? 'Todos' : `${clientCount} cliente${clientCount > 1 ? '(s)' : ''}`}</td>
                   <td className="py-3 px-6">
                     <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${u.status === 'ativo' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
                       {u.status === 'ativo' ? 'Ativo' : 'Inativo'}
@@ -221,29 +226,29 @@ export default function UserManagement() {
                   </td>
                   <td className="py-3 px-6 text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <button 
+                      <button
                         onClick={() => handleEditClick(u)}
-                        className={`p-1 rounded ${isCurrent ? 'hover:bg-amber-100' : 'hover:bg-gray-100'}`} 
+                        className={`p-1 rounded ${isCurrent ? 'hover:bg-amber-100' : 'hover:bg-gray-100'}`}
                         title="Editar"
                       >
                         <Pencil className={`w-3.5 h-3.5 ${isCurrent ? 'text-amber-600' : 'text-gray-400'}`} />
                       </button>
-                      <button 
-                        onClick={() => toggleUserStatus(u)} 
+                      <button
+                        onClick={() => toggleUserStatus(u)}
                         disabled={isCurrent}
-                        className={`p-1 rounded ${isCurrent ? 'opacity-50 cursor-not-allowed' : u.status === 'ativo' ? 'hover:bg-emerald-50' : 'hover:bg-gray-100'}`} 
+                        className={`p-1 rounded ${isCurrent ? 'opacity-50 cursor-not-allowed' : u.status === 'ativo' ? 'hover:bg-emerald-50' : 'hover:bg-gray-100'}`}
                         title={isCurrent ? 'Não pode desativar sua própria conta' : u.status === 'ativo' ? 'Desativar' : 'Ativar'}
                       >
                         <UserCheck className={`w-3.5 h-3.5 ${isCurrent ? 'text-gray-300' : u.status === 'ativo' ? 'text-emerald-600' : 'text-gray-400'}`} />
                       </button>
-                      <button 
+                      <button
                         onClick={() => {
                           if (window.confirm('Tem certeza que deseja deletar este usuário?')) {
                             deleteUserMut.mutate(u.id);
                           }
                         }}
                         disabled={isCurrent}
-                        className={`p-1 rounded ${isCurrent ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50'}`} 
+                        className={`p-1 rounded ${isCurrent ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50'}`}
                         title={isCurrent ? 'Não pode deletar sua própria conta' : 'Deletar'}
                       >
                         <Trash2 className={`w-3.5 h-3.5 ${isCurrent ? 'text-gray-300' : 'text-red-400'}`} />
@@ -276,13 +281,18 @@ export default function UserManagement() {
             </div>
             <div>
               <Label className="text-xs">Nome</Label>
-              <Input value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} placeholder="João da Silva" className="mt-1" />
+              <Input
+                value={form.full_name}
+                onChange={e => setForm({ ...form, full_name: e.target.value })}
+                placeholder="João da Silva"
+                className="mt-1"
+              />
             </div>
             {!isCurrentUserRow(editingUserId) && (
               <>
                 <div>
                   <Label className="text-xs">Perfil de Acesso</Label>
-                  <Select value={form.profile_id} onValueChange={v => setForm({...form, profile_id: v})}>
+                  <Select value={form.profile_id} onValueChange={v => setForm({ ...form, profile_id: v })}>
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Selecione o perfil" />
                     </SelectTrigger>
@@ -299,24 +309,24 @@ export default function UserManagement() {
                   </Select>
                 </div>
                 <div>
-                    <Label className="text-xs">Clientes com Acesso</Label>
-                    <div className="mt-1 border border-gray-200 rounded-lg overflow-hidden">
-                      <label className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100">
-                        <Checkbox checked={form.units.length === clients.length && clients.length > 0} onCheckedChange={toggleAllUnits} />
-                        <span className="text-xs font-medium text-gray-700">Todos os clientes</span>
-                      </label>
-                      <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
-                        {clients.map(c => (
-                          <label key={c.id} className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-gray-50">
-                            <Checkbox checked={form.units.includes(c.id)} onCheckedChange={() => toggleUnit(c.id)} />
-                            <Building2 className="w-3 h-3 text-gray-400" />
-                            <span className="text-xs text-gray-700">{c.clinic_name}</span>
-                          </label>
-                        ))}
-                      </div>
+                  <Label className="text-xs">Clientes com Acesso</Label>
+                  <div className="mt-1 border border-gray-200 rounded-lg overflow-hidden">
+                    <label className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100">
+                      <Checkbox checked={form.units.length === clients.length && clients.length > 0} onCheckedChange={toggleAllUnits} />
+                      <span className="text-xs font-medium text-gray-700">Todos os clientes</span>
+                    </label>
+                    <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
+                      {clients.map(c => (
+                        <label key={c.id} className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-gray-50">
+                          <Checkbox checked={form.units.includes(c.id)} onCheckedChange={() => toggleUnit(c.id)} />
+                          <Building2 className="w-3 h-3 text-gray-400" />
+                          <span className="text-xs text-gray-700">{c.clinic_name}</span>
+                        </label>
+                      ))}
                     </div>
-                    {form.units.length > 0 && <p className="text-[10px] text-gray-400 mt-1">{form.units.length} cliente(s) selecionado(s)</p>}
                   </div>
+                  {form.units.length > 0 && <p className="text-[10px] text-gray-400 mt-1">{form.units.length} cliente(s) selecionado(s)</p>}
+                </div>
               </>
             )}
             <div className="flex gap-2 justify-end">
@@ -338,15 +348,26 @@ export default function UserManagement() {
           <div className="space-y-4 mt-4">
             <div>
               <Label className="text-xs">E-mail *</Label>
-              <Input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="usuario@exemplo.com" className="mt-1" />
+              <Input
+                type="email"
+                value={form.email}
+                onChange={e => setForm({ ...form, email: e.target.value })}
+                placeholder="usuario@exemplo.com"
+                className="mt-1"
+              />
             </div>
             <div>
               <Label className="text-xs">Nome</Label>
-              <Input value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} placeholder="João da Silva" className="mt-1" />
+              <Input
+                value={form.full_name}
+                onChange={e => setForm({ ...form, full_name: e.target.value })}
+                placeholder="João da Silva"
+                className="mt-1"
+              />
             </div>
             <div>
               <Label className="text-xs">Perfil de Acesso *</Label>
-              <Select value={form.profile_id} onValueChange={v => setForm({...form, profile_id: v})}>
+              <Select value={form.profile_id} onValueChange={v => setForm({ ...form, profile_id: v })}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Selecione o perfil" />
                 </SelectTrigger>
@@ -386,8 +407,12 @@ export default function UserManagement() {
                 <span className="font-medium">📧 Convite por e-mail:</span> O usuário receberá um convite no e-mail informado.
               </p>
             </div>
-            <Button onClick={() => inviteMut.mutate()} className="w-full bg-red-500 hover:bg-red-600" disabled={!form.email || !form.profile_id || inviteMut.isPending}>
-              {inviteMut.isPending ? 'Enviando...' : 'Enviar Convite'}
+            <Button
+              onClick={() => inviteMut.mutate()}
+              className="w-full bg-red-500 hover:bg-red-600"
+              disabled={!form.email || !form.profile_id || inviteMut.isPending}
+            >
+              {inviteMut.isPending ? 'Criando usuário...' : 'Criar Usuário'}
             </Button>
           </div>
         </DialogContent>
