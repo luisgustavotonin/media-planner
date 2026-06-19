@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../components/hooks/useAuth';
-import { usePermissions } from '../components/hooks/usePermissions';
 import { calculateConsolidated } from '../components/hooks/usePlanCalculations';
 import PageHeader from '../components/ui-custom/PageHeader';
 import StatCard from '../components/ui-custom/StatCard';
@@ -33,10 +32,9 @@ export default function PlanDetail() {
   const params = new URLSearchParams(window.location.search);
   const planId = params.get('id');
   const { user } = useAuth();
-  const perms = usePermissions(user);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const readOnly = perms.canViewOnly;
+  const readOnly = false;
 
   const { data: plan, isLoading } = useQuery({
     queryKey: ['plan', planId],

@@ -1,7 +1,6 @@
 import React from 'react';
-import { withProtectedPage } from '@/components/ProtectedPage';
 
-function Dashboard() {
+export default function Dashboard() {
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
       <div className="mb-8">
@@ -11,5 +10,3 @@ function Dashboard() {
     </div>
   );
 }
-
-export default withProtectedPage(Dashboard, 'visualizar_dashboard');
