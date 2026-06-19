@@ -1,20 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../components/hooks/useAuth';
 import { calculateScenarios } from '../components/hooks/usePlanCalculations';
 import PageHeader from '../components/ui-custom/PageHeader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { TrendingUp, TrendingDown, Minus, SlidersHorizontal, ChevronDown, ChevronUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
 export default function Scenarios() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState('');
+  const [showAdj, setShowAdj] = useState(false);
+  const [adjForm, setAdjForm] = useState(null);
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
@@ -35,9 +40,32 @@ export default function Scenarios() {
   const clientPlans = myPlans.filter(p => p.client_id === selectedClientId);
   const plan = myPlans.find(p => p.id === selectedPlanId);
 
+  useEffect(() => { setSelectedPlanId(''); }, [selectedClientId]);
+
+  // Sync adjForm when plan changes
   useEffect(() => {
-    setSelectedPlanId('');
-  }, [selectedClientId]);
+    if (plan) {
+      setAdjForm({
+        optimistic_cpl_adj: (plan.scenario_adjustments?.optimistic_cpl_adj ?? -0.20) * 100,
+        conservative_cpl_adj: (plan.scenario_adjustments?.conservative_cpl_adj ?? 0.25) * 100,
+        optimistic_conv_adj: (plan.scenario_adjustments?.optimistic_conv_adj ?? 0.05) * 100,
+        conservative_conv_adj: (plan.scenario_adjustments?.conservative_conv_adj ?? -0.05) * 100,
+      });
+    }
+  }, [selectedPlanId]);
+
+  const saveAdjMut = useMutation({
+    mutationFn: (data) => base44.entities.MediaPlan.update(plan.id, { scenario_adjustments: data }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plans'] }),
+  });
+
+  // Usa adjForm (local) para preview em tempo real
+  const liveAdjustments = adjForm ? {
+    optimistic_cpl_adj: adjForm.optimistic_cpl_adj / 100,
+    conservative_cpl_adj: adjForm.conservative_cpl_adj / 100,
+    optimistic_conv_adj: adjForm.optimistic_conv_adj / 100,
+    conservative_conv_adj: adjForm.conservative_conv_adj / 100,
+  } : plan?.scenario_adjustments;
 
   let scenarios = null;
   if (plan && plan.channels?.length > 0) {
@@ -48,7 +76,7 @@ export default function Scenarios() {
           plan.appointment_to_show_rate || 0.7,
           plan.show_to_sale_rate || 0.35,
         ];
-    scenarios = calculateScenarios(plan.channels, rates, plan.average_ticket || 5000, plan.scenario_adjustments);
+    scenarios = calculateScenarios(plan.channels, rates, plan.average_ticket || 5000, liveAdjustments);
   }
 
   const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
@@ -114,6 +142,98 @@ export default function Scenarios() {
           </div>
         )}
       </div>
+
+      {plan && adjForm && (
+        <div className="bg-white rounded-xl border border-gray-100 mb-6 overflow-hidden">
+          <button
+            onClick={() => setShowAdj(v => !v)}
+            className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="w-4 h-4 text-gray-400" />
+              <span className="text-sm font-semibold text-gray-900">Premissas dos Cenários</span>
+              <span className="text-xs text-gray-400 ml-1">
+                Otimista: CPL {adjForm.optimistic_cpl_adj > 0 ? '+' : ''}{adjForm.optimistic_cpl_adj.toFixed(0)}% / Conv. +{adjForm.optimistic_conv_adj.toFixed(0)}p.p. &nbsp;·&nbsp;
+                Conservador: CPL +{adjForm.conservative_cpl_adj.toFixed(0)}% / Conv. {adjForm.conservative_conv_adj.toFixed(0)}p.p.
+              </span>
+            </div>
+            {showAdj ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+          </button>
+
+          {showAdj && (
+            <div className="px-6 pb-6 border-t border-gray-50">
+              <p className="text-xs text-gray-400 mt-4 mb-4">
+                O <strong>Realista</strong> é o plano atual sem alterações. Os demais cenários aplicam ajustes sobre o CPL e as taxas de conversão:
+              </p>
+              <div className="grid grid-cols-2 gap-6">
+                {/* Otimista */}
+                <div className="space-y-3">
+                  <h5 className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Otimista</h5>
+                  <div>
+                    <Label className="text-xs text-gray-500">Variação do CPL (%)</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        type="number"
+                        value={adjForm.optimistic_cpl_adj}
+                        onChange={e => setAdjForm(f => ({ ...f, optimistic_cpl_adj: parseFloat(e.target.value) || 0 }))}
+                        className="h-8 text-sm w-28"
+                      />
+                      <span className="text-xs text-gray-400">% no CPL (negativo = mais barato)</span>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Variação nas Conversões (p.p.)</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        type="number"
+                        value={adjForm.optimistic_conv_adj}
+                        onChange={e => setAdjForm(f => ({ ...f, optimistic_conv_adj: parseFloat(e.target.value) || 0 }))}
+                        className="h-8 text-sm w-28"
+                      />
+                      <span className="text-xs text-gray-400">p.p. nas taxas</span>
+                    </div>
+                  </div>
+                </div>
+                {/* Conservador */}
+                <div className="space-y-3">
+                  <h5 className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Conservador</h5>
+                  <div>
+                    <Label className="text-xs text-gray-500">Variação do CPL (%)</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        type="number"
+                        value={adjForm.conservative_cpl_adj}
+                        onChange={e => setAdjForm(f => ({ ...f, conservative_cpl_adj: parseFloat(e.target.value) || 0 }))}
+                        className="h-8 text-sm w-28"
+                      />
+                      <span className="text-xs text-gray-400">% no CPL (positivo = mais caro)</span>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Variação nas Conversões (p.p.)</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        type="number"
+                        value={adjForm.conservative_conv_adj}
+                        onChange={e => setAdjForm(f => ({ ...f, conservative_conv_adj: parseFloat(e.target.value) || 0 }))}
+                        className="h-8 text-sm w-28"
+                      />
+                      <span className="text-xs text-gray-400">p.p. nas taxas (negativo = pior)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <Button
+                onClick={() => saveAdjMut.mutate(liveAdjustments)}
+                disabled={saveAdjMut.isPending}
+                className="mt-5 h-8 text-xs bg-blue-600 hover:bg-blue-700"
+              >
+                {saveAdjMut.isPending ? 'Salvando...' : 'Salvar premissas'}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {scenarios && (
         <>
