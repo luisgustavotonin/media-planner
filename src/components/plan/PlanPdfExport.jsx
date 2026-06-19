@@ -151,18 +151,16 @@ function drawTable(doc, { startY, headers, rows, colWidths, pageW, marginL = 14,
   return y;
 }
 
-// ── Gráfico funil visual (barras decrescentes centradas) ──────────────────────
+// ── Gráfico funil vertical (barras verticais decrescentes, estilo UI) ─────────
 function drawFunnelChart(doc, { x, y, w, h, stages, values, pageW, marginL }) {
   if (!stages || stages.length === 0) return y;
 
   const maxVal = Math.max(...values, 1);
-  const barH = Math.min(18, (h - 12) / stages.length - 3);
-  const labelW = 48;
-  const barAreaW = w - labelW - 30;
-  const valueW = 30;
+  const chartH = 52; // altura da área de barras
+  const footerH = 16; // área das taxas de conversão abaixo
   let cy = y;
 
-  // Título seção
+  // Título
   doc.setFontSize(9);
   doc.setFont(undefined, 'bold');
   doc.setTextColor(...C.marrom);
@@ -173,58 +171,85 @@ function drawFunnelChart(doc, { x, y, w, h, stages, values, pageW, marginL }) {
   doc.setLineWidth(0.2);
   cy += 7;
 
+  const n = stages.length;
+  const gap = 3;
+  const totalGap = gap * (n - 1);
+  const barW = (w - totalGap) / n;
+
+  // Cores degradê de azul-violeta (igual ao UI: azul → roxo)
   const STAGE_COLORS = [
-    [248, 93, 7],   // laranja
-    [200, 75, 5],
-    [160, 60, 4],
-    [120, 45, 3],
-    [80,  30, 2],
-    [50,  18, 1],
+    [101, 116, 205],  // azul-violeta (Lead)
+    [120, 100, 195],  // violeta médio
+    [145,  90, 185],  // violeta
+    [165,  80, 175],  // violeta-roxo (Venda)
+    [100, 110, 200],
+    [130,  95, 190],
   ];
+
+  // Eixo Y — linhas de grade leves
+  const gridLines = [0, 0.25, 0.5, 0.75, 1.0];
+  gridLines.forEach(pct => {
+    const gy = cy + chartH * (1 - pct);
+    doc.setDrawColor(220, 217, 210);
+    doc.setLineWidth(0.15);
+    doc.line(x, gy, x + w, gy);
+    if (pct > 0) {
+      doc.setFontSize(5.5);
+      doc.setFont(undefined, 'normal');
+      doc.setTextColor(...C.savana);
+      doc.text(Math.round(maxVal * pct).toLocaleString('pt-BR'), x - 1, gy + 1.5, { align: 'right' });
+    }
+  });
+  doc.setLineWidth(0.2);
 
   stages.forEach((stage, i) => {
     const val = values[i] || 0;
     const pct = val / maxVal;
-    // Barra trapezóide: cada nível fica ligeiramente menor
-    const bw = Math.max(10, barAreaW * pct);
-    const bx = x + labelW + (barAreaW - bw) / 2; // centralizado
-
+    const bh = Math.max(2, chartH * pct);
+    const bx = x + i * (barW + gap);
+    const by = cy + chartH - bh;
     const color = STAGE_COLORS[Math.min(i, STAGE_COLORS.length - 1)];
-    doc.setFillColor(...color);
-    doc.roundedRect(bx, cy, bw, barH - 2, 1.5, 1.5, 'F');
 
-    // Label etapa
+    doc.setFillColor(...color);
+    doc.roundedRect(bx, by, barW, bh, 1, 1, 'F');
+
+    // Valor acima da barra
     doc.setFontSize(7);
     doc.setFont(undefined, 'bold');
     doc.setTextColor(...C.marrom);
-    doc.text(safe(abbrevStage(stage)), x + labelW - 3, cy + barH / 2 + 0.5, { align: 'right' });
+    doc.text(fmtN(val), bx + barW / 2, by - 2, { align: 'center' });
 
-    // Valor dentro/fora da barra
-    doc.setFontSize(8);
-    doc.setFont(undefined, 'bold');
-    if (bw > 20) {
-      doc.setTextColor(...C.branco);
-      doc.text(fmtN(val), bx + bw / 2, cy + barH / 2 + 1, { align: 'center' });
-    } else {
-      doc.setTextColor(...C.marrom);
-      doc.text(fmtN(val), bx + bw + 4, cy + barH / 2 + 1, { align: 'left' });
-    }
-
-    // Taxa de conversão entre etapas
-    if (i < stages.length - 1) {
-      const nextVal = values[i + 1] || 0;
-      const rate = val > 0 ? ((nextVal / val) * 100).toFixed(0) + '%' : '-';
-      doc.setFontSize(6.5);
-      doc.setFont(undefined, 'normal');
-      doc.setTextColor(...C.savana);
-      const arrowX = x + labelW + barAreaW + 4;
-      doc.text(safe('> ' + rate), arrowX, cy + barH / 2 + 1);
-    }
-
-    cy += barH + 2;
+    // Label da etapa abaixo do chart
+    doc.setFontSize(6.5);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(...C.marrom);
+    const label = safe(stage);
+    doc.text(label, bx + barW / 2, cy + chartH + 5, { align: 'center' });
   });
 
-  return cy + 4;
+  // Taxas de conversão entre etapas (rodapé)
+  const rateY = cy + chartH + 11;
+  doc.setFontSize(6);
+  doc.setFont(undefined, 'normal');
+  const convParts = [];
+  stages.forEach((stage, i) => {
+    if (i < stages.length - 1) {
+      const val = values[i] || 0;
+      const nextVal = values[i + 1] || 0;
+      const rate = val > 0 ? ((nextVal / val) * 100).toFixed(1) + '%' : '-';
+      convParts.push(`${safe(stage)} > ${safe(stages[i + 1])}  ${rate}`);
+    }
+  });
+  // Centralizar todas as taxas numa linha
+  const fullText = convParts.join('    ');
+  doc.setTextColor(...C.savana);
+  // Quebra em linhas se necessário
+  const splitText = doc.splitTextToSize(fullText, w);
+  splitText.forEach((line, li) => {
+    doc.text(line, x + w / 2, rateY + li * 5, { align: 'center' });
+  });
+
+  return rateY + (splitText.length * 5) + 4;
 }
 
 // ── Alocação canais (barras horizontais proporcionais) ────────────────────────
@@ -600,14 +625,6 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
   ]);
 
   drawTable(doc, { startY: y, headers: tableHeaders, rows: tableRows, colWidths, pageW, marginL });
-
-  // ═══════════════════════════════════════════════
-  // PÁGINA 2+ — Estrutura Meta em cascata
-  // ═══════════════════════════════════════════════
-  const metaChannels = (localPlan.channels || []).filter(c => c.channel_name === 'Meta' && (c.strategies || []).length > 0);
-  for (const metaCh of metaChannels) {
-    drawMetaPage(doc, { metaCh, titulo, pageW, pageH, marginL });
-  }
 
   // ── Footer em todas as páginas ─────────────────
   const pageCount = doc.internal.getNumberOfPages();
