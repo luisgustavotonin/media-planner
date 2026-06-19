@@ -231,8 +231,9 @@ export default function PlanDetail() {
               { label: 'CPL Google', bmVal: benchmark.google_default_cpl, planVal: channels.find(c => c.channel_name === 'Google')?.expected_cpl, fmt: v => `R$${v}` },
             ].map((item, i) => {
               if (!item.bmVal) return null;
-              const delta = item.planVal && item.bmVal ? ((item.planVal - item.bmVal) / item.bmVal) * 100 : null;
-              const isGood = delta !== null && (i < 3 ? delta > 0 : delta < 0); // taxas: maior é melhor; CPL: menor é melhor
+              const delta = item.planVal != null && item.bmVal ? ((item.planVal - item.bmVal) / item.bmVal) * 100 : null;
+              const hasSignificantDelta = delta !== null && Math.abs(delta) >= 0.5;
+              const isGood = hasSignificantDelta && (i < 3 ? delta > 0 : delta < 0);
               return (
                 <div key={i} className="bg-white rounded-lg p-3 border border-amber-100">
                   <p className="text-gray-400 mb-1">{item.label}</p>
@@ -240,10 +241,13 @@ export default function PlanDetail() {
                   {item.planVal != null && item.planVal !== 0 && (
                     <>
                       <p className="text-gray-500">Plano: {item.fmt(item.planVal)}</p>
-                      {delta !== null && (
+                      {hasSignificantDelta && (
                         <p className={`font-semibold mt-1 ${isGood ? 'text-emerald-600' : 'text-red-500'}`}>
                           {delta > 0 ? '+' : ''}{delta.toFixed(1)}%
                         </p>
+                      )}
+                      {!hasSignificantDelta && delta !== null && (
+                        <p className="font-semibold mt-1 text-gray-400">Na meta</p>
                       )}
                     </>
                   )}
