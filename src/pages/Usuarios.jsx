@@ -86,8 +86,7 @@ export default function UsuariosPage() {
 
   const excluirUsuarioMutation = useMutation({
     mutationFn: async (userId) => {
-      const vinculosUsuario = vinculos.filter(v => v.user_id === userId);
-      for (const v of vinculosUsuario) await base44.entities.UserClient.delete(v.id);
+      await base44.functions.invoke('deleteUser', { userId });
       toast.success('Usuário excluído!');
     },
     onSuccess: () => queryClient.invalidateQueries(['user-client'])
