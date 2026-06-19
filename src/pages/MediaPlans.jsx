@@ -17,7 +17,7 @@ const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov'
 // Especialidades agora vêm dos benchmarks cadastrados (carregados abaixo)
 const STATUS_LABELS = { active: 'ativo', draft: 'rascunho', completed: 'concluído' };
 
-const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
 export default function MediaPlans() {
   const { user } = useAuth();
@@ -25,7 +25,7 @@ export default function MediaPlans() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState('all');
+  const [selectedPlanId, setSelectedPlanId] = useState('');
 
   const { data: plans = [], isLoading } = useQuery({
     queryKey: ['plans'],
@@ -100,13 +100,8 @@ export default function MediaPlans() {
     plans.filter(p => p.created_by === user?.email);
 
   const myClients = user?.role === 'admin' ? clients : clients.filter(c => c.created_by === user?.email);
-  const filtered = selectedClientId
-    ? myPlans.filter(p => {
-        if (p.client_id !== selectedClientId) return false;
-        if (selectedMonth !== 'all' && String(p.period_month) !== selectedMonth) return false;
-        return true;
-      })
-    : [];
+  const clientPlans = myPlans.filter(p => p.client_id === selectedClientId);
+  const selectedPlan = myPlans.find(p => p.id === selectedPlanId);
 
   // Segmentos baseados nos benchmarks cadastrados
   const ESPECIALIDADES = benchmarks.map(b => ({
@@ -126,11 +121,12 @@ export default function MediaPlans() {
         )}
       />
 
-      <div className="mb-6 bg-white rounded-xl border border-gray-100 p-5 space-y-4 max-w-md">
-        <div>
-          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">1. Selecione o Cliente</p>
-          <Select value={selectedClientId} onValueChange={v => { setSelectedClientId(v); setSelectedMonth('all'); }}>
-            <SelectTrigger className="bg-white">
+      <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
+        {/* Passo 1: Cliente */}
+        <div className="mb-5">
+          <Label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">1. Selecione o Cliente</Label>
+          <Select value={selectedClientId} onValueChange={v => { setSelectedClientId(v); setSelectedPlanId(''); }}>
+            <SelectTrigger className="mt-2 max-w-sm">
               <SelectValue placeholder="Selecione um cliente..." />
             </SelectTrigger>
             <SelectContent>
@@ -138,63 +134,56 @@ export default function MediaPlans() {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Passo 2: Plano */}
         {selectedClientId && (
-          <div>
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">2. Selecione o Mês</p>
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="bg-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os meses</SelectItem>
-                {MESES_FULL.map((m, i) => (
-                  <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="mb-5">
+            <Label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">2. Selecione o Plano de Mídia</Label>
+            {clientPlans.length === 0 ? (
+              <p className="text-sm text-gray-400 mt-2">Este cliente não possui planos de mídia cadastrados.</p>
+            ) : (
+              <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+                <SelectTrigger className="mt-2 max-w-sm">
+                  <SelectValue placeholder="Selecione um plano..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {clientPlans.map(p => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {MESES_SHORT[(p.period_month || 1) - 1]}/{p.period_year} — {p.status === 'active' ? 'Ativo' : p.status === 'draft' ? 'Rascunho' : 'Concluído'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         )}
       </div>
 
-      {!selectedClientId ? (
-        <EmptyState icon={Search} title="Selecione um cliente" description="Escolha um cliente acima para visualizar os planos de mídia dele." />
-      ) : filtered.length === 0 ? (
-        <EmptyState icon={BarChart3} title="Nenhum plano de mídia" description="Este cliente ainda não possui planos. Crie o primeiro para começar." />
-      ) : (
-        <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50">
-          {filtered.map(plan => (
-            <div key={plan.id} className="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors group">
-              <Link to={createPageUrl(`PlanDetail?id=${plan.id}`)} className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
-                  <Target className="w-4 h-4 text-blue-500" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{plan.client_name || 'Sem nome'}</p>
-                  <p className="text-xs text-gray-400">
-                    {MESES[(plan.period_month || 1) - 1]} {plan.period_year} · {ESPECIALIDADES.find(e => e.value === plan.segment)?.label || 'Geral'} · {plan.channels?.length || 0} canais
-                  </p>
-                </div>
-              </Link>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-900">R${(plan.total_investment || 0).toLocaleString('pt-BR')}</p>
-                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                    plan.status === 'active' ? 'bg-emerald-50 text-emerald-700' :
-                    plan.status === 'completed' ? 'bg-gray-100 text-gray-600' :
-                    'bg-amber-50 text-amber-700'
-                  }`}>
-                    {STATUS_LABELS[plan.status] || 'rascunho'}
-                  </span>
-                </div>
-                {!isClientRole && (
-                  <button onClick={(e) => { e.stopPropagation(); deleteMut.mutate(plan.id); }}
-                    className="p-1.5 rounded-md hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                  </button>
-                )}
+      {selectedPlan && (
+        <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
+          <Link to={createPageUrl(`PlanDetail?id=${selectedPlan.id}`)} className="flex items-center justify-between hover:opacity-75 transition-opacity">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center">
+                <Target className="w-5 h-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">{selectedPlan.client_name || 'Sem nome'}</p>
+                <p className="text-xs text-gray-400">
+                  {MESES_SHORT[(selectedPlan.period_month || 1) - 1]}/{selectedPlan.period_year} · {ESPECIALIDADES.find(e => e.value === selectedPlan.segment)?.label || 'Geral'} · {selectedPlan.channels?.length || 0} canais
+                </p>
               </div>
             </div>
-          ))}
+            <div className="text-right">
+              <p className="text-lg font-semibold text-gray-900">R${(selectedPlan.total_investment || 0).toLocaleString('pt-BR')}</p>
+              <span className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full inline-block mt-1 ${
+                selectedPlan.status === 'active' ? 'bg-emerald-50 text-emerald-700' :
+                selectedPlan.status === 'completed' ? 'bg-gray-100 text-gray-600' :
+                'bg-amber-50 text-amber-700'
+              }`}>
+                {STATUS_LABELS[selectedPlan.status] || 'rascunho'}
+              </span>
+            </div>
+          </Link>
         </div>
       )}
 
