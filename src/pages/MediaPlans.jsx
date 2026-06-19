@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../components/hooks/useAuth';
@@ -105,6 +105,13 @@ export default function MediaPlans() {
     value: b.segment,
     label: b.segment_label || b.segment,
   }));
+
+  // Auto-seleciona primeiro cliente se não há seleção
+  useEffect(() => {
+    if (!selectedClientId && allClients.length > 0) {
+      setSelectedClientId(allClients[0].id);
+    }
+  }, [allClients]);
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
