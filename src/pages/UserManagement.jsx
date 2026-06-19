@@ -44,15 +44,36 @@ export default function UserManagement() {
     mutationFn: async () => {
       if (!form.email || !form.profile_id) throw new Error('Email e perfil são obrigatórios');
       
-      // Chamada via backend function que gerencia todo o processo
-      const response = await base44.functions.invoke('inviteUser', { 
-        email: form.email,
-        full_name: form.full_name,
-        profile_id: form.profile_id
-      });
+      // Determina role baseado no profile
+      const profile = profiles.find(p => p.id === form.profile_id);
+      if (!profile) throw new Error('Perfil inválido');
       
-      if (response.data?.error) throw new Error(response.data.error);
-      return response.data;
+      let role = 'consultant';
+      if (profile.level === 1) role = 'admin';
+      else if (profile.level >= 4) role = 'client';
+      
+      // Envia convite diretamente
+      await base44.users.inviteUser(form.email, role);
+      
+      // Aguarda a criação do usuário
+      let createdUser = null;
+      for (let i = 0; i < 10; i++) {
+        await new Promise(r => setTimeout(r, 300));
+        const users = await base44.asServiceRole.entities.User.filter({ email: form.email });
+        if (users?.length > 0) {
+          createdUser = users[0];
+          break;
+        }
+      }
+      
+      // Atualiza perfil e nome
+      if (createdUser) {
+        const updateData = { profile_id: form.profile_id };
+        if (form.full_name) updateData.full_name = form.full_name;
+        await base44.asServiceRole.entities.User.update(createdUser.id, updateData);
+      }
+      
+      return { success: true };
     },
     onSuccess: () => {
       toast.success('Convite enviado com sucesso!');
