@@ -309,6 +309,23 @@ export default function UserManagement() {
                   </Select>
                 </div>
                 <div>
+                  <Label className="text-xs">Status</Label>
+                  <Select value={users.find(u => u.id === editingUserId)?.status || 'ativo'} onValueChange={v => {
+                    const userData = users.find(u => u.id === editingUserId);
+                    if (userData) {
+                      updateUserMut.mutate({ userId: editingUserId, data: { status: v } });
+                    }
+                  }}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ativo">Ativo</SelectItem>
+                      <SelectItem value="inativo">Inativo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <Label className="text-xs">Clientes com Acesso</Label>
                   <div className="mt-1 border border-gray-200 rounded-lg overflow-hidden">
                     <label className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100">
