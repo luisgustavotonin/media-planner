@@ -7,18 +7,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Plus, Shield, UserCheck, Eye, Mail, Building2, Pencil, Trash2 } from 'lucide-react';
+import { Users, Plus, Shield, UserCheck, Mail, Building2, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const roleColors = { admin: 'bg-red-50 text-red-700 border-red-100', consultant: 'bg-blue-50 text-blue-700 border-blue-100', client: 'bg-gray-50 text-gray-600 border-gray-100' };
 const roleLabels = { admin: 'Admin', consultant: 'Consultor', client: 'Cliente' };
-const roleIcons = { admin: Shield, consultant: UserCheck, client: Eye };
+const roleIcons = { admin: Shield, consultant: UserCheck, client: Mail };
 
 export default function UserManagement() {
   const queryClient = useQueryClient();
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [form, setForm] = useState({ email: '', role: 'consultant', profile_id: '', units: [] });
+  const [form, setForm] = useState({ email: '', full_name: '', role: 'consultant', profile_id: '', units: [] });
 
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
@@ -42,7 +42,8 @@ export default function UserManagement() {
     mutationFn: async () => {
       if (!form.email || !form.profile_id) throw new Error('Email e perfil são obrigatórios');
       const response = await base44.functions.invoke('inviteUser', { 
-        email: form.email, 
+        email: form.email,
+        full_name: form.full_name,
         role: form.role,
         profile_id: form.profile_id
       });
@@ -51,7 +52,7 @@ export default function UserManagement() {
     onSuccess: () => {
       toast.success('Convite enviado com sucesso!');
       setInviteOpen(false);
-      setForm({ email: '', role: 'consultant', profile_id: '', units: [] });
+      setForm({ email: '', full_name: '', role: 'consultant', profile_id: '', units: [] });
       queryClient.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (err) => {
@@ -76,6 +77,11 @@ export default function UserManagement() {
     updateUserMut.mutate({ userId, data: { profile_id: profileId } });
   };
 
+  const toggleUserStatus = (user) => {
+    const newStatus = user.status === 'ativo' ? 'inativo' : 'ativo';
+    updateUserMut.mutate({ userId: user.id, data: { status: newStatus } });
+  };
+
   const toggleUnit = (id) => {
     setForm(f => {
       const units = f.units.includes(id) ? f.units.filter(u => u !== id) : [...f.units, id];
@@ -96,7 +102,7 @@ export default function UserManagement() {
         title="Usuários"
         description="Gerencie os usuários e seus acessos ao sistema."
         actions={
-          <Button onClick={() => { setForm({ email: '', role: 'consultant', profile_id: '', units: [] }); setInviteOpen(true); }} className="gap-2 bg-red-500 hover:bg-red-600">
+          <Button onClick={() => { setForm({ email: '', full_name: '', role: 'consultant', profile_id: '', units: [] }); setInviteOpen(true); }} className="gap-2 bg-red-500 hover:bg-red-600">
             <Plus className="w-4 h-4" /> Incluir Usuário
           </Button>
         }
@@ -136,15 +142,17 @@ export default function UserManagement() {
                   </td>
                   <td className="py-3 px-6 text-gray-600">{unitCount === 0 ? 'Todas' : `${unitCount} unidade${unitCount > 1 ? '(s)' : ''}`}</td>
                   <td className="py-3 px-6">
-                    <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">Ativo</span>
+                    <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${u.status === 'ativo' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {u.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                    </span>
                   </td>
                   <td className="py-3 px-6 text-center">
                     <div className="flex items-center justify-center gap-1">
                       <button className="p-1 hover:bg-gray-100 rounded" title="Editar">
                         <Pencil className="w-3.5 h-3.5 text-gray-400" />
                       </button>
-                      <button className="p-1 hover:bg-gray-100 rounded" title="Compartilhar">
-                        <Eye className="w-3.5 h-3.5 text-gray-400" />
+                      <button onClick={() => toggleUserStatus(u)} className={`p-1 rounded ${u.status === 'ativo' ? 'hover:bg-emerald-50' : 'hover:bg-gray-100'}`} title={u.status === 'ativo' ? 'Desativar' : 'Ativar'}>
+                        <UserCheck className={`w-3.5 h-3.5 ${u.status === 'ativo' ? 'text-emerald-600' : 'text-gray-400'}`} />
                       </button>
                       <button className="p-1 hover:bg-red-50 rounded" title="Remover">
                         <Trash2 className="w-3.5 h-3.5 text-red-400" />
@@ -175,6 +183,10 @@ export default function UserManagement() {
               <Input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="usuario@exemplo.com" className="mt-1" />
             </div>
             <div>
+              <Label className="text-xs">Nome</Label>
+              <Input value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} placeholder="João da Silva" className="mt-1" />
+            </div>
+            <div>
               <Label className="text-xs">Perfil de Acesso *</Label>
               <Select value={form.profile_id} onValueChange={v => {
                 const profile = profiles.find(p => p.id === v);
@@ -195,17 +207,6 @@ export default function UserManagement() {
                       </div>
                     </SelectItem>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs">Função no sistema</Label>
-              <Select value={form.role} onValueChange={v => setForm({...form, role: v})}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="consultant">Consultor</SelectItem>
-                  <SelectItem value="client">Cliente</SelectItem>
                 </SelectContent>
               </Select>
             </div>
