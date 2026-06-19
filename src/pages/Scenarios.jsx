@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../components/hooks/useAuth';
@@ -9,21 +9,36 @@ import { Label } from '@/components/ui/label';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
+const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
 export default function Scenarios() {
   const { user } = useAuth();
+  const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState('');
+
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients'],
+    queryFn: () => base44.entities.Client.list('-created_date'),
+  });
 
   const { data: plans = [] } = useQuery({
     queryKey: ['plans'],
     queryFn: () => base44.entities.MediaPlan.list('-created_date'),
   });
 
+  const myClients = user?.role === 'admin' ? clients : clients.filter(c => c.created_by === user?.email);
   const myPlans = user?.role === 'admin' ? plans : plans.filter(p => p.created_by === user?.email);
+
+  const clientPlans = myPlans.filter(p => p.client_id === selectedClientId);
   const plan = myPlans.find(p => p.id === selectedPlanId);
+
+  useEffect(() => {
+    setSelectedPlanId('');
+  }, [selectedClientId]);
 
   let scenarios = null;
   if (plan && plan.channels?.length > 0) {
-    const rates = plan.conversion_rates?.length
+    const rates = Array.isArray(plan.conversion_rates) && plan.conversion_rates.length
       ? plan.conversion_rates
       : [
           plan.lead_to_appointment_rate || 0.35,
@@ -53,14 +68,48 @@ export default function Scenarios() {
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
       <PageHeader title="Simulador de Cenários" description="Compare projeções otimista, realista e conservadora." />
 
-      <div className="mb-8">
-        <Label className="text-xs">Selecione o Plano de Mídia</Label>
-        <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
-          <SelectTrigger className="w-full max-w-md mt-1"><SelectValue placeholder="Escolha um plano..." /></SelectTrigger>
-          <SelectContent>
-            {myPlans.map(p => <SelectItem key={p.id} value={p.id}>{p.client_name} — {p.period_month}/{p.period_year}</SelectItem>)}
-          </SelectContent>
-        </Select>
+      <div className="bg-white rounded-xl border border-gray-100 p-6 mb-8">
+        {/* Passo 1: Cliente */}
+        <div className="mb-5">
+          <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">1. Selecione o Cliente</Label>
+          <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+            <SelectTrigger className="mt-2 max-w-sm">
+              <SelectValue placeholder="Selecione um cliente..." />
+            </SelectTrigger>
+            <SelectContent>
+              {myClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Passo 2: Plano */}
+        {selectedClientId && (
+          <div>
+            <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">2. Selecione o Plano de Mídia</Label>
+            {clientPlans.length === 0 ? (
+              <p className="text-sm text-gray-400 mt-2">Este cliente não possui planos de mídia cadastrados.</p>
+            ) : (
+              <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+                <SelectTrigger className="mt-2 max-w-sm">
+                  <SelectValue placeholder="Selecione um plano..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {clientPlans.map(p => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {MESES_SHORT[(p.period_month || 1) - 1]}/{p.period_year} — {p.status === 'active' ? 'Ativo' : p.status === 'draft' ? 'Rascunho' : 'Concluído'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        )}
+
+        {!selectedClientId && (
+          <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center text-gray-400 text-sm">
+            Selecione um cliente para começar
+          </div>
+        )}
       </div>
 
       {scenarios && (
