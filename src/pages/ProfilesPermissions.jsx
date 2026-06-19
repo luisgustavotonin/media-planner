@@ -59,11 +59,6 @@ export default function ProfilesPermissions() {
   });
 
   const handleEdit = (p) => {
-   // Não permite editar perfil Master (admin)
-   if (p.level === 1) {
-     alert('O perfil Master não pode ser editado.');
-     return;
-   }
    setEditing(p);
    setForm({
      name: p.name || '', level: p.level || 1, description: p.description || '',
@@ -136,17 +131,13 @@ export default function ProfilesPermissions() {
               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button 
                   onClick={() => handleEdit(profile)} 
-                  className={`p-1.5 rounded-md ${profile.level === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
-                  disabled={profile.level === 1}
-                  title={profile.level === 1 ? 'Perfil Master não pode ser editado' : ''}
+                  className="p-1.5 rounded-md hover:bg-gray-100"
                 >
                   <Pencil className="w-3.5 h-3.5 text-gray-400" />
                 </button>
                 <button 
                   onClick={() => deleteMut.mutate(profile.id)} 
-                  className={`p-1.5 rounded-md ${profile.level === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50'}`}
-                  disabled={profile.level === 1}
-                  title={profile.level === 1 ? 'Perfil Master não pode ser deletado' : ''}
+                  className="p-1.5 rounded-md hover:bg-red-50"
                 >
                   <Trash2 className="w-3.5 h-3.5 text-red-400" />
                 </button>
