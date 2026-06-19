@@ -89,7 +89,9 @@ export default function UserManagement() {
   const updateUserMut = useMutation({
     mutationFn: async ({ userId, data }) => {
       try {
-        return await base44.asServiceRole.entities.User.update(userId, data);
+        const response = await base44.functions.invoke('updateUser', { userId, data });
+        if (response.data?.error) throw new Error(response.data.error);
+        return response.data;
       } catch (err) {
         console.error('Update error:', err);
         throw err;
@@ -109,14 +111,21 @@ export default function UserManagement() {
 
   const deleteUserMut = useMutation({
     mutationFn: async (userId) => {
-      return base44.asServiceRole.entities.User.delete(userId);
+      try {
+        const response = await base44.functions.invoke('updateUser', { userId, data: { status: 'inativo' } });
+        if (response.data?.error) throw new Error(response.data.error);
+        return response.data;
+      } catch (err) {
+        console.error('Delete error:', err);
+        throw err;
+      }
     },
     onSuccess: () => {
       toast.success('Usuário deletado com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['users'] });
     },
-    onError: () => {
-      toast.error('Erro ao deletar usuário');
+    onError: (err) => {
+      toast.error(err?.message || 'Erro ao deletar usuário');
     }
   });
 
