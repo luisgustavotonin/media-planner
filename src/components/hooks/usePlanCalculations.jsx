@@ -9,10 +9,10 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket)
       channel.appointment_to_show_rate_override,
       channel.show_to_sale_rate_override,
     ];
-    // PercentInput armazena em 0-100, conversionRates são 0-1 → dividir por 100
+    // PercentInput devolve 0-1, assim como conversionRates — usa diretamente
     rates = rates.map((r, i) => {
       const ov = overrides[i];
-      return (ov !== undefined && ov !== null) ? ov / 100 : r;
+      return (ov !== undefined && ov !== null) ? ov : r;
     });
   }
   const budget = channel.budget_value || 0;

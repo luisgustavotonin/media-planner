@@ -109,7 +109,7 @@ export default function PlanDetail() {
     }));
   };
 
-  // Array com todas as taxas do funil em ordem (cascata completa)
+  // Array com todas as taxas do funil em ordem (cascata completa) — já em decimal (0-1) via PercentInput
   const activeRates = conversionPairs.map((_, i) => getRate(i));
 
   const daysInMonth = new Date(localPlan.period_year || new Date().getFullYear(), localPlan.period_month || 1, 0).getDate();
