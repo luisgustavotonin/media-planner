@@ -126,12 +126,12 @@ export default function MediaPlans() {
         )}
       />
 
-      <div className="mb-6 flex flex-wrap gap-3 items-end">
-        <div className="w-72">
-          <Label className="text-xs text-gray-500 mb-1.5 block">Cliente</Label>
+      <div className="mb-6 bg-white rounded-xl border border-gray-100 p-5 space-y-4 max-w-md">
+        <div>
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">1. Selecione o Cliente</p>
           <Select value={selectedClientId} onValueChange={v => { setSelectedClientId(v); setSelectedMonth('all'); }}>
             <SelectTrigger className="bg-white">
-              <SelectValue placeholder="Selecione um cliente para ver os planos" />
+              <SelectValue placeholder="Selecione um cliente..." />
             </SelectTrigger>
             <SelectContent>
               {myClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
@@ -139,8 +139,8 @@ export default function MediaPlans() {
           </Select>
         </div>
         {selectedClientId && (
-          <div className="w-44">
-            <Label className="text-xs text-gray-500 mb-1.5 block">Mês</Label>
+          <div>
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">2. Selecione o Mês</p>
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
               <SelectTrigger className="bg-white">
                 <SelectValue />
