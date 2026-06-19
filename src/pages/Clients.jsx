@@ -54,7 +54,10 @@ export default function Clients() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['clients'] }),
   });
 
-  const myClients = user?.role === 'admin' ? clients : clients.filter(c => c.created_by === user?.email);
+  const userUnits = user?.units || [];
+  const myClients = user?.role === 'admin' ? clients :
+    userUnits.length > 0 ? clients.filter(c => userUnits.includes(c.id)) :
+    clients.filter(c => c.created_by === user?.email);
   const filtered = myClients.filter(c => c.clinic_name?.toLowerCase().includes(search.toLowerCase()));
 
   const handleSubmit = () => {
