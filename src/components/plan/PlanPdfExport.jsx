@@ -176,14 +176,14 @@ function drawFunnelChart(doc, { x, y, w, h, stages, values, pageW, marginL }) {
   const totalGap = gap * (n - 1);
   const barW = (w - totalGap) / n;
 
-  // Cores degradê de azul-violeta (igual ao UI: azul → roxo)
+  // Cores paleta U-Trax
   const STAGE_COLORS = [
-    [101, 116, 205],  // azul-violeta (Lead)
-    [120, 100, 195],  // violeta médio
-    [145,  90, 185],  // violeta
-    [165,  80, 175],  // violeta-roxo (Venda)
-    [100, 110, 200],
-    [130,  95, 190],
+    [248,  93,   7],  // laranja U-Trax
+    [200,  75,   5],  // laranja escuro
+    [126, 105,  81],  // savana
+    [ 49,  43,  29],  // marrom
+    [160,  60,   4],
+    [ 80,  30,   2],
   ];
 
   // Eixo Y — linhas de grade leves
@@ -252,39 +252,75 @@ function drawFunnelChart(doc, { x, y, w, h, stages, values, pageW, marginL }) {
   return rateY + (splitText.length * 5) + 4;
 }
 
+// Desenha logo do canal (Meta/Google) em jsPDF via formas vetoriais
+function drawChannelLogo(doc, name, cx, cy, size) {
+  if (name === 'Meta') {
+    // ∞ Meta: dois círculos estilo infinito desenhados como arcos
+    const blue = [29, 161, 242]; // azul Meta
+    doc.setFillColor(29, 161, 242);
+    // Anel esquerdo
+    doc.setDrawColor(29, 161, 242);
+    doc.setLineWidth(size * 0.28);
+    doc.ellipse(cx - size * 0.28, cy, size * 0.28, size * 0.18, 'S');
+    // Anel direito
+    doc.ellipse(cx + size * 0.28, cy, size * 0.28, size * 0.18, 'S');
+  } else if (name === 'Google') {
+    const s = size * 0.5;
+    // G colorido simplificado: quadrantes
+    doc.setFillColor(66, 133, 244);  doc.rect(cx,      cy - s, s, s, 'F');
+    doc.setFillColor(52, 168, 83);   doc.rect(cx,      cy,     s, s, 'F');
+    doc.setFillColor(251, 188, 4);   doc.rect(cx - s,  cy,     s, s, 'F');
+    doc.setFillColor(234, 67, 53);   doc.rect(cx - s,  cy - s, s, s, 'F');
+  }
+}
+
 // ── Alocação canais (barras horizontais proporcionais) ────────────────────────
 function drawChannelAllocation(doc, { x, y, channels, totalBudget, pageW, marginL, w }) {
   if (!channels || channels.length === 0) return y;
 
+  const labelW = 42; // largura da área de label (inclui logo + nome)
+  const barAreaW = w - labelW - 28;
+
+  // Título alinhado com início das barras
+  const titleX = x + labelW;
   doc.setFontSize(9);
   doc.setFont(undefined, 'bold');
   doc.setTextColor(...C.marrom);
-  doc.text('Alocação por Canal', x, y);
+  doc.text('Alocação por Canal', titleX, y);
   doc.setDrawColor(...C.laranja);
   doc.setLineWidth(0.5);
-  doc.line(x, y + 1.5, x + 55, y + 1.5);
+  doc.line(titleX, y + 1.5, titleX + 55, y + 1.5);
   doc.setLineWidth(0.2);
   y += 7;
 
   const BAR_COLORS = [
-    [248, 93, 7],
-    [66, 103, 178],
+    [248, 93, 7],    // laranja U-Trax (Meta)
+    [66, 103, 178],  // azul (Google)
     [52, 168, 83],
     [251, 188, 4],
     [234, 67, 53],
     [126, 105, 81],
   ];
 
-  const barH = 11;
-  const labelW = 38;
-  const barAreaW = w - labelW - 25;
-  const pctW = 22;
+  const barH = 13;
+  const logoSize = 2.8;
 
   channels.forEach((ch, i) => {
     const bv = ch.budget_value || 0;
     const pct = totalBudget > 0 ? bv / totalBudget : 0;
     const bw = Math.max(3, barAreaW * pct);
     const color = BAR_COLORS[i % BAR_COLORS.length];
+    const midY = y + (barH - 3) / 2;
+
+    // Logo do canal
+    const logoX = x + labelW - 20;
+    drawChannelLogo(doc, ch.channel_name, logoX, midY, logoSize);
+
+    // Nome do canal
+    doc.setFontSize(7.5);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(...C.marrom);
+    doc.text(safe(ch.channel_name || '-'), x + labelW - 3, midY + 1, { align: 'right' });
 
     // bg track
     doc.setFillColor(235, 232, 225);
@@ -293,17 +329,11 @@ function drawChannelAllocation(doc, { x, y, channels, totalBudget, pageW, margin
     doc.setFillColor(...color);
     doc.roundedRect(x + labelW, y, bw, barH - 3, 1, 1, 'F');
 
-    // channel name
-    doc.setFontSize(7);
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(...C.marrom);
-    doc.text(safe(ch.channel_name || '-'), x + labelW - 3, y + barH / 2 - 0.5, { align: 'right' });
-
     // percent + value
     doc.setFontSize(6.5);
     doc.setFont(undefined, 'normal');
     doc.setTextColor(...C.savana);
-    doc.text(safe(Math.round(pct * 100) + '% | ' + fmt(bv)), x + labelW + barAreaW + 3, y + barH / 2 - 0.5);
+    doc.text(safe(Math.round(pct * 100) + '% | ' + fmt(bv)), x + labelW + barAreaW + 3, midY + 1);
 
     y += barH;
   });
