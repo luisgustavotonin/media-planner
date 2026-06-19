@@ -44,15 +44,14 @@ export default function UserManagement() {
     mutationFn: async () => {
       if (!form.email || !form.profile_id) throw new Error('Email e perfil são obrigatórios');
       
-      // Determina role baseado no profile
+      // Determina role baseado no profile - NUNCA admin para convites
       const profile = profiles.find(p => p.id === form.profile_id);
       if (!profile) throw new Error('Perfil inválido');
       
       let role = 'consultant';
-      if (profile.level === 1) role = 'admin';
-      else if (profile.level >= 4) role = 'client';
+      if (profile.level >= 4) role = 'client';
       
-      // Envia convite diretamente
+      // Envia convite diretamente (sempre consultant ou client, NUNCA admin)
       await base44.users.inviteUser(form.email, role);
       
       // Aguarda a criação do usuário
@@ -113,9 +112,8 @@ export default function UserManagement() {
   const deleteUserMut = useMutation({
     mutationFn: async (userId) => {
       try {
-        const response = await base44.functions.invoke('updateUser', { userId, data: { status: 'inativo' } });
-        if (response.data?.error) throw new Error(response.data.error);
-        return response.data;
+        await base44.asServiceRole.entities.User.delete(userId);
+        return { success: true };
       } catch (err) {
         console.error('Delete error:', err);
         throw err;
