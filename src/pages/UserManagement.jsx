@@ -185,7 +185,7 @@ export default function UserManagement() {
               <th className="text-left py-3 px-6 font-semibold text-gray-700 uppercase tracking-wider">NOME</th>
               <th className="text-left py-3 px-6 font-semibold text-gray-700 uppercase tracking-wider">E-MAIL</th>
               <th className="text-left py-3 px-6 font-semibold text-gray-700 uppercase tracking-wider">PERFIL</th>
-              <th className="text-left py-3 px-6 font-semibold text-gray-700 uppercase tracking-wider">UNIDADES</th>
+              <th className="text-left py-3 px-6 font-semibold text-gray-700 uppercase tracking-wider">CLIENTES</th>
               <th className="text-left py-3 px-6 font-semibold text-gray-700 uppercase tracking-wider">STATUS</th>
               <th className="text-center py-3 px-6 font-semibold text-gray-700 uppercase tracking-wider">AÇÕES</th>
             </tr>
@@ -213,7 +213,7 @@ export default function UserManagement() {
                       <span className="text-gray-400">—</span>
                     )}
                   </td>
-                  <td className="py-3 px-6 text-gray-600">{unitCount === 0 ? 'Todas' : `${unitCount} unidade${unitCount > 1 ? '(s)' : ''}`}</td>
+                  <td className="py-3 px-6 text-gray-600">{unitCount === 0 ? 'Todos' : `${unitCount} cliente${unitCount > 1 ? '(s)' : ''}`}</td>
                   <td className="py-3 px-6">
                     <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${u.status === 'ativo' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
                       {u.status === 'ativo' ? 'Ativo' : 'Inativo'}
@@ -299,24 +299,24 @@ export default function UserManagement() {
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-xs">Unidades com Acesso</Label>
-                  <div className="mt-1 border border-gray-200 rounded-lg overflow-hidden">
-                    <label className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100">
-                      <Checkbox checked={form.units.length === clients.length && clients.length > 0} onCheckedChange={toggleAllUnits} />
-                      <span className="text-xs font-medium text-gray-700">Todas as unidades</span>
-                    </label>
-                    <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
-                      {clients.map(c => (
-                        <label key={c.id} className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-gray-50">
-                          <Checkbox checked={form.units.includes(c.id)} onCheckedChange={() => toggleUnit(c.id)} />
-                          <Building2 className="w-3 h-3 text-gray-400" />
-                          <span className="text-xs text-gray-700">{c.clinic_name}</span>
-                        </label>
-                      ))}
+                    <Label className="text-xs">Clientes com Acesso</Label>
+                    <div className="mt-1 border border-gray-200 rounded-lg overflow-hidden">
+                      <label className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100">
+                        <Checkbox checked={form.units.length === clients.length && clients.length > 0} onCheckedChange={toggleAllUnits} />
+                        <span className="text-xs font-medium text-gray-700">Todos os clientes</span>
+                      </label>
+                      <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
+                        {clients.map(c => (
+                          <label key={c.id} className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-gray-50">
+                            <Checkbox checked={form.units.includes(c.id)} onCheckedChange={() => toggleUnit(c.id)} />
+                            <Building2 className="w-3 h-3 text-gray-400" />
+                            <span className="text-xs text-gray-700">{c.clinic_name}</span>
+                          </label>
+                        ))}
+                      </div>
                     </div>
+                    {form.units.length > 0 && <p className="text-[10px] text-gray-400 mt-1">{form.units.length} cliente(s) selecionado(s)</p>}
                   </div>
-                  {form.units.length > 0 && <p className="text-[10px] text-gray-400 mt-1">{form.units.length} unidade(s) selecionada(s)</p>}
-                </div>
               </>
             )}
             <div className="flex gap-2 justify-end">
@@ -363,11 +363,11 @@ export default function UserManagement() {
               </Select>
             </div>
             <div>
-              <Label className="text-xs">Unidades com Acesso</Label>
+              <Label className="text-xs">Clientes com Acesso</Label>
               <div className="mt-1 border border-gray-200 rounded-lg overflow-hidden">
                 <label className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100">
                   <Checkbox checked={form.units.length === clients.length && clients.length > 0} onCheckedChange={toggleAllUnits} />
-                  <span className="text-xs font-medium text-gray-700">Todas as unidades</span>
+                  <span className="text-xs font-medium text-gray-700">Todos os clientes</span>
                 </label>
                 <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
                   {clients.map(c => (
@@ -379,7 +379,7 @@ export default function UserManagement() {
                   ))}
                 </div>
               </div>
-              {form.units.length > 0 && <p className="text-[10px] text-gray-400 mt-1">{form.units.length} unidade(s) selecionada(s)</p>}
+              {form.units.length > 0 && <p className="text-[10px] text-gray-400 mt-1">{form.units.length} cliente(s) selecionado(s)</p>}
             </div>
             <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
               <p className="text-xs text-blue-700">
