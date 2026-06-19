@@ -7,13 +7,16 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
     if (user.role !== 'admin') return Response.json({ error: 'Forbidden' }, { status: 403 });
 
-    const { email, role } = await req.json();
+    const { email, role, profile_id } = await req.json();
     if (!email || !role) return Response.json({ error: 'Missing email or role' }, { status: 400 });
 
     await base44.asServiceRole.users.inviteUser(email, role);
-    return Response.json({ success: true });
+    
+    // If profile_id provided, we need to wait for user creation and update their profile
+    // For now, return success - admin can manually assign profile in UI
+    return Response.json({ success: true, message: 'Convite enviado com sucesso' });
   } catch (error) {
     console.error('Invite error:', error);
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ error: error.message || 'Erro ao enviar convite' }, { status: 500 });
   }
 });

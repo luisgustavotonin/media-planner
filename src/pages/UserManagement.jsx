@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import PageHeader from '../components/ui-custom/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Plus, Shield, UserCheck, Eye, Mail, Building2, Check } from 'lucide-react';
+import { Users, Plus, Shield, UserCheck, Eye, Mail, Building2, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -18,8 +18,7 @@ const roleIcons = { admin: Shield, consultant: UserCheck, client: Eye };
 export default function UserManagement() {
   const queryClient = useQueryClient();
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviting, setInviting] = useState(false);
-  const [form, setForm] = useState({ full_name: '', email: '', role: 'consultant', profile_id: '', units: [] });
+  const [form, setForm] = useState({ email: '', role: 'consultant', profile_id: '', units: [] });
 
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
@@ -39,24 +38,42 @@ export default function UserManagement() {
     },
   });
 
-  const handleInvite = async () => {
-    if (!form.email) return;
-    setInviting(true);
-    try {
-      const response = await base44.functions.invoke('inviteUser', { email: form.email, role: form.role });
-      if (response.data?.success) {
-        toast.success(`Convite enviado para ${form.email}!`);
-        setInviteOpen(false);
-        setForm({ full_name: '', email: '', role: 'consultant', profile_id: '', units: [] });
-        queryClient.invalidateQueries({ queryKey: ['users'] });
-      } else {
-        toast.error('Erro ao enviar convite. Tente novamente.');
-      }
-    } catch (err) {
-      toast.error('Erro ao enviar convite. Verifique o e-mail e tente novamente.');
-    } finally {
-      setInviting(false);
+  const inviteMut = useMutation({
+    mutationFn: async () => {
+      if (!form.email || !form.profile_id) throw new Error('Email e perfil são obrigatórios');
+      const response = await base44.functions.invoke('inviteUser', { 
+        email: form.email, 
+        role: form.role,
+        profile_id: form.profile_id
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Convite enviado com sucesso!');
+      setInviteOpen(false);
+      setForm({ email: '', role: 'consultant', profile_id: '', units: [] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (err) => {
+      toast.error(err.message || 'Erro ao enviar convite');
     }
+  });
+
+  const updateUserMut = useMutation({
+    mutationFn: async ({ userId, data }) => {
+      return base44.asServiceRole.entities.User.update(userId, data);
+    },
+    onSuccess: () => {
+      toast.success('Usuário atualizado com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: () => {
+      toast.error('Erro ao atualizar usuário');
+    }
+  });
+
+  const handleProfileChange = (userId, profileId) => {
+    updateUserMut.mutate({ userId, data: { profile_id: profileId } });
   };
 
   const toggleUnit = (id) => {
@@ -74,51 +91,87 @@ export default function UserManagement() {
   };
 
   return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto">
+    <div className="p-6 lg:p-8 max-w-7xl mx-auto">
       <PageHeader
         title="Usuários"
-        description="Gerencie os membros da equipe e seus acessos."
+        description="Gerencie os usuários e seus acessos ao sistema."
         actions={
-          <Button onClick={() => setInviteOpen(true)} className="gap-2 bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4" /> Adicionar Usuário
+          <Button onClick={() => { setForm({ email: '', role: 'consultant', profile_id: '', units: [] }); setInviteOpen(true); }} className="gap-2 bg-red-500 hover:bg-red-600">
+            <Plus className="w-4 h-4" /> Incluir Usuário
           </Button>
         }
       />
 
-      <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50">
-        {users.map(u => {
-          const Icon = roleIcons[u.role] || Eye;
-          const profile = profiles.find(p => p.id === u.profile_id);
-          return (
-            <div key={u.id} className="flex items-center justify-between px-6 py-4">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                  <span className="text-xs font-semibold text-gray-600">{u.full_name?.[0]?.toUpperCase() || u.email?.[0]?.toUpperCase()}</span>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{u.full_name || u.email}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <Mail className="w-3 h-3 text-gray-300" />
-                    <p className="text-xs text-gray-400">{u.email}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                {profile && (
-                  <span className="text-[11px] text-gray-500 hidden sm:block">{profile.name}</span>
-                )}
-                <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full flex items-center gap-1 border ${roleColors[u.role] || roleColors.client}`}>
-                  <Icon className="w-3 h-3" />
-                  {roleLabels[u.role] || 'Usuário'}
-                </span>
-              </div>
-            </div>
-          );
-        })}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-100 bg-gray-50/50">
+              <th className="text-left py-3 px-6 font-semibold text-gray-700">NOME</th>
+              <th className="text-left py-3 px-6 font-semibold text-gray-700">E-MAIL</th>
+              <th className="text-left py-3 px-6 font-semibold text-gray-700">PERFIL</th>
+              <th className="text-left py-3 px-6 font-semibold text-gray-700">UNIDADES</th>
+              <th className="text-left py-3 px-6 font-semibold text-gray-700">STATUS</th>
+              <th className="text-center py-3 px-6 font-semibold text-gray-700">AÇÕES</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {users.map(u => {
+              const profile = profiles.find(p => p.id === u.profile_id);
+              return (
+                <tr key={u.id} className="hover:bg-gray-50/30 transition-colors">
+                  <td className="py-4 px-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-semibold text-gray-600">{u.full_name?.[0]?.toUpperCase() || u.email?.[0]?.toUpperCase()}</span>
+                      </div>
+                      <span className="font-medium text-gray-900">{u.full_name || 'Sem nome'}</span>
+                    </div>
+                  </td>
+                  <td className="py-4 px-6">
+                    <span className="text-gray-600">{u.email}</span>
+                  </td>
+                  <td className="py-4 px-6">
+                    <Select value={u.profile_id || ''} onValueChange={(val) => handleProfileChange(u.id, val)}>
+                      <SelectTrigger className="w-40 h-8">
+                        <SelectValue placeholder="Sem perfil" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {profiles.map(p => (
+                          <SelectItem key={p.id} value={p.id}>
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
+                              {p.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="py-4 px-6">
+                    <span className="text-gray-600 text-xs">{u.units?.length || 0} unidade(s)</span>
+                  </td>
+                  <td className="py-4 px-6">
+                    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">Ativo</span>
+                  </td>
+                  <td className="py-4 px-6 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <button className="p-1.5 rounded-md hover:bg-gray-100 transition-colors" title="Editar">
+                        <Pencil className="w-4 h-4 text-gray-400" />
+                      </button>
+                      <button className="p-1.5 rounded-md hover:bg-red-50 transition-colors" title="Remover">
+                        <Trash2 className="w-4 h-4 text-red-400" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
         {users.length === 0 && (
           <div className="px-6 py-12 text-center">
             <Users className="w-8 h-8 text-gray-200 mx-auto mb-3" />
-            <p className="text-sm text-gray-400">Nenhum usuário ainda. Adicione o primeiro membro da equipe.</p>
+            <p className="text-sm text-gray-400">Nenhum usuário ainda.</p>
           </div>
         )}
       </div>
@@ -130,15 +183,11 @@ export default function UserManagement() {
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div>
-              <Label className="text-xs">Nome Completo</Label>
-              <Input value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} placeholder="João da Silva" className="mt-1" />
-            </div>
-            <div>
               <Label className="text-xs">E-mail *</Label>
               <Input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="usuario@exemplo.com" className="mt-1" />
             </div>
             <div>
-              <Label className="text-xs">Perfil de Acesso</Label>
+              <Label className="text-xs">Perfil de Acesso *</Label>
               <Select value={form.profile_id} onValueChange={v => {
                 const profile = profiles.find(p => p.id === v);
                 let role = 'consultant';
@@ -152,10 +201,10 @@ export default function UserManagement() {
                 <SelectContent>
                   {profiles.map(p => (
                     <SelectItem key={p.id} value={p.id}>
-                      <span className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: p.color }} />
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
                         {p.name} — Nível {p.level}
-                      </span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -206,11 +255,11 @@ export default function UserManagement() {
             </div>
             <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
               <p className="text-xs text-blue-700">
-                <span className="font-medium">📧 Convite por e-mail:</span> O usuário receberá um convite no e-mail informado e ao fazer login já terá as permissões configuradas automaticamente.
+                <span className="font-medium">📧 Convite por e-mail:</span> O usuário receberá um convite no e-mail informado.
               </p>
             </div>
-            <Button onClick={handleInvite} className="w-full bg-blue-600 hover:bg-blue-700" disabled={!form.email || inviting}>
-              {inviting ? 'Enviando...' : 'Enviar Convite'}
+            <Button onClick={() => inviteMut.mutate()} className="w-full bg-red-500 hover:bg-red-600" disabled={!form.email || !form.profile_id || inviteMut.isPending}>
+              {inviteMut.isPending ? 'Enviando...' : 'Enviar Convite'}
             </Button>
           </div>
         </DialogContent>
