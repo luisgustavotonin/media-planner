@@ -220,40 +220,42 @@ export default function UserManagement() {
                   </td>
                   <td className="py-3 px-6 text-gray-600">{clientCount === 0 ? 'Todos' : `${clientCount} cliente${clientCount > 1 ? '(s)' : ''}`}</td>
                   <td className="py-3 px-6">
-                    <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${u.status === 'ativo' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
-                      {u.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                    <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${isCurrent ? 'bg-emerald-50 text-emerald-700' : u.status === 'ativo' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {isCurrent ? 'Ativo' : u.status === 'ativo' ? 'Ativo' : 'Inativo'}
                     </span>
                   </td>
                   <td className="py-3 px-6 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <button
-                        onClick={() => handleEditClick(u)}
-                        className={`p-1 rounded ${isCurrent ? 'hover:bg-amber-100' : 'hover:bg-gray-100'}`}
-                        title="Editar"
-                      >
-                        <Pencil className={`w-3.5 h-3.5 ${isCurrent ? 'text-amber-600' : 'text-gray-400'}`} />
-                      </button>
-                      <button
-                        onClick={() => toggleUserStatus(u)}
-                        disabled={isCurrent}
-                        className={`p-1 rounded ${isCurrent ? 'opacity-50 cursor-not-allowed' : u.status === 'ativo' ? 'hover:bg-emerald-50' : 'hover:bg-gray-100'}`}
-                        title={isCurrent ? 'Não pode desativar sua própria conta' : u.status === 'ativo' ? 'Desativar' : 'Ativar'}
-                      >
-                        <UserCheck className={`w-3.5 h-3.5 ${isCurrent ? 'text-gray-300' : u.status === 'ativo' ? 'text-emerald-600' : 'text-gray-400'}`} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (window.confirm('Tem certeza que deseja deletar este usuário?')) {
-                            deleteUserMut.mutate(u.id);
-                          }
-                        }}
-                        disabled={isCurrent}
-                        className={`p-1 rounded ${isCurrent ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50'}`}
-                        title={isCurrent ? 'Não pode deletar sua própria conta' : 'Deletar'}
-                      >
-                        <Trash2 className={`w-3.5 h-3.5 ${isCurrent ? 'text-gray-300' : 'text-red-400'}`} />
-                      </button>
-                    </div>
+                    {!isCurrent ? (
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => handleEditClick(u)}
+                          className="p-1 rounded hover:bg-gray-100"
+                          title="Editar"
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-gray-400" />
+                        </button>
+                        <button
+                          onClick={() => toggleUserStatus(u)}
+                          className={`p-1 rounded ${u.status === 'ativo' ? 'hover:bg-emerald-50' : 'hover:bg-gray-100'}`}
+                          title={u.status === 'ativo' ? 'Desativar' : 'Ativar'}
+                        >
+                          <UserCheck className={`w-3.5 h-3.5 ${u.status === 'ativo' ? 'text-emerald-600' : 'text-gray-400'}`} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm('Tem certeza que deseja deletar este usuário?')) {
+                              deleteUserMut.mutate(u.id);
+                            }
+                          }}
+                          className="p-1 rounded hover:bg-red-50"
+                          title="Deletar"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-gray-400">Sua conta</span>
+                    )}
                   </td>
                 </tr>
               );

@@ -20,6 +20,11 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Se usuário está inativo, nega acesso
+    if (user.status === 'inativo') {
+      return Response.json({ authorized_client_ids: [], is_admin: false }, { status: 403 });
+    }
+
     // Para usuário secundário, retorna apenas os units dele
     const clientIds = Array.isArray(user.units) ? user.units : [];
     
