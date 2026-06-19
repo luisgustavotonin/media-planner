@@ -18,7 +18,7 @@ const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out'
 
 export default function ReversePlan() {
   const { user } = useAuth();
-  const { filterClientsByAccess } = useUserAccess();
+  const { filterClientsByAccess, isInactive } = useUserAccess();
   const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [targetRevenue, setTargetRevenue] = useState(0);
@@ -98,6 +98,15 @@ export default function ReversePlan() {
   const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
   const fmtPct = v => `${(v * 100).toFixed(1)}%`;
   const canCalculate = selectedPlanId && targetRevenue > 0 && distribution.length > 0 && planTicket > 0;
+
+  // Se usuário está inativo, não renderizar
+  if (isInactive) {
+    return (
+      <div className="p-6 lg:p-8 max-w-7xl mx-auto text-center">
+        <p className="text-gray-500">Acesso negado. Usuário inativo.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto">

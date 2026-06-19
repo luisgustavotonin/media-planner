@@ -24,7 +24,7 @@ export default function MediaPlans() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { filterClientsByAccess } = useUserAccess();
+  const { filterClientsByAccess, isInactive } = useUserAccess();
   const [open, setOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState('');
@@ -108,6 +108,15 @@ export default function MediaPlans() {
     value: b.segment,
     label: b.segment_label || b.segment,
   }));
+
+  // Se usuário está inativo, não renderizar
+  if (isInactive) {
+    return (
+      <div className="p-6 lg:p-8 max-w-7xl mx-auto text-center">
+        <p className="text-gray-500">Acesso negado. Usuário inativo.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">

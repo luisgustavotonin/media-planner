@@ -29,7 +29,7 @@ const emptyClient = { clinic_name: '', responsible_person: '', phone: '', email:
 export default function Clients() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { filterClientsByAccess } = useUserAccess();
+  const { filterClientsByAccess, isInactive } = useUserAccess();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyClient);
@@ -81,6 +81,15 @@ export default function Clients() {
   };
 
   const getEspecialidadeLabel = (val) => ESPECIALIDADES.find(e => e.value === val)?.label || val;
+
+  // Se usuário está inativo, não renderizar
+  if (isInactive) {
+    return (
+      <div className="p-6 lg:p-8 max-w-7xl mx-auto text-center">
+        <p className="text-gray-500">Acesso negado. Usuário inativo.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
