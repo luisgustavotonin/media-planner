@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../components/hooks/useAuth';
+import { useUserAccess } from '../components/hooks/useUserAccess';
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
 import { Button } from '@/components/ui/button';
@@ -28,13 +29,14 @@ const emptyClient = { clinic_name: '', responsible_person: '', phone: '', email:
 export default function Clients() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { filterClientsByAccess } = useUserAccess();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyClient);
   const [search, setSearch] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  const { data: clients = [], isLoading } = useQuery({
+  const { data: allClients = [], isLoading } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
       const data = await base44.entities.Client.list();
@@ -55,10 +57,7 @@ export default function Clients() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['clients'] }),
   });
 
-  const userUnits = user?.units || [];
-  const myClients = user?.role === 'admin' ? clients :
-    userUnits.length > 0 ? clients.filter(c => userUnits.includes(c.id)) :
-    [];
+  const myClients = filterClientsByAccess(allClients);
   const filtered = myClients.filter(c => c.clinic_name?.toLowerCase().includes(search.toLowerCase()));
 
   const handleSubmit = () => {

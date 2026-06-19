@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../components/hooks/useAuth';
+import { useUserAccess } from '../components/hooks/useUserAccess';
 import { calculateScenarios } from '../components/hooks/usePlanCalculations';
 import PageHeader from '../components/ui-custom/PageHeader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -16,12 +17,13 @@ const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out'
 export default function Scenarios() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { filterClientsByAccess } = useUserAccess();
   const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [showAdj, setShowAdj] = useState(false);
   const [adjForm, setAdjForm] = useState(null);
 
-  const { data: clients = [] } = useQuery({
+  const { data: allClients = [] } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
       const data = await base44.entities.Client.list();
@@ -34,15 +36,8 @@ export default function Scenarios() {
     queryFn: () => base44.entities.MediaPlan.list('-created_date'),
   });
 
-  const userUnits = user?.units || [];
-
-  const myClients = user?.role === 'admin' ? clients :
-    userUnits.length > 0 ? clients.filter(c => userUnits.includes(c.id)) :
-    clients.filter(c => c.created_by === user?.email);
-
-  const myPlans = user?.role === 'admin' ? plans :
-    userUnits.length > 0 ? plans.filter(p => userUnits.includes(p.client_id)) :
-    plans.filter(p => p.created_by === user?.email);
+  const myClients = filterClientsByAccess(allClients);
+  const myPlans = plans.filter(p => myClients.some(c => c.id === p.client_id));
 
   const clientPlans = myPlans.filter(p => p.client_id === selectedClientId);
   const plan = myPlans.find(p => p.id === selectedPlanId);

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../components/hooks/useAuth';
+import { useUserAccess } from '../components/hooks/useUserAccess';
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ export default function MediaPlans() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { filterClientsByAccess } = useUserAccess();
   const [open, setOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState('');
@@ -31,7 +33,7 @@ export default function MediaPlans() {
     queryKey: ['plans'],
     queryFn: () => base44.entities.MediaPlan.list('-created_date'),
   });
-  const { data: clients = [] } = useQuery({
+  const { data: allClients = [] } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
       const data = await base44.entities.Client.list();
@@ -54,7 +56,7 @@ export default function MediaPlans() {
 
   const createMut = useMutation({
     mutationFn: async (d) => {
-      const client = clients.find(c => c.id === d.client_id);
+      const client = allClients.find(c => c.id === d.client_id);
       const bm = benchmarks.find(b => b.segment === d.segment);
       const ft = funnelTypes.find(f => f.id === d.funnel_type_id);
 
@@ -96,16 +98,8 @@ export default function MediaPlans() {
 
   const isClientRole = user?.role === 'client';
 
-   // Se user tem units, filtra por units; caso contrário usa created_by
-   const userUnits = user?.units || [];
-   const myPlans = user?.role === 'admin' ? plans :
-     isClientRole ? plans.filter(p => p.client_id === user?.assigned_client_id) :
-     userUnits.length > 0 ? plans.filter(p => userUnits.includes(p.client_id)) :
-     plans.filter(p => p.created_by === user?.email);
-
-   const myClients = user?.role === 'admin' ? clients : 
-     userUnits.length > 0 ? clients.filter(c => userUnits.includes(c.id)) :
-     clients.filter(c => c.created_by === user?.email);
+   const myClients = filterClientsByAccess(allClients);
+   const myPlans = plans.filter(p => myClients.some(c => c.id === p.client_id));
   const clientPlans = myPlans.filter(p => p.client_id === selectedClientId);
   const selectedPlan = myPlans.find(p => p.id === selectedPlanId);
 

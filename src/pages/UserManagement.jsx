@@ -61,10 +61,10 @@ export default function UserManagement() {
     },
     onSuccess: () => {
       toast.success('Usuário criado com sucesso!');
-      setInviteOpen(false);
-      setForm({ email: '', full_name: '', profile_id: '', units: [] });
-      // Refetch users immediately
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      // Reset form and close modal
+      setForm({ email: '', full_name: '', profile_id: '', units: [] });
+      setInviteOpen(false);
     },
     onError: (err) => {
       toast.error(err.message || 'Erro ao criar usuário');
