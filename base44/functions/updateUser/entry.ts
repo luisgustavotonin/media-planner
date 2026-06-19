@@ -18,6 +18,12 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'userId e data são obrigatórios' }, { status: 400 });
     }
 
+    // Se deleted: true, deleta o usuário
+    if (data.deleted === true) {
+      await base44.asServiceRole.entities.User.delete(userId);
+      return Response.json({ success: true, deleted: true });
+    }
+
     const result = await base44.asServiceRole.entities.User.update(userId, data);
     return Response.json({ success: true, data: result });
   } catch (error) {

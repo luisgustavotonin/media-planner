@@ -112,8 +112,9 @@ export default function UserManagement() {
   const deleteUserMut = useMutation({
     mutationFn: async (userId) => {
       try {
-        await base44.asServiceRole.entities.User.delete(userId);
-        return { success: true };
+        const response = await base44.functions.invoke('updateUser', { userId, data: { deleted: true } });
+        if (response.data?.error) throw new Error(response.data.error);
+        return response.data;
       } catch (err) {
         console.error('Delete error:', err);
         throw err;
