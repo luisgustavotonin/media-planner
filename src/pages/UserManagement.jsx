@@ -88,15 +88,22 @@ export default function UserManagement() {
 
   const updateUserMut = useMutation({
     mutationFn: async ({ userId, data }) => {
-      return base44.asServiceRole.entities.User.update(userId, data);
+      try {
+        return await base44.asServiceRole.entities.User.update(userId, data);
+      } catch (err) {
+        console.error('Update error:', err);
+        throw err;
+      }
     },
     onSuccess: () => {
       toast.success('Usuário atualizado com sucesso!');
       setEditingUserId(null);
+      setForm({ email: '', full_name: '', profile_id: '', units: [] });
       queryClient.invalidateQueries({ queryKey: ['users'] });
     },
-    onError: () => {
-      toast.error('Erro ao atualizar usuário');
+    onError: (err) => {
+      console.error('Mutation error:', err);
+      toast.error(err?.message || 'Erro ao atualizar usuário');
     }
   });
 
@@ -129,8 +136,14 @@ export default function UserManagement() {
   };
 
   const handleSaveEdit = () => {
-    if (!form.full_name && !form.profile_id) {
-      toast.error('Preenchimento obrigatório');
+    const isCurrent = isCurrentUserRow(editingUserId);
+    
+    if (isCurrent && !form.full_name) {
+      toast.error('Preencha o nome');
+      return;
+    }
+    if (!isCurrent && !form.full_name && !form.profile_id) {
+      toast.error('Preencha ao menos um campo');
       return;
     }
     
