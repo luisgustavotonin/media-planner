@@ -252,25 +252,41 @@ function drawFunnelChart(doc, { x, y, w, h, stages, values, pageW, marginL }) {
   return rateY + (splitText.length * 5) + 4;
 }
 
-// Desenha logo do canal (Meta/Google) em jsPDF via formas vetoriais
+// Desenha logo do canal via texto/formas em jsPDF
 function drawChannelLogo(doc, name, cx, cy, size) {
   if (name === 'Meta') {
-    // ∞ Meta: dois círculos estilo infinito desenhados como arcos
-    const blue = [29, 161, 242]; // azul Meta
-    doc.setFillColor(29, 161, 242);
-    // Anel esquerdo
-    doc.setDrawColor(29, 161, 242);
-    doc.setLineWidth(size * 0.28);
-    doc.ellipse(cx - size * 0.28, cy, size * 0.28, size * 0.18, 'S');
-    // Anel direito
-    doc.ellipse(cx + size * 0.28, cy, size * 0.28, size * 0.18, 'S');
+    // ∞ desenhado com duas elipses de stroke (anel esquerdo + anel direito)
+    const rx = size * 0.38;
+    const ry = size * 0.22;
+    const lw = size * 0.18;
+    doc.setDrawColor(24, 119, 242);
+    doc.setLineWidth(lw);
+    // anel esquerdo
+    doc.ellipse(cx - rx * 0.72, cy, rx * 0.62, ry, 'S');
+    // anel direito (inclinado levemente para direita)
+    doc.ellipse(cx + rx * 0.72, cy, rx * 0.62, ry, 'S');
+    doc.setLineWidth(0.2);
   } else if (name === 'Google') {
-    const s = size * 0.5;
-    // G colorido simplificado: quadrantes
-    doc.setFillColor(66, 133, 244);  doc.rect(cx,      cy - s, s, s, 'F');
-    doc.setFillColor(52, 168, 83);   doc.rect(cx,      cy,     s, s, 'F');
-    doc.setFillColor(251, 188, 4);   doc.rect(cx - s,  cy,     s, s, 'F');
-    doc.setFillColor(234, 67, 53);   doc.rect(cx - s,  cy - s, s, s, 'F');
+    // "G" colorido em 4 arcos circulares — simulado com elipses coloridas sobrepostas
+    const r = size * 0.55;
+    // círculo de fundo
+    doc.setFillColor(234, 67, 53); doc.circle(cx, cy, r, 'F');   // vermelho
+    // quadrante verde (baixo-esq)
+    doc.setFillColor(52, 168, 83);
+    doc.triangle(cx, cy, cx - r, cy, cx, cy + r, 'F');
+    doc.circle(cx, cy + r * 0.7, r * 0.3, 'F');
+    // quadrante azul (cima-esq)
+    doc.setFillColor(66, 133, 244);
+    doc.triangle(cx, cy, cx - r, cy, cx - r * 0.7, cy - r * 0.7, 'F');
+    // quadrante amarelo (cima-dir)
+    doc.setFillColor(251, 188, 4);
+    doc.triangle(cx, cy, cx + r, cy, cx, cy - r, 'F');
+    // branco central para dar efeito de anel
+    doc.setFillColor(255, 255, 255);
+    doc.circle(cx, cy, r * 0.55, 'F');
+    // "G" branco simplificado — barra horizontal direita
+    doc.setFillColor(66, 133, 244);
+    doc.rect(cx, cy - r * 0.08, r * 0.55, r * 0.22, 'F');
   }
 }
 
