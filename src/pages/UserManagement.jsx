@@ -45,7 +45,8 @@ export default function UserManagement() {
       if (!form.email || !form.profile_id) throw new Error('Email e perfil são obrigatórios');
       
       // Determina role baseado no profile - NUNCA admin para convites
-      const profile = profiles.find(p => p.id === form.profile_id);
+      const profileList = await base44.entities.Profile.list();
+      const profile = profileList.find(p => p.id === form.profile_id);
       if (!profile) throw new Error('Perfil inválido');
       
       let role = 'consultant';
