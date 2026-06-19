@@ -1,32 +1,17 @@
 import { jsPDF } from 'jspdf';
 
-const MESES = ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const SEGMENTOS = {
-  implants: 'Implantes', aesthetics: 'Estetica', orthodontics: 'Ortodontia',
-  general: 'Clinica Geral', periodontics: 'Periodontia', endodontics: 'Endodontia',
+  implants: 'Implantes', aesthetics: 'Estética', orthodontics: 'Ortodontia',
+  general: 'Clínica Geral', periodontics: 'Periodontia', endodontics: 'Endodontia',
   pediatric: 'Odontopediatria', other: 'Outros',
 };
-const STATUS_PT = { draft: 'Rascunho', active: 'Ativo', completed: 'Concluido' };
+const STATUS_PT = { draft: 'Rascunho', active: 'Ativo', completed: 'Concluído' };
 
-const CHAR_MAP = {
-  'à':'a','á':'a','â':'a','ã':'a','ä':'a','å':'a',
-  'è':'e','é':'e','ê':'e','ë':'e',
-  'ì':'i','í':'i','î':'i','ï':'i',
-  'ò':'o','ó':'o','ô':'o','õ':'o','ö':'o',
-  'ù':'u','ú':'u','û':'u','ü':'u',
-  'ý':'y','ÿ':'y','ñ':'n','ç':'c',
-  'À':'A','Á':'A','Â':'A','Ã':'A','Ä':'A','Å':'A',
-  'È':'E','É':'E','Ê':'E','Ë':'E',
-  'Ì':'I','Í':'I','Î':'I','Ï':'I',
-  'Ò':'O','Ó':'O','Ô':'O','Õ':'O','Ö':'O',
-  'Ù':'U','Ú':'U','Û':'U','Ü':'U',
-  'Ñ':'N','Ç':'C',
-  '→':'>','–':'-','—':'-','«':'"','»':'"',
-};
-
+// Mantém o texto como está — jsPDF suporta UTF-8 com a fonte padrão (Helvetica)
 function safe(str) {
   if (!str) return '';
-  return String(str).split('').map(c => CHAR_MAP[c] ?? (c.charCodeAt(0) > 255 ? '?' : c)).join('');
+  return String(str).replace(/→/g, '>').replace(/[–—]/g, '-');
 }
 
 // Paleta U-Trax
@@ -63,7 +48,7 @@ function fmtPct(v) {
 const ABBREV_MAP = {
   'lead': 'Leads', 'leads': 'Leads',
   'contato': 'Contato', 'contact': 'Contato',
-  'qualificacao': 'Qualif.', 'qualification': 'Qualif.',
+  'qualificacao': 'Qualif.', 'qualification': 'Qualif.', 'qualificação': 'Qualif.',
   'agendamento': 'Agenda.', 'agend': 'Agenda.',
   'call': 'Call',
   'realizado': 'Realiz.',
@@ -94,7 +79,7 @@ function drawHeader(doc, titulo, subtitulo, pageW) {
   doc.setTextColor(...C.laranja);
   doc.setFontSize(7.5);
   doc.setFont(undefined, 'bold');
-  doc.text('PLANO DE MIDIA', 19, 9);
+  doc.text('PLANO DE MÍDIA', 19, 9);
 
   doc.setTextColor(...C.linho);
   doc.setFontSize(16);
@@ -181,7 +166,7 @@ function drawFunnelChart(doc, { x, y, w, h, stages, values, pageW, marginL }) {
   doc.setFontSize(9);
   doc.setFont(undefined, 'bold');
   doc.setTextColor(...C.marrom);
-  doc.text('Funil de Conversao', marginL, cy);
+  doc.text('Funil de Conversão', marginL, cy);
   doc.setDrawColor(...C.laranja);
   doc.setLineWidth(0.5);
   doc.line(marginL, cy + 1.5, marginL + 55, cy + 1.5);
@@ -249,7 +234,7 @@ function drawChannelAllocation(doc, { x, y, channels, totalBudget, pageW, margin
   doc.setFontSize(9);
   doc.setFont(undefined, 'bold');
   doc.setTextColor(...C.marrom);
-  doc.text('Alocacao por Canal', x, y);
+  doc.text('Alocação por Canal', x, y);
   doc.setDrawColor(...C.laranja);
   doc.setLineWidth(0.5);
   doc.line(x, y + 1.5, x + 55, y + 1.5);
@@ -305,8 +290,8 @@ function drawChannelAllocation(doc, { x, y, channels, totalBudget, pageW, margin
 function drawMetaPage(doc, { metaCh, titulo, pageW, pageH, marginL }) {
   const FUNNEL_STAGE_LABELS = {
     topo: 'Topo — Reconhecimento',
-    meio: 'Meio — Consideracao',
-    fundo: 'Fundo — Conversao',
+    meio: 'Meio — Consideração',
+    fundo: 'Fundo — Conversão',
     remarketing: 'Remarketing',
   };
   const FUNNEL_COLORS = {
@@ -317,7 +302,7 @@ function drawMetaPage(doc, { metaCh, titulo, pageW, pageH, marginL }) {
   };
 
   doc.addPage();
-  const headerH = drawHeader(doc, titulo, 'Estrutura de Campanhas Meta Ads', pageW);
+  const headerH = drawHeader(doc, titulo, 'Estrutura de Campanhas — Meta Ads', pageW);
   let my = headerH + 10;
 
   // ── Badge Meta ──────────────────────────────────────────
@@ -416,19 +401,19 @@ function drawMetaPage(doc, { metaCh, titulo, pageW, pageH, marginL }) {
       doc.setFontSize(7);
       doc.setFont(undefined, 'normal');
       doc.setTextColor(...C.savana);
-      doc.text(safe(`Mensal: ${fmt(adBudget)}  |  Diario: R$${dailyBudget.toFixed(2)}`), pageW - marginL - 18, my + 5.5, { align: 'right' });
+      doc.text(safe(`Mensal: ${fmt(adBudget)}  |  Diário: R$${dailyBudget.toFixed(2)}`), pageW - marginL - 18, my + 5.5, { align: 'right' });
 
       // ── Nível 3: Parametrizações em grid ──────────────────
       const params = adset.params || {};
       const paramItems = [
         { label: 'Objetivo', value: params.objetivo },
-        { label: 'Publico', value: params.publico },
-        { label: 'Faixa Etaria', value: params.faixa_etaria },
-        { label: 'Genero', value: params.genero },
-        { label: 'Localizacao', value: params.localizacao },
+        { label: 'Público', value: params.publico },
+        { label: 'Faixa Etária', value: params.faixa_etaria },
+        { label: 'Gênero', value: params.genero },
+        { label: 'Localização', value: params.localizacao },
         { label: 'Formato', value: params.formato },
         { label: 'Posicionamento', value: params.posicionamento },
-        { label: 'Observacoes', value: params.observacoes },
+        { label: 'Observações', value: params.observacoes },
       ].filter(p => p.value);
 
       const paramColW = (pageW - marginL * 2 - 22) / 4;
@@ -451,7 +436,7 @@ function drawMetaPage(doc, { metaCh, titulo, pageW, pageH, marginL }) {
         doc.setFontSize(6.5);
         doc.setFont(undefined, 'italic');
         doc.setTextColor(...C.savana);
-        doc.text('Sem parametrizacoes definidas.', marginL + 18, my + 16);
+        doc.text('Sem parametrizações definidas.', marginL + 18, my + 16);
       }
 
       my += 30;
@@ -488,7 +473,7 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
 
   const cards = [
     { label: 'Invest. Bruto', value: `R$${Math.round(totalInvestment).toLocaleString('pt-BR')}` },
-    ...(hasAnyTax ? [{ label: 'Invest. Liquido', value: `R$${Math.round(netInvestment).toLocaleString('pt-BR')}` }] : []),
+    ...(hasAnyTax ? [{ label: 'Invest. Líquido', value: `R$${Math.round(netInvestment).toLocaleString('pt-BR')}` }] : []),
     { label: 'Leads Esperados', value: fmtN(consolidated.totals.total_leads) },
     { label: 'Vendas Esperadas', value: fmtN(consolidated.totals.total_sales) },
     { label: 'Receita Projetada', value: `R$${Math.round(consolidated.totals.total_revenue).toLocaleString('pt-BR')}` },
@@ -633,7 +618,7 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
     doc.setFontSize(6.5);
     doc.setTextColor(...C.savana);
     doc.setFont(undefined, 'normal');
-    doc.text(`Pagina ${i} de ${pageCount}`, pageW - marginL, pageH - 5, { align: 'right' });
+    doc.text(`Página ${i} de ${pageCount}`, pageW - marginL, pageH - 5, { align: 'right' });
     doc.text('Media Planner - Performance Clinic', marginL, pageH - 5);
     doc.setFillColor(...C.laranja);
     doc.circle(pageW / 2, pageH - 6, 0.8, 'F');
