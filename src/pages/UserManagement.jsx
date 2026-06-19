@@ -52,27 +52,11 @@ export default function UserManagement() {
       let role = 'consultant';
       if (profile.level >= 4) role = 'client';
       
-      // Envia convite diretamente (sempre consultant ou client, NUNCA admin)
-      await base44.users.inviteUser(form.email, role);
+      // Envia convite via função backend (que envia o email)
+      const inviteResponse = await base44.functions.invoke('inviteUser', { email: form.email, role, profile_id: form.profile_id, full_name: form.full_name });
+      if (inviteResponse.data?.error) throw new Error(inviteResponse.data.error);
       
-      // Aguarda a criação do usuário
-      let createdUser = null;
-      for (let i = 0; i < 10; i++) {
-        await new Promise(r => setTimeout(r, 300));
-        const users = await base44.asServiceRole.entities.User.filter({ email: form.email });
-        if (users?.length > 0) {
-          createdUser = users[0];
-          break;
-        }
-      }
-      
-      // Atualiza perfil e nome via function
-      if (createdUser) {
-        const updateData = { profile_id: form.profile_id };
-        if (form.full_name) updateData.full_name = form.full_name;
-        const response = await base44.functions.invoke('updateUser', { userId: createdUser.id, data: updateData });
-        if (response.data?.error) throw new Error(response.data.error);
-      }
+
       
       return { success: true };
     },
