@@ -13,7 +13,7 @@ import { Shield, Plus, Pencil, Trash2, Eye, Pencil as EditIcon } from 'lucide-re
 // Each group: module name, view permission key, edit permission key (null = not applicable)
 // Ordem exata do menu lateral
 const PERMISSION_GROUPS = [
-  { module: 'Dashboard',               view: 'visualizar_dashboard',             edit: null },
+  { module: 'Dashboard',               view: 'visualizar_dashboard',             edit: 'editar_dashboard' },
   { module: 'Clientes',                view: 'visualizar_clientes',              edit: 'editar_clientes' },
   { module: 'Planos de Mídia',         view: 'visualizar_planos',                edit: 'editar_planos' },
   { module: 'Planejamento Reverso',    view: 'visualizar_planejamento_reverso',   edit: 'editar_planejamento_reverso' },

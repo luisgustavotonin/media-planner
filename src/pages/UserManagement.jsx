@@ -41,35 +41,29 @@ export default function UserManagement() {
   });
 
   const inviteMut = useMutation({
-    mutationFn: async () => {
-      if (!form.email || !form.profile_id) throw new Error('Email e perfil são obrigatórios');
-      
-      // Determina role baseado no profile - NUNCA admin para convites
-      const profileList = await base44.entities.Profile.list();
-      const profile = profileList.find(p => p.id === form.profile_id);
-      if (!profile) throw new Error('Perfil inválido');
-      
-      let role = 'consultant';
-      if (profile.level >= 4) role = 'client';
-      
-      // Envia convite via função backend (que envia o email)
-      const inviteResponse = await base44.functions.invoke('inviteUser', { email: form.email, role, profile_id: form.profile_id, full_name: form.full_name });
-      if (inviteResponse.data?.error) throw new Error(inviteResponse.data.error);
-      
+     mutationFn: async () => {
+       if (!form.email || !form.profile_id) throw new Error('Email e perfil são obrigatórios');
 
-      
-      return { success: true };
-    },
-    onSuccess: () => {
-      toast.success('Convite enviado com sucesso!');
-      setInviteOpen(false);
-      setForm({ email: '', full_name: '', profile_id: '', units: [] });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-    },
-    onError: (err) => {
-      toast.error(err.message || 'Erro ao enviar convite');
-    }
-  });
+       const inviteResponse = await base44.functions.invoke('inviteUser', { 
+         email: form.email, 
+         profile_id: form.profile_id, 
+         full_name: form.full_name,
+         units: form.units
+       });
+       if (inviteResponse.data?.error) throw new Error(inviteResponse.data.error);
+
+       return inviteResponse.data;
+     },
+     onSuccess: () => {
+       toast.success('Convite enviado com sucesso!');
+       setInviteOpen(false);
+       setForm({ email: '', full_name: '', profile_id: '', units: [] });
+       queryClient.invalidateQueries({ queryKey: ['users'] });
+     },
+     onError: (err) => {
+       toast.error(err.message || 'Erro ao enviar convite');
+     }
+   });
 
   const updateUserMut = useMutation({
     mutationFn: async ({ userId, data }) => {
@@ -125,7 +119,7 @@ export default function UserManagement() {
       email: user.email, 
       full_name: user.full_name || '', 
       profile_id: user.profile_id || '',
-      units: []
+      units: user.units || []
     });
   };
 
@@ -142,10 +136,11 @@ export default function UserManagement() {
     }
     
     const updateData = {};
-    if (form.full_name) updateData.full_name = form.full_name;
-    if (form.profile_id) updateData.profile_id = form.profile_id;
-    
-    updateUserMut.mutate({ userId: editingUserId, data: updateData });
+     if (form.full_name) updateData.full_name = form.full_name;
+     if (form.profile_id) updateData.profile_id = form.profile_id;
+     if (form.units.length > 0) updateData.units = form.units;
+
+     updateUserMut.mutate({ userId: editingUserId, data: updateData });
   };
 
   const toggleUnit = (id) => {
@@ -284,24 +279,45 @@ export default function UserManagement() {
               <Input value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} placeholder="João da Silva" className="mt-1" />
             </div>
             {!isCurrentUserRow(editingUserId) && (
-              <div>
-                <Label className="text-xs">Perfil de Acesso</Label>
-                <Select value={form.profile_id} onValueChange={v => setForm({...form, profile_id: v})}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Selecione o perfil" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {profiles.map(p => (
-                      <SelectItem key={p.id} value={p.id}>
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
-                          {p.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <>
+                <div>
+                  <Label className="text-xs">Perfil de Acesso</Label>
+                  <Select value={form.profile_id} onValueChange={v => setForm({...form, profile_id: v})}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Selecione o perfil" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {profiles.map(p => (
+                        <SelectItem key={p.id} value={p.id}>
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
+                            {p.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Unidades com Acesso</Label>
+                  <div className="mt-1 border border-gray-200 rounded-lg overflow-hidden">
+                    <label className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100">
+                      <Checkbox checked={form.units.length === clients.length && clients.length > 0} onCheckedChange={toggleAllUnits} />
+                      <span className="text-xs font-medium text-gray-700">Todas as unidades</span>
+                    </label>
+                    <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
+                      {clients.map(c => (
+                        <label key={c.id} className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-gray-50">
+                          <Checkbox checked={form.units.includes(c.id)} onCheckedChange={() => toggleUnit(c.id)} />
+                          <Building2 className="w-3 h-3 text-gray-400" />
+                          <span className="text-xs text-gray-700">{c.clinic_name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  {form.units.length > 0 && <p className="text-[10px] text-gray-400 mt-1">{form.units.length} unidade(s) selecionada(s)</p>}
+                </div>
+              </>
             )}
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={() => setEditingUserId(null)}>Cancelar</Button>

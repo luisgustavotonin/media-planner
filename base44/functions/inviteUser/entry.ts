@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { email, full_name, profile_id } = await req.json();
+    const { email, full_name, profile_id, units = [] } = await req.json();
     
     if (!email || !profile_id) {
       return Response.json({ error: 'Email e profile_id são obrigatórios' }, { status: 400 });
@@ -52,7 +52,8 @@ Deno.serve(async (req) => {
       full_name: full_name || email,
       profile_id,
       status: 'inativo',
-      assigned_client_id: clientId
+      assigned_client_id: clientId,
+      units: units && units.length > 0 ? units : undefined
     });
     
     console.log(`[inviteUser] User created in DB: ${newUser.id} with status=inativo and profile=${profile.name}`);
