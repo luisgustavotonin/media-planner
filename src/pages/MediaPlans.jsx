@@ -30,7 +30,10 @@ export default function MediaPlans() {
   });
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list(),
+    queryFn: async () => {
+      const data = await base44.entities.Client.list();
+      return data.sort((a, b) => (a.clinic_name || '').localeCompare(b.clinic_name || '', 'pt-BR'));
+    },
   });
   const { data: benchmarks = [] } = useQuery({
     queryKey: ['benchmarks'],

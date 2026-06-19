@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Plus, Shield, UserCheck, Eye, Mail, Building2 } from 'lucide-react';
+import { Users, Plus, Shield, UserCheck, Eye, Mail, Building2, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const roleColors = { admin: 'bg-red-50 text-red-700 border-red-100', consultant: 'bg-blue-50 text-blue-700 border-blue-100', client: 'bg-gray-50 text-gray-600 border-gray-100' };
 const roleLabels = { admin: 'Admin', consultant: 'Consultor', client: 'Cliente' };
@@ -18,7 +19,7 @@ export default function UserManagement() {
   const queryClient = useQueryClient();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviting, setInviting] = useState(false);
-  const [form, setForm] = useState({ full_name: '', email: '', role: 'consultant', profile_id: '', units: '' });
+  const [form, setForm] = useState({ full_name: '', email: '', role: 'consultant', profile_id: '', units: [] });
 
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
@@ -32,18 +33,40 @@ export default function UserManagement() {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list(),
+    queryFn: async () => {
+      const data = await base44.entities.Client.list();
+      return data.sort((a, b) => (a.clinic_name || '').localeCompare(b.clinic_name || '', 'pt-BR'));
+    },
   });
 
   const handleInvite = async () => {
     if (!form.email) return;
     setInviting(true);
-    await base44.users.inviteUser(form.email, form.role);
-    toast.success(`Convite enviado para ${form.email}!`);
-    setInviting(false);
-    setInviteOpen(false);
-    setForm({ full_name: '', email: '', role: 'consultant', profile_id: '', units: '' });
-    queryClient.invalidateQueries({ queryKey: ['users'] });
+    try {
+      await base44.users.inviteUser(form.email, form.role);
+      toast.success(`Convite enviado para ${form.email}!`);
+      setInviteOpen(false);
+      setForm({ full_name: '', email: '', role: 'consultant', profile_id: '', units: [] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    } catch (err) {
+      toast.error('Erro ao enviar convite. Verifique o e-mail e tente novamente.');
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const toggleUnit = (id) => {
+    setForm(f => {
+      const units = f.units.includes(id) ? f.units.filter(u => u !== id) : [...f.units, id];
+      return { ...f, units };
+    });
+  };
+
+  const toggleAllUnits = () => {
+    setForm(f => ({
+      ...f,
+      units: f.units.length === clients.length ? [] : clients.map(c => c.id),
+    }));
   };
 
   return (
@@ -147,22 +170,37 @@ export default function UserManagement() {
             </div>
             <div>
               <Label className="text-xs">Unidades com Acesso</Label>
-              <Select value={form.units} onValueChange={v => setForm({...form, units: v})}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Selecione as unidades (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as unidades</SelectItem>
+              <div className="mt-1 border border-gray-200 rounded-lg overflow-hidden">
+                <div
+                  className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100"
+                  onClick={toggleAllUnits}
+                >
+                  <Checkbox
+                    checked={form.units.length === clients.length && clients.length > 0}
+                    onCheckedChange={toggleAllUnits}
+                  />
+                  <span className="text-xs font-medium text-gray-700">Todas as unidades</span>
+                </div>
+                <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
                   {clients.map(c => (
-                    <SelectItem key={c.id} value={c.id}>
-                      <span className="flex items-center gap-2">
-                        <Building2 className="w-3 h-3" />
-                        {c.clinic_name}
-                      </span>
-                    </SelectItem>
+                    <div
+                      key={c.id}
+                      className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-gray-50"
+                      onClick={() => toggleUnit(c.id)}
+                    >
+                      <Checkbox
+                        checked={form.units.includes(c.id)}
+                        onCheckedChange={() => toggleUnit(c.id)}
+                      />
+                      <Building2 className="w-3 h-3 text-gray-400" />
+                      <span className="text-xs text-gray-700">{c.clinic_name}</span>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              </div>
+              {form.units.length > 0 && (
+                <p className="text-[10px] text-gray-400 mt-1">{form.units.length} unidade(s) selecionada(s)</p>
+              )}
             </div>
             <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
               <p className="text-xs text-blue-700">

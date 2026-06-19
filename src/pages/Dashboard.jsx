@@ -23,7 +23,10 @@ export default function Dashboard() {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list('-created_date'),
+    queryFn: async () => {
+      const data = await base44.entities.Client.list();
+      return data.sort((a, b) => (a.clinic_name || '').localeCompare(b.clinic_name || '', 'pt-BR'));
+    },
   });
 
   const { data: plans = [] } = useQuery({
