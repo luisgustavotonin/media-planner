@@ -32,6 +32,9 @@
         "visualizar_dashboard": {
           "type": "boolean"
         },
+        "editar_dashboard": {
+          "type": "boolean"
+        },
         "visualizar_clientes": {
           "type": "boolean"
         },

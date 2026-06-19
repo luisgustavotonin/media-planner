@@ -26,9 +26,11 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Perfil não encontrado' }, { status: 400 });
     }
 
+    // NUNCA cria como admin por invite - sempre consultant ou client baseado no level
     let role = 'consultant';
-    if (profile.level === 1) role = 'admin';
-    else if (profile.level >= 4) role = 'client';
+    if (profile.level >= 4) role = 'client';
+    
+    console.log(`[inviteUser] Profile level: ${profile.level}, assigned role: ${role}`);
 
     // Verifica se o usuário já existe
     const existingUsers = await base44.asServiceRole.entities.User.filter({ email });
@@ -53,13 +55,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Atualiza o usuário com profile e nome se foi criado
+    // Atualiza o usuário com profile, nome e status inativo
     if (createdUser) {
       try {
-        const updateData = { profile_id };
+        const updateData = { 
+          profile_id,
+          status: 'inativo'  // Criado inativo, só ativa quando admin liberar
+        };
         if (full_name) updateData.full_name = full_name;
         await base44.asServiceRole.entities.User.update(createdUser.id, updateData);
-        console.log(`[inviteUser] Updated user ${createdUser.id} with profile and full_name`);
+        console.log(`[inviteUser] Updated user ${createdUser.id} with profile_id, status=inativo, and full_name`);
       } catch (updateErr) {
         console.error(`[inviteUser] Error updating user:`, updateErr.message);
       }
