@@ -132,15 +132,13 @@ export default function UserManagement() {
       toast.error('Preencha o nome');
       return;
     }
-    if (!isCurrent && !form.full_name && !form.profile_id && form.units.length === 0) {
-      toast.error('Preencha ao menos um campo');
-      return;
-    }
 
     const updateData = {};
     if (form.full_name) updateData.full_name = form.full_name;
     if (form.profile_id) updateData.profile_id = form.profile_id;
-    updateData.units = form.units;
+    if (!isCurrent) {
+      updateData.units = form.units; // Sempre salva units para usuários não-admin
+    }
 
     updateUserMut.mutate({ userId: editingUserId, data: updateData });
   };

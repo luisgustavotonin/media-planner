@@ -38,12 +38,15 @@ Deno.serve(async (req) => {
     // Para usuário secundário, retorna apenas os units dele
     const clientIds = Array.isArray(user.units) ? user.units : [];
     
+    console.log(`[validateUserAccess] User ${user.email} - units: ${JSON.stringify(clientIds)}`);
+    
     return Response.json({
       authorized_client_ids: clientIds,
       is_admin: false,
       is_inactive: false,
       user_id: user.id,
-      user_email: user.email
+      user_email: user.email,
+      debug_units: user.units
     });
   } catch (error) {
     console.error('[validateUserAccess]', error.message);
