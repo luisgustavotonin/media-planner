@@ -1,0 +1,39 @@
+{
+  "name": "UserClient",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "User ID"
+    },
+    "user_email": {
+      "type": "string",
+      "format": "email"
+    },
+    "user_nome": {
+      "type": "string"
+    },
+    "client_id": {
+      "type": "string",
+      "description": "Reference to Client entity"
+    },
+    "perfil_id": {
+      "type": "string",
+      "description": "Reference to AccessProfile entity"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PENDENTE",
+        "APROVADO",
+        "INATIVO"
+      ],
+      "default": "PENDENTE"
+    }
+  },
+  "required": [
+    "user_id",
+    "user_email",
+    "client_id"
+  ]
+}

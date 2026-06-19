@@ -1,0 +1,32 @@
+{
+  "name": "AccessProfile",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string",
+      "description": "Nome do perfil"
+    },
+    "descricao": {
+      "type": "string"
+    },
+    "nivel_hierarquico": {
+      "type": "number",
+      "default": 5
+    },
+    "cor": {
+      "type": "string",
+      "default": "#DC2626"
+    },
+    "ativo": {
+      "type": "boolean",
+      "default": true
+    },
+    "permissoes": {
+      "type": "object",
+      "description": "Objeto de permiss\u00f5es em formato chave-valor"
+    }
+  },
+  "required": [
+    "nome"
+  ]
+}

@@ -19,6 +19,8 @@ const navItems = [
   { name: 'Acomp. Semanal', page: 'WeeklyTracking', icon: CalendarDays, roles: ['admin', 'consultant'] },
   { name: 'Benchmarks', page: 'Benchmarks', icon: Settings, roles: ['admin'] },
   { name: 'Tipos de Funil', page: 'FunnelTypes', icon: GitBranch, roles: ['admin'] },
+  { name: 'Usuários', page: 'Usuarios', icon: LayoutDashboard, roles: ['admin'] },
+  { name: 'Perfis', page: 'Perfis', icon: Settings, roles: ['admin'] },
 ];
 
 export default function Layout({ children, currentPageName }) {
