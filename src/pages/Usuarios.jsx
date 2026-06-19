@@ -70,7 +70,7 @@ export default function UsuariosPage() {
             user_nome: data.nome,
             client_id: clienteId,
             perfil_id: data.perfil_id,
-            status: 'PENDENTE'
+            status: 'APROVADO'
           });
         }
         toast.success('Usuário incluído com sucesso!');
@@ -102,14 +102,7 @@ export default function UsuariosPage() {
     onSuccess: () => queryClient.invalidateQueries(['user-client'])
   });
 
-  const aprovarUsuarioMutation = useMutation({
-    mutationFn: async (userId) => {
-      const vinculosUsuario = vinculos.filter(v => v.user_id === userId);
-      for (const v of vinculosUsuario) await base44.entities.UserClient.update(v.id, { status: 'APROVADO' });
-      toast.success('Usuário aprovado!');
-    },
-    onSuccess: () => queryClient.invalidateQueries(['user-client'])
-  });
+
 
   const abrirDialogoUsuario = (usuario = null) => {
     if (usuario) {
@@ -210,10 +203,10 @@ export default function UsuariosPage() {
                           <span className="text-sm text-slate-600">{vinc.filter(v => v.status === 'APROVADO').length} cliente(s)</span>
                         </TableCell>
                         <TableCell>
-                          {usuario.status === 'APROVADO' ? (
-                            <span className="flex items-center gap-1 text-green-600 text-sm"><CheckCircle className="w-4 h-4" /> Aprovado</span>
+                          {vinc[0]?.status === 'APROVADO' ? (
+                            <span className="flex items-center gap-1 text-green-600 text-sm"><CheckCircle className="w-4 h-4" /> Ativo</span>
                           ) : (
-                            <span className="flex items-center gap-1 text-amber-600 text-sm"><XCircle className="w-4 h-4" /> Pendente</span>
+                            <span className="flex items-center gap-1 text-slate-400 text-sm"><XCircle className="w-4 h-4" /> Inativo</span>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
@@ -221,12 +214,7 @@ export default function UsuariosPage() {
                             <Button variant="ghost" size="icon" onClick={() => abrirDialogoUsuario(usuario)}>
                               <Edit className="w-4 h-4" />
                             </Button>
-                            {usuario.status === 'PENDENTE' && (
-                              <Button variant="ghost" size="icon" onClick={() => aprovarUsuarioMutation.mutate(usuario.user_id)}>
-                                <CheckCircle className="w-4 h-4 text-green-600" />
-                              </Button>
-                            )}
-                            {usuario.status === 'APROVADO' && (
+                            {vinc[0]?.status === 'APROVADO' && (
                               <Button variant="ghost" size="icon" onClick={() => {
                                 if (confirm('⚠️ Confirma a inativação deste usuário?')) inativarUsuarioMutation.mutate(usuario.user_id);
                               }}>
