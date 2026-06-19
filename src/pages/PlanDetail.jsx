@@ -79,9 +79,10 @@ export default function PlanDetail() {
   }
 
   const funnelType = funnelTypes.find(f => f.id === localPlan.funnel_type_id);
-  // Busca benchmark pelo funil + segmento; fallback só por segmento para legado
+  // Busca benchmark: 1) funil + segmento exato, 2) só funil (sem segmento), 3) legado só por segmento
   const benchmark = benchmarks.find(b => b.funnel_type_id === localPlan.funnel_type_id && b.segment === localPlan.segment)
-    || benchmarks.find(b => b.segment === localPlan.segment);
+    || benchmarks.find(b => b.funnel_type_id === localPlan.funnel_type_id)
+    || benchmarks.find(b => !b.funnel_type_id && b.segment === localPlan.segment);
   const funnelStages = funnelType?.stages || [];
 
   // Pares de conversão dinâmicos baseados nas etapas do funil
