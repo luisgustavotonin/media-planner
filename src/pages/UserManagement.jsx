@@ -140,7 +140,7 @@ export default function UserManagement() {
     const updateData = {};
     if (form.full_name) updateData.full_name = form.full_name;
     if (form.profile_id) updateData.profile_id = form.profile_id;
-    if (form.units.length >= 0) updateData.units = form.units;
+    updateData.units = form.units;
 
     updateUserMut.mutate({ userId: editingUserId, data: updateData });
   };
