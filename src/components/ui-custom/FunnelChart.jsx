@@ -31,11 +31,15 @@ export default function FunnelChart({ data, title, funnelStages, benchmark, conv
   let benchmarkData = null;
   if (benchmark && funnelData.length >= 1) {
     const totalLeads = funnelData[0].value;
-    const bmRates = [
-      benchmark.lead_to_appointment_rate || 0,
-      benchmark.appointment_to_show_rate || 0,
-      benchmark.show_to_sale_rate || 0,
-    ];
+    // Prefer dynamic conversion_rates, fallback to legacy fields
+    const hasRates = Array.isArray(benchmark.conversion_rates) && benchmark.conversion_rates.length > 0;
+    const bmRates = hasRates
+      ? benchmark.conversion_rates
+      : [
+          benchmark.lead_to_appointment_rate || 0,
+          benchmark.appointment_to_show_rate || 0,
+          benchmark.show_to_sale_rate || 0,
+        ];
     benchmarkData = funnelData.map((d, i) => {
       if (i === 0) return totalLeads;
       let bm = totalLeads;
