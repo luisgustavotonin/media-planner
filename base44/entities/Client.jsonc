@@ -53,6 +53,13 @@
       "type": "string",
       "description": "Email of the client user account linked to this clinic"
     },
+    "units": {
+      "type": "array",
+      "description": "Array of unit names this client belongs to",
+      "items": {
+        "type": "string"
+      }
+    },
     "status": {
       "type": "string",
       "enum": [

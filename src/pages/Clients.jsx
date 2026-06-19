@@ -56,8 +56,8 @@ export default function Clients() {
 
   const userUnits = user?.units || [];
   const myClients = user?.role === 'admin' ? clients :
-    userUnits.length > 0 ? clients.filter(c => userUnits.includes(c.id)) :
-    clients.filter(c => c.created_by === user?.email);
+    userUnits.length > 0 ? clients.filter(c => c.units && c.units.some(unit => userUnits.includes(unit))) :
+    [];
   const filtered = myClients.filter(c => c.clinic_name?.toLowerCase().includes(search.toLowerCase()));
 
   const handleSubmit = () => {
