@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { TrendingUp, TrendingDown, Minus, SlidersHorizontal, ChevronDown, ChevronUp } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, SlidersHorizontal, ChevronDown, ChevronUp, Settings } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -149,21 +149,27 @@ export default function Scenarios() {
             className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors"
           >
             <div className="flex items-center gap-2">
-              <SlidersHorizontal className="w-4 h-4 text-gray-400" />
-              <span className="text-sm font-semibold text-gray-900">Premissas dos Cenários</span>
-              <span className="text-xs text-gray-400 ml-1">
-                Otimista: CPL {adjForm.optimistic_cpl_adj > 0 ? '+' : ''}{adjForm.optimistic_cpl_adj.toFixed(0)}% / Conv. +{adjForm.optimistic_conv_adj.toFixed(0)}p.p. &nbsp;·&nbsp;
-                Conservador: CPL +{adjForm.conservative_cpl_adj.toFixed(0)}% / Conv. {adjForm.conservative_conv_adj.toFixed(0)}p.p.
-              </span>
+              <Settings className="w-4 h-4 text-gray-400" />
+              <span className="text-sm font-semibold text-gray-900">Configurações dos Cenários</span>
+              {!showAdj && (
+                <span className="text-xs text-gray-400 ml-1">
+                  Otimista: CPL {adjForm.optimistic_cpl_adj > 0 ? '+' : ''}{adjForm.optimistic_cpl_adj.toFixed(0)}% / Conv. +{adjForm.optimistic_conv_adj.toFixed(0)}p.p.
+                  &nbsp;·&nbsp;
+                  Conservador: CPL +{adjForm.conservative_cpl_adj.toFixed(0)}% / Conv. {adjForm.conservative_conv_adj.toFixed(0)}p.p.
+                </span>
+              )}
             </div>
             {showAdj ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
           </button>
 
           {showAdj && (
             <div className="px-6 pb-6 border-t border-gray-50">
-              <p className="text-xs text-gray-400 mt-4 mb-4">
-                O <strong>Realista</strong> é o plano atual sem alterações. Os demais cenários aplicam ajustes sobre o CPL e as taxas de conversão:
-              </p>
+              <div className="mt-4 mb-5 p-3 bg-blue-50 rounded-lg border border-blue-100 text-xs text-blue-700 space-y-1">
+                <p><strong>Como funcionam os cenários:</strong></p>
+                <p>• <strong>Realista</strong>: plano atual sem nenhuma alteração.</p>
+                <p>• <strong>CPL (%)</strong>: ajuste no Custo por Lead de cada canal. Negativo = leads mais baratos (mais leads pelo mesmo budget). Positivo = leads mais caros.</p>
+                <p>• <strong>Conversões (p.p.)</strong>: ajuste em pontos percentuais aplicado a <em>todas</em> as taxas de conversão do funil (ex: Lead→Agendamento, Agendamento→Comparecimento, etc.). Positivo = melhor conversão; negativo = pior.</p>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 {/* Otimista */}
                 <div className="space-y-3">

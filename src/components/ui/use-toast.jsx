@@ -1,8 +1,9 @@
 // Inspired by react-hot-toast library
 import { useState, useEffect } from "react";
 
-const TOAST_LIMIT = 20;
-const TOAST_REMOVE_DELAY = 1000000;
+const TOAST_LIMIT = 5;
+const TOAST_REMOVE_DELAY = 300; // delay after dismiss before removing from DOM
+const TOAST_AUTO_DISMISS_DELAY = 4000; // auto-dismiss after 4s
 
 const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
@@ -134,6 +135,9 @@ function toast({ ...props }) {
     },
   });
 
+  // Auto-dismiss after delay
+  setTimeout(() => dismiss(), TOAST_AUTO_DISMISS_DELAY);
+
   return {
     id,
     dismiss,
@@ -161,4 +165,4 @@ function useToast() {
   };
 }
 
-export { useToast, toast }; 
+export { useToast, toast };
