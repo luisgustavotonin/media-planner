@@ -221,7 +221,7 @@ export default function WeeklyTracking() {
 
           <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
             <h3 className="text-sm font-semibold text-gray-900 mb-4">Lançar Dados Semanais</h3>
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
               <div>
                 <Label className="text-xs">Semana</Label>
                 <Select value={String(weekForm.week_number)} onValueChange={v => setWeekForm(f => ({ ...f, week_number: Number(v) }))}>

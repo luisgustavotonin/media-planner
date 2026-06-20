@@ -122,7 +122,7 @@ export default function FunnelTypes() {
   };
 
   return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto">
+    <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-5xl mx-auto w-full">
       <PageHeader
         title="Tipos de Funil"
         description="Configure modelos de funil totalmente livres — etapas, métricas e taxas de conversão."
@@ -133,7 +133,7 @@ export default function FunnelTypes() {
         }
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         {funnels.map(f => (
           <div key={f.id} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-sm transition-shadow group">
             <div className="flex items-start justify-between mb-3">
