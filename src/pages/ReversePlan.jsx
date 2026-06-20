@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../components/hooks/useAuth';
 import { calculateReversePlan } from '../components/hooks/usePlanCalculations';
 import PageHeader from '../components/ui-custom/PageHeader';
 import StatCard from '../components/ui-custom/StatCard';
@@ -17,11 +16,16 @@ import { useToast } from '@/components/ui/use-toast';
 const CHANNEL_OPTIONS = ['Meta', 'Google', 'TikTok', 'YouTube', 'LinkedIn', 'Outro'];
 const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
-function PlanList({ records, clients, onSelect, onCreate }) {
+// ── Vista: lista de planejamentos salvos (com filtros de cliente/mês) ──
+function PlanList({ records, clients, onSelect, onNew }) {
   const [filterClient, setFilterClient] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
 
-  const sortedClients = [...clients].sort((a, b) => (a.clinic_name || '').localeCompare(b.clinic_name || '', 'pt-BR'));
+  const sortedClients = [...clients].sort((a, b) =>
+    (a.clinic_name || '').localeCompare(b.clinic_name || '', 'pt-BR')
+  );
+
+  const allMonths = [...new Set(records.map(r => r.plan_label).filter(Boolean))].sort();
 
   const filtered = records.filter(r => {
     if (filterClient && r.client_id !== filterClient) return false;
@@ -29,38 +33,50 @@ function PlanList({ records, clients, onSelect, onCreate }) {
     return true;
   });
 
-  const allMonths = [...new Set(records.map(r => r.plan_label).filter(Boolean))].sort();
-
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">Planejamentos Salvos</h2>
-          <p className="text-sm text-gray-500">{records.length} planejamento(s) reverso(s)</p>
-        </div>
-        <Button onClick={onCreate} className="gap-2 bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4" /> Novo Planejamento
-        </Button>
-      </div>
-
-      {/* Filtros */}
-      <div className="flex flex-wrap gap-3 mb-5">
+      {/* Seletor de cliente */}
+      <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
+        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">1. Filtrar por Cliente</p>
         <Select value={filterClient} onValueChange={setFilterClient}>
-          <SelectTrigger className="w-48 h-9 text-sm"><SelectValue placeholder="Todos os clientes" /></SelectTrigger>
+          <SelectTrigger className="max-w-xs">
+            <SelectValue placeholder="Todos os clientes..." />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value={null}>Todos os clientes</SelectItem>
-            {sortedClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
+            {sortedClients.map(c => (
+              <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
+
         {allMonths.length > 0 && (
-          <Select value={filterMonth} onValueChange={setFilterMonth}>
-            <SelectTrigger className="w-36 h-9 text-sm"><SelectValue placeholder="Todos os meses" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value={null}>Todos os meses</SelectItem>
-              {allMonths.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <>
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-4">2. Filtrar por Mês</p>
+            <Select value={filterMonth} onValueChange={setFilterMonth}>
+              <SelectTrigger className="max-w-xs">
+                <SelectValue placeholder="Todos os meses..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={null}>Todos os meses</SelectItem>
+                {allMonths.map(m => (
+                  <SelectItem key={m} value={m}>{m}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
         )}
+      </div>
+
+      {/* Cabeçalho da lista */}
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-base font-semibold text-gray-900">Planejamentos Salvos</h2>
+          <p className="text-sm text-gray-500">{filtered.length} planejamento(s) reverso(s)</p>
+        </div>
+        <Button onClick={onNew} className="gap-2 bg-blue-600 hover:bg-blue-700">
+          <Plus className="w-4 h-4" /> Novo Planejamento
+        </Button>
       </div>
 
       {filtered.length === 0 ? (
@@ -87,7 +103,7 @@ function PlanList({ records, clients, onSelect, onCreate }) {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-gray-900">{r.title || cname}</p>
-                    <p className="text-xs text-gray-400">{cname} {r.plan_label ? `· ${r.plan_label}` : ''}</p>
+                    <p className="text-xs text-gray-400">{cname}{r.plan_label ? ` · ${r.plan_label}` : ''}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-8">
@@ -118,114 +134,23 @@ function PlanList({ records, clients, onSelect, onCreate }) {
   );
 }
 
-function PlanForm({ editRecord, clients, plans, onSave, onDelete, onBack }) {
+// ── Vista: visualizar planejamento salvo (somente leitura) ──
+function PlanView({ record, clients, onBack, onDelete }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  const [selectedClientId, setSelectedClientId] = useState(editRecord?.client_id || '');
-  const [selectedPlanId, setSelectedPlanId] = useState(editRecord?.plan_id || '');
-  const [title, setTitle] = useState(editRecord?.title || '');
-  const [targetRevenue, setTargetRevenue] = useState(editRecord?.target_revenue || 0);
-  const [distribution, setDistribution] = useState(editRecord?.distribution || []);
-  const [result, setResult] = useState(() => {
-    // Auto-calculate on open if we have saved data
-    if (editRecord?.result) return editRecord.result;
-    return null;
-  });
-
-  const clientPlans = plans.filter(p => p.client_id === selectedClientId);
-  const selectedPlan = plans.find(p => p.id === selectedPlanId);
-
-  const sortedClients = [...clients].sort((a, b) => (a.clinic_name || '').localeCompare(b.clinic_name || '', 'pt-BR'));
-
-  useEffect(() => {
-    setSelectedPlanId('');
-    setDistribution([]);
-    setResult(null);
-  }, [selectedClientId]);
-
-  // Auto-calculate when editing a saved record that has all data but no result
-  useEffect(() => {
-    if (editRecord && editRecord.distribution?.length > 0 && editRecord.target_revenue > 0 && !result) {
-      const rates = editRecord.conversion_rates || [];
-      const ticket = editRecord.average_ticket || 0;
-      if (ticket > 0 && rates.length > 0) {
-        setResult(calculateReversePlan(editRecord.target_revenue, ticket, rates, editRecord.distribution));
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!selectedPlan || editRecord) return;
-    if (selectedPlan.channels?.length > 0) {
-      const totalBudget = selectedPlan.channels.reduce((s, c) => s + (c.budget_value || 0), 0);
-      setDistribution(selectedPlan.channels.map(ch => ({
-        channel_name: ch.channel_name,
-        percent: totalBudget > 0 ? Math.round((ch.budget_value / totalBudget) * 100) : 0,
-        expected_cpl: ch.expected_cpl || 0,
-      })));
-    }
-  }, [selectedPlanId]);
-
-  const planRates = selectedPlan
-    ? (Array.isArray(selectedPlan.conversion_rates) && selectedPlan.conversion_rates.length
-        ? selectedPlan.conversion_rates
-        : [selectedPlan.lead_to_appointment_rate || 0, selectedPlan.appointment_to_show_rate || 0, selectedPlan.show_to_sale_rate || 0])
-    : (editRecord?.conversion_rates || []);
-
-  const planTicket = selectedPlan?.average_ticket || editRecord?.average_ticket || 0;
-
-  const saveMutation = useMutation({
-    mutationFn: (data) => editRecord
-      ? base44.entities.ReversePlanRecord.update(editRecord.id, data)
-      : base44.entities.ReversePlanRecord.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reverse-plans'] });
-      toast({ title: 'Planejamento salvo!', description: 'Dados salvos com sucesso.' });
-      onSave();
-    },
-  });
+  const cname = clients.find(c => c.id === record.client_id)?.clinic_name || record.client_name || '—';
+  const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
+  const fmtPct = v => `${(v * 100).toFixed(1)}%`;
+  const result = record.result;
 
   const deleteMutation = useMutation({
-    mutationFn: () => base44.entities.ReversePlanRecord.delete(editRecord.id),
+    mutationFn: () => base44.entities.ReversePlanRecord.delete(record.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reverse-plans'] });
       toast({ title: 'Planejamento excluído.' });
       onBack();
     },
   });
-
-  const handleDistChange = (idx, field, value) => {
-    setDistribution(d => d.map((ch, i) => i === idx ? { ...ch, [field]: Number(value) } : ch));
-  };
-
-  const handleCalculate = () => {
-    const r = calculateReversePlan(targetRevenue, planTicket, planRates, distribution);
-    setResult(r);
-  };
-
-  const handleSave = () => {
-    const cname = clients.find(c => c.id === selectedClientId)?.clinic_name || '';
-    const planLabel = selectedPlan
-      ? `${MESES_SHORT[(selectedPlan.period_month || 1) - 1]}/${selectedPlan.period_year}`
-      : '';
-    saveMutation.mutate({
-      client_id: selectedClientId || editRecord?.client_id,
-      client_name: cname || editRecord?.client_name,
-      plan_id: selectedPlanId || editRecord?.plan_id,
-      plan_label: planLabel || editRecord?.plan_label,
-      title: title || `Planejamento — ${cname}`,
-      target_revenue: targetRevenue,
-      average_ticket: planTicket,
-      conversion_rates: planRates,
-      distribution,
-      result,
-    });
-  };
-
-  const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
-  const fmtPct = v => `${(v * 100).toFixed(1)}%`;
-  const canCalculate = (selectedPlanId || editRecord?.plan_id) && targetRevenue > 0 && distribution.length > 0 && planTicket > 0;
 
   const funnelStages = result ? [
     { label: 'Leads', value: result.required_leads },
@@ -243,23 +168,230 @@ function PlanForm({ editRecord, clients, plans, onSave, onDelete, onBack }) {
             <ArrowLeft className="w-5 h-5 text-gray-500" />
           </button>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">{editRecord ? 'Editar Planejamento' : 'Novo Planejamento Reverso'}</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{record.title || cname}</h2>
+            <p className="text-sm text-gray-500">{cname}{record.plan_label ? ` · ${record.plan_label}` : ''}</p>
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => deleteMutation.mutate()}
+          disabled={deleteMutation.isPending}
+          className="text-red-500 border-red-200 hover:bg-red-50"
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {/* Dados do funil */}
+      {record.conversion_rates?.length > 0 && record.average_ticket > 0 && (
+        <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Info className="w-4 h-4 text-blue-500" />
+            <span className="text-xs font-semibold text-blue-700">Dados do Funil</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div>
+              <p className="text-gray-400">Ticket Médio</p>
+              <p className="font-semibold text-gray-800">{fmt(record.average_ticket)}</p>
+            </div>
+            {record.conversion_rates.map((r, i) => {
+              const labels = ['Lead → Agend.', 'Agend. → Compar.', 'Compar. → Venda'];
+              return (
+                <div key={i}>
+                  <p className="text-gray-400">{labels[i] || `Taxa ${i + 1}`}</p>
+                  <p className="font-semibold text-gray-800">{fmtPct(r)}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Meta de receita */}
+      <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
+        <p className="text-xs text-gray-400 mb-1">Meta de Receita</p>
+        <p className="text-2xl font-bold text-gray-900">{fmt(record.target_revenue || 0)}</p>
+      </div>
+
+      {/* Resultados */}
+      {result && (
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
+            <StatCard label="Investimento Necessário" value={fmt(result.total_investment)} icon={DollarSign} color="blue" />
+            <StatCard label="Leads Necessários" value={result.required_leads.toLocaleString()} icon={Users} color="purple" />
+            <StatCard label="Vendas Necessárias" value={result.required_sales.toLocaleString()} icon={Target} color="orange" />
+            <StatCard label="Meta de Receita" value={fmt(record.target_revenue)} icon={TrendingDown} color="green" />
+          </div>
+
+          {funnelStages.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
+              <h3 className="text-sm font-semibold text-gray-900 mb-4">Projeção do Funil</h3>
+              <FunnelVisual stages={funnelStages} />
+            </div>
+          )}
+
+          {result.channel_budgets?.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
+              <div className="px-6 py-4 border-b border-gray-50">
+                <h3 className="text-sm font-semibold text-gray-900">Orçamento por Canal</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-50/50 border-b border-gray-100">
+                      <th className="text-left py-2.5 px-4 font-medium text-gray-500">Canal</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Distribuição</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">CPL</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Leads Nec.</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Budget Nec.</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {result.channel_budgets.map((ch, i) => (
+                      <tr key={i}>
+                        <td className="py-2.5 px-4"><ChannelBadge channel={ch.channel_name} /></td>
+                        <td className="py-2.5 px-4 text-right">{ch.percent}%</td>
+                        <td className="py-2.5 px-4 text-right">R${ch.expected_cpl}</td>
+                        <td className="py-2.5 px-4 text-right">{ch.required_leads.toLocaleString()}</td>
+                        <td className="py-2.5 px-4 text-right font-semibold">{fmt(ch.required_budget)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-gray-50 border-t border-gray-200 font-semibold">
+                      <td className="py-3 px-4">Total</td>
+                      <td className="py-3 px-4 text-right">100%</td>
+                      <td></td>
+                      <td className="py-3 px-4 text-right">{result.required_leads.toLocaleString()}</td>
+                      <td className="py-3 px-4 text-right">{fmt(result.total_investment)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Vista: criar novo planejamento (sequência: cliente → plano → dados → calcular → salvar) ──
+function PlanNew({ clients, plans, onSave, onBack }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const [selectedClientId, setSelectedClientId] = useState('');
+  const [selectedPlanId, setSelectedPlanId] = useState('');
+  const [title, setTitle] = useState('');
+  const [targetRevenue, setTargetRevenue] = useState(0);
+  const [distribution, setDistribution] = useState([]);
+  const [result, setResult] = useState(null);
+
+  const sortedClients = [...clients].sort((a, b) =>
+    (a.clinic_name || '').localeCompare(b.clinic_name || '', 'pt-BR')
+  );
+  const clientPlans = plans.filter(p => p.client_id === selectedClientId);
+  const selectedPlan = plans.find(p => p.id === selectedPlanId);
+
+  useEffect(() => {
+    setSelectedPlanId('');
+    setDistribution([]);
+    setResult(null);
+  }, [selectedClientId]);
+
+  useEffect(() => {
+    if (!selectedPlan) return;
+    if (selectedPlan.channels?.length > 0) {
+      const totalBudget = selectedPlan.channels.reduce((s, c) => s + (c.budget_value || 0), 0);
+      setDistribution(selectedPlan.channels.map(ch => ({
+        channel_name: ch.channel_name,
+        percent: totalBudget > 0 ? Math.round((ch.budget_value / totalBudget) * 100) : 0,
+        expected_cpl: ch.expected_cpl || 0,
+      })));
+    } else {
+      setDistribution([]);
+    }
+    setResult(null);
+  }, [selectedPlanId]);
+
+  const planRates = selectedPlan
+    ? (Array.isArray(selectedPlan.conversion_rates) && selectedPlan.conversion_rates.length
+        ? selectedPlan.conversion_rates
+        : [selectedPlan.lead_to_appointment_rate || 0, selectedPlan.appointment_to_show_rate || 0, selectedPlan.show_to_sale_rate || 0])
+    : [];
+  const planTicket = selectedPlan?.average_ticket || 0;
+
+  const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
+  const fmtPct = v => `${(v * 100).toFixed(1)}%`;
+  const canCalculate = selectedPlanId && targetRevenue > 0 && distribution.length > 0 && planTicket > 0;
+
+  const handleDistChange = (idx, field, value) => {
+    setDistribution(d => d.map((ch, i) => i === idx ? { ...ch, [field]: Number(value) } : ch));
+  };
+
+  const handleCalculate = () => {
+    setResult(calculateReversePlan(targetRevenue, planTicket, planRates, distribution));
+  };
+
+  const saveMutation = useMutation({
+    mutationFn: (data) => base44.entities.ReversePlanRecord.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reverse-plans'] });
+      toast({ title: 'Planejamento salvo!' });
+      onSave();
+    },
+  });
+
+  const handleSave = () => {
+    const cname = clients.find(c => c.id === selectedClientId)?.clinic_name || '';
+    const planLabel = selectedPlan
+      ? `${MESES_SHORT[(selectedPlan.period_month || 1) - 1]}/${selectedPlan.period_year}`
+      : '';
+    saveMutation.mutate({
+      client_id: selectedClientId,
+      client_name: cname,
+      plan_id: selectedPlanId,
+      plan_label: planLabel,
+      title: title || `Planejamento — ${cname}`,
+      target_revenue: targetRevenue,
+      average_ticket: planTicket,
+      conversion_rates: planRates,
+      distribution,
+      result,
+    });
+  };
+
+  const funnelStages = result ? [
+    { label: 'Leads', value: result.required_leads },
+    ...(result.required_appointments > 0 ? [{ label: 'Agendamentos', value: result.required_appointments }] : []),
+    ...(result.required_showups > 0 ? [{ label: 'Comparecimentos', value: result.required_showups }] : []),
+    { label: 'Vendas', value: result.required_sales },
+  ] : [];
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+            <ArrowLeft className="w-5 h-5 text-gray-500" />
+          </button>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Novo Planejamento Reverso</h2>
             <p className="text-sm text-gray-500">Calcule o investimento necessário para atingir sua meta</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          {editRecord && (
-            <Button variant="outline" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending} className="text-red-500 border-red-200 hover:bg-red-50">
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          )}
-          <Button onClick={handleSave} disabled={saveMutation.isPending || !selectedClientId} className="gap-2 bg-blue-600 hover:bg-blue-700">
+        {result && (
+          <Button onClick={handleSave} disabled={saveMutation.isPending} className="gap-2 bg-blue-600 hover:bg-blue-700">
             <Save className="w-4 h-4" /> Salvar
           </Button>
-        </div>
+        )}
       </div>
 
+      {/* Seleção sequencial: cliente → plano */}
       <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
+
         {/* Título */}
         <div className="mb-5">
           <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Título (opcional)</Label>
@@ -271,28 +403,26 @@ function PlanForm({ editRecord, clients, plans, onSave, onDelete, onBack }) {
           />
         </div>
 
-        {/* Cliente */}
-        {!editRecord && (
-          <div className="mb-5">
-            <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">1. Selecione o Cliente</Label>
-            <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-              <SelectTrigger className="mt-2 max-w-sm"><SelectValue placeholder="Selecione um cliente..." /></SelectTrigger>
-              <SelectContent>
-                {sortedClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+        {/* 1. Cliente */}
+        <div className="mb-5">
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">1. Selecione o Cliente</p>
+          <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+            <SelectTrigger className="max-w-xs"><SelectValue placeholder="Selecione um cliente..." /></SelectTrigger>
+            <SelectContent>
+              {sortedClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
 
-        {/* Plano */}
-        {(selectedClientId || editRecord) && !editRecord && (
+        {/* 2. Plano (só aparece após cliente) */}
+        {selectedClientId && (
           <div className="mb-5">
-            <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">2. Selecione o Plano de Mídia (opcional)</Label>
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">2. Selecione o Plano de Mídia</p>
             {clientPlans.length === 0 ? (
-              <p className="text-sm text-gray-400 mt-2">Este cliente não possui planos de mídia.</p>
+              <p className="text-sm text-gray-400">Este cliente não possui planos de mídia.</p>
             ) : (
               <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
-                <SelectTrigger className="mt-2 max-w-sm"><SelectValue placeholder="Selecione um plano..." /></SelectTrigger>
+                <SelectTrigger className="max-w-xs"><SelectValue placeholder="Selecione um plano..." /></SelectTrigger>
                 <SelectContent>
                   {clientPlans.map(p => (
                     <SelectItem key={p.id} value={p.id}>
@@ -305,8 +435,8 @@ function PlanForm({ editRecord, clients, plans, onSave, onDelete, onBack }) {
           </div>
         )}
 
-        {/* Dados do funil */}
-        {(selectedPlan || editRecord?.conversion_rates?.length > 0) && planTicket > 0 && (
+        {/* Dados do funil (só aparece após plano) */}
+        {selectedPlan && planTicket > 0 && (
           <div className="mb-5 p-4 bg-blue-50 rounded-lg border border-blue-100">
             <div className="flex items-center gap-2 mb-3">
               <Info className="w-4 h-4 text-blue-500" />
@@ -330,8 +460,8 @@ function PlanForm({ editRecord, clients, plans, onSave, onDelete, onBack }) {
           </div>
         )}
 
-        {/* Meta + Canais */}
-        {(selectedClientId || editRecord) && (
+        {/* Meta + canais (só aparece após plano selecionado) */}
+        {selectedPlanId && (
           <>
             <div className="mb-5">
               <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Meta de Receita (R$)</Label>
@@ -364,7 +494,6 @@ function PlanForm({ editRecord, clients, plans, onSave, onDelete, onBack }) {
                   ))}
                 </div>
               )}
-
               <div className="flex flex-wrap gap-3 mt-3">
                 <Button variant="outline" onClick={() => setDistribution(d => [...d, { channel_name: 'Meta', percent: 0, expected_cpl: 0 }])} className="gap-2 text-sm">
                   <Plus className="w-4 h-4" /> Adicionar Canal
@@ -389,66 +518,66 @@ function PlanForm({ editRecord, clients, plans, onSave, onDelete, onBack }) {
           </div>
 
           {funnelStages.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
+            <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Projeção do Funil</h3>
               <FunnelVisual stages={funnelStages} />
             </div>
           )}
 
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
-            <div className="px-6 py-4 border-b border-gray-50">
-              <h3 className="text-sm font-semibold text-gray-900">Orçamento por Canal</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-gray-50/50 border-b border-gray-100">
-                    <th className="text-left py-2.5 px-4 font-medium text-gray-500">Canal</th>
-                    <th className="text-right py-2.5 px-4 font-medium text-gray-500">Distribuição</th>
-                    <th className="text-right py-2.5 px-4 font-medium text-gray-500">CPL</th>
-                    <th className="text-right py-2.5 px-4 font-medium text-gray-500">Leads Nec.</th>
-                    <th className="text-right py-2.5 px-4 font-medium text-gray-500">Budget Nec.</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {result.channel_budgets.map((ch, i) => (
-                    <tr key={i}>
-                      <td className="py-2.5 px-4"><ChannelBadge channel={ch.channel_name} /></td>
-                      <td className="py-2.5 px-4 text-right">{ch.percent}%</td>
-                      <td className="py-2.5 px-4 text-right">R${ch.expected_cpl}</td>
-                      <td className="py-2.5 px-4 text-right">{ch.required_leads.toLocaleString()}</td>
-                      <td className="py-2.5 px-4 text-right font-semibold">{fmt(ch.required_budget)}</td>
+          {result.channel_budgets?.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
+              <div className="px-6 py-4 border-b border-gray-50">
+                <h3 className="text-sm font-semibold text-gray-900">Orçamento por Canal</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-50/50 border-b border-gray-100">
+                      <th className="text-left py-2.5 px-4 font-medium text-gray-500">Canal</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Distribuição</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">CPL</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Leads Nec.</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Budget Nec.</th>
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="bg-gray-50 border-t border-gray-200 font-semibold">
-                    <td className="py-3 px-4">Total</td>
-                    <td className="py-3 px-4 text-right">100%</td>
-                    <td></td>
-                    <td className="py-3 px-4 text-right">{result.required_leads.toLocaleString()}</td>
-                    <td className="py-3 px-4 text-right">{fmt(result.total_investment)}</td>
-                  </tr>
-                </tfoot>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {result.channel_budgets.map((ch, i) => (
+                      <tr key={i}>
+                        <td className="py-2.5 px-4"><ChannelBadge channel={ch.channel_name} /></td>
+                        <td className="py-2.5 px-4 text-right">{ch.percent}%</td>
+                        <td className="py-2.5 px-4 text-right">R${ch.expected_cpl}</td>
+                        <td className="py-2.5 px-4 text-right">{ch.required_leads.toLocaleString()}</td>
+                        <td className="py-2.5 px-4 text-right font-semibold">{fmt(ch.required_budget)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-gray-50 border-t border-gray-200 font-semibold">
+                      <td className="py-3 px-4">Total</td>
+                      <td className="py-3 px-4 text-right">100%</td>
+                      <td></td>
+                      <td className="py-3 px-4 text-right">{result.required_leads.toLocaleString()}</td>
+                      <td className="py-3 px-4 text-right">{fmt(result.total_investment)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
         </>
       )}
     </div>
   );
 }
 
+// ── Página principal ──
 export default function ReversePlan() {
-  const [view, setView] = useState('list'); // 'list' | 'new' | 'edit'
-  const [editRecord, setEditRecord] = useState(null);
+  const [view, setView] = useState('list'); // 'list' | 'new' | 'view'
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: async () => {
-      const data = await base44.entities.Client.list();
-      return data.sort((a, b) => (a.clinic_name || '').localeCompare(b.clinic_name || '', 'pt-BR'));
-    },
+    queryFn: () => base44.entities.Client.list(),
   });
 
   const { data: plans = [] } = useQuery({
@@ -461,25 +590,32 @@ export default function ReversePlan() {
     queryFn: () => base44.entities.ReversePlanRecord.list('-created_date'),
   });
 
-  const handleSelect = (r) => { setEditRecord(r); setView('edit'); };
-  const handleCreate = () => { setEditRecord(null); setView('new'); };
-  const handleBack = () => { setEditRecord(null); setView('list'); };
-
   return (
     <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
       <PageHeader title="Planejamento Reverso" description="Calcule o investimento necessário para atingir suas metas de receita." />
 
       {view === 'list' && (
-        <PlanList records={records} clients={clients} onSelect={handleSelect} onCreate={handleCreate} />
+        <PlanList
+          records={records}
+          clients={clients}
+          onSelect={r => { setSelectedRecord(r); setView('view'); }}
+          onNew={() => setView('new')}
+        />
       )}
-      {(view === 'new' || view === 'edit') && (
-        <PlanForm
-          editRecord={editRecord}
+      {view === 'view' && selectedRecord && (
+        <PlanView
+          record={selectedRecord}
+          clients={clients}
+          onBack={() => { setSelectedRecord(null); setView('list'); }}
+          onDelete={() => { setSelectedRecord(null); setView('list'); }}
+        />
+      )}
+      {view === 'new' && (
+        <PlanNew
           clients={clients}
           plans={plans}
-          onSave={handleBack}
-          onDelete={handleBack}
-          onBack={handleBack}
+          onSave={() => setView('list')}
+          onBack={() => setView('list')}
         />
       )}
     </div>

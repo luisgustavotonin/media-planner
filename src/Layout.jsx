@@ -25,7 +25,6 @@ export default function Layout({ children, currentPageName }) {
   const { user, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const role = user?.role || 'user';
-  const isAdmin = role === 'admin';
 
   const filteredNav = navItems.filter(item => item.roles.includes(role));
 
