@@ -130,7 +130,7 @@ export default function ReversePlan() {
   ] : [];
 
   return (
-    <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 w-full">
+    <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
       <PageHeader title="Planejamento Reverso" description="Selecione um cliente e plano de mídia para calcular o investimento necessário." />
 
       <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
