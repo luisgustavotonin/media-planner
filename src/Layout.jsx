@@ -11,12 +11,12 @@ import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
 
 const navItems = [
-  { name: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'consultant'] },
-  { name: 'Clientes', page: 'Clients', icon: Building2, roles: ['admin', 'consultant'] },
-  { name: 'Planos de Mídia', page: 'MediaPlans', icon: BarChart3, roles: ['admin', 'consultant', 'client'] },
-  { name: 'Planejamento Reverso', page: 'ReversePlan', icon: Target, roles: ['admin', 'consultant'] },
-  { name: 'Cenários', page: 'Scenarios', icon: FlaskConical, roles: ['admin', 'consultant'] },
-  { name: 'Acomp. Semanal', page: 'WeeklyTracking', icon: CalendarDays, roles: ['admin', 'consultant'] },
+  { name: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'consultant', 'user'] },
+  { name: 'Clientes', page: 'Clients', icon: Building2, roles: ['admin', 'consultant', 'user'] },
+  { name: 'Planos de Mídia', page: 'MediaPlans', icon: BarChart3, roles: ['admin', 'consultant', 'user', 'client'] },
+  { name: 'Planejamento Reverso', page: 'ReversePlan', icon: Target, roles: ['admin', 'consultant', 'user'] },
+  { name: 'Cenários', page: 'Scenarios', icon: FlaskConical, roles: ['admin', 'consultant', 'user'] },
+  { name: 'Acomp. Semanal', page: 'WeeklyTracking', icon: CalendarDays, roles: ['admin', 'consultant', 'user'] },
   { name: 'Benchmarks', page: 'Benchmarks', icon: Settings, roles: ['admin'] },
   { name: 'Tipos de Funil', page: 'FunnelTypes', icon: GitBranch, roles: ['admin'] },
 ];
