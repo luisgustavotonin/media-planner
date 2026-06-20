@@ -17,8 +17,8 @@ const navItems = [
   { name: 'Planejamento Reverso', page: 'ReversePlan', icon: Target, roles: ['admin', 'consultant', 'user'] },
   { name: 'Cenários', page: 'Scenarios', icon: FlaskConical, roles: ['admin', 'consultant', 'user'] },
   { name: 'Acomp. Semanal', page: 'WeeklyTracking', icon: CalendarDays, roles: ['admin', 'consultant', 'user'] },
-  { name: 'Benchmarks', page: 'Benchmarks', icon: Settings, roles: ['admin'] },
-  { name: 'Tipos de Funil', page: 'FunnelTypes', icon: GitBranch, roles: ['admin'] },
+  { name: 'Benchmarks', page: 'Benchmarks', icon: Settings, roles: ['admin', 'user', 'consultant'] },
+  { name: 'Tipos de Funil', page: 'FunnelTypes', icon: GitBranch, roles: ['admin', 'user', 'consultant'] },
 ];
 
 export default function Layout({ children, currentPageName }) {

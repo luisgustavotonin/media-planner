@@ -18,16 +18,22 @@ const CHANNEL_OPTIONS = ['Meta', 'Google', 'TikTok', 'YouTube', 'LinkedIn', 'Out
 const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
 function PlanList({ records, clients, onSelect, onCreate }) {
-  const byClient = {};
-  records.forEach(r => {
-    const cname = clients.find(c => c.id === r.client_id)?.clinic_name || r.client_name || 'Cliente';
-    if (!byClient[r.client_id]) byClient[r.client_id] = { name: cname, records: [] };
-    byClient[r.client_id].records.push(r);
+  const [filterClient, setFilterClient] = useState('');
+  const [filterMonth, setFilterMonth] = useState('');
+
+  const sortedClients = [...clients].sort((a, b) => (a.clinic_name || '').localeCompare(b.clinic_name || '', 'pt-BR'));
+
+  const filtered = records.filter(r => {
+    if (filterClient && r.client_id !== filterClient) return false;
+    if (filterMonth && r.plan_label !== filterMonth) return false;
+    return true;
   });
+
+  const allMonths = [...new Set(records.map(r => r.plan_label).filter(Boolean))].sort();
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Planejamentos Salvos</h2>
           <p className="text-sm text-gray-500">{records.length} planejamento(s) reverso(s)</p>
@@ -37,18 +43,35 @@ function PlanList({ records, clients, onSelect, onCreate }) {
         </Button>
       </div>
 
-      {records.length === 0 ? (
+      {/* Filtros */}
+      <div className="flex flex-wrap gap-3 mb-5">
+        <Select value={filterClient} onValueChange={setFilterClient}>
+          <SelectTrigger className="w-48 h-9 text-sm"><SelectValue placeholder="Todos os clientes" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value={null}>Todos os clientes</SelectItem>
+            {sortedClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {allMonths.length > 0 && (
+          <Select value={filterMonth} onValueChange={setFilterMonth}>
+            <SelectTrigger className="w-36 h-9 text-sm"><SelectValue placeholder="Todos os meses" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value={null}>Todos os meses</SelectItem>
+              {allMonths.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
+      {filtered.length === 0 ? (
         <div className="border-2 border-dashed border-gray-200 rounded-xl p-12 text-center">
           <Target className="w-10 h-10 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500 font-medium">Nenhum planejamento reverso salvo</p>
           <p className="text-gray-400 text-sm mt-1">Crie seu primeiro planejamento para começar</p>
-          <Button onClick={onCreate} className="mt-4 gap-2 bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4" /> Novo Planejamento
-          </Button>
         </div>
       ) : (
         <div className="space-y-2">
-          {records.map(r => {
+          {filtered.map(r => {
             const cname = clients.find(c => c.id === r.client_id)?.clinic_name || r.client_name || '—';
             const sales = r.result?.required_sales || 0;
             const inv = r.result?.total_investment || 0;
@@ -104,7 +127,11 @@ function PlanForm({ editRecord, clients, plans, onSave, onDelete, onBack }) {
   const [title, setTitle] = useState(editRecord?.title || '');
   const [targetRevenue, setTargetRevenue] = useState(editRecord?.target_revenue || 0);
   const [distribution, setDistribution] = useState(editRecord?.distribution || []);
-  const [result, setResult] = useState(editRecord?.result || null);
+  const [result, setResult] = useState(() => {
+    // Auto-calculate on open if we have saved data
+    if (editRecord?.result) return editRecord.result;
+    return null;
+  });
 
   const clientPlans = plans.filter(p => p.client_id === selectedClientId);
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
@@ -116,6 +143,17 @@ function PlanForm({ editRecord, clients, plans, onSave, onDelete, onBack }) {
     setDistribution([]);
     setResult(null);
   }, [selectedClientId]);
+
+  // Auto-calculate when editing a saved record that has all data but no result
+  useEffect(() => {
+    if (editRecord && editRecord.distribution?.length > 0 && editRecord.target_revenue > 0 && !result) {
+      const rates = editRecord.conversion_rates || [];
+      const ticket = editRecord.average_ticket || 0;
+      if (ticket > 0 && rates.length > 0) {
+        setResult(calculateReversePlan(editRecord.target_revenue, ticket, rates, editRecord.distribution));
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!selectedPlan || editRecord) return;
