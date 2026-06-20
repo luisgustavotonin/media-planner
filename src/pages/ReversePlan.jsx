@@ -1,27 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../components/hooks/useAuth';
 import { calculateReversePlan } from '../components/hooks/usePlanCalculations';
 import PageHeader from '../components/ui-custom/PageHeader';
 import StatCard from '../components/ui-custom/StatCard';
 import ChannelBadge from '../components/ui-custom/ChannelBadge';
+import FunnelVisual from '../components/ui-custom/FunnelVisual';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Target, DollarSign, Users, TrendingDown, Calculator, Plus, Trash2, Info } from 'lucide-react';
+import { Target, DollarSign, Users, TrendingDown, Calculator, Plus, Trash2, Info, Save, CheckCircle } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 const CHANNEL_OPTIONS = ['Meta', 'Google', 'TikTok', 'YouTube', 'LinkedIn', 'Outro'];
 const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
 export default function ReversePlan() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [targetRevenue, setTargetRevenue] = useState(0);
   const [distribution, setDistribution] = useState([]);
   const [result, setResult] = useState(null);
+  const [saved, setSaved] = useState(false);
 
   const { data: allClients = [] } = useQuery({
     queryKey: ['clients'],
@@ -37,22 +42,33 @@ export default function ReversePlan() {
   });
 
   const myPlans = plans.filter(p => allClients.some(c => c.id === p.client_id));
-
   const clientPlans = myPlans.filter(p => p.client_id === selectedClientId);
   const selectedPlan = myPlans.find(p => p.id === selectedPlanId);
 
-  // Quando troca cliente, limpa plano e resultado
+  const saveMutation = useMutation({
+    mutationFn: (data) => base44.entities.MediaPlan.update(selectedPlanId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plans'] });
+      setSaved(true);
+      toast({ title: 'Planejamento Reverso salvo!', description: 'Os dados foram salvos no plano de mídia.' });
+      setTimeout(() => setSaved(false), 3000);
+    },
+  });
+
   useEffect(() => {
     setSelectedPlanId('');
     setResult(null);
     setDistribution([]);
   }, [selectedClientId]);
 
-  // Quando seleciona plano, pré-popula canais do plano
   useEffect(() => {
     if (!selectedPlan) return;
     setResult(null);
-    if (selectedPlan.channels?.length > 0) {
+    setSaved(false);
+    if (selectedPlan.reverse_plan_enabled && selectedPlan.reverse_channel_distribution?.length > 0) {
+      setDistribution(selectedPlan.reverse_channel_distribution);
+      setTargetRevenue(selectedPlan.target_revenue || 0);
+    } else if (selectedPlan.channels?.length > 0) {
       const totalBudget = selectedPlan.channels.reduce((s, c) => s + (c.budget_value || 0), 0);
       setDistribution(selectedPlan.channels.map(ch => ({
         channel_name: ch.channel_name,
@@ -64,7 +80,6 @@ export default function ReversePlan() {
     }
   }, [selectedPlanId]);
 
-  // Taxas e ticket do plano selecionado
   const planRates = selectedPlan
     ? (Array.isArray(selectedPlan.conversion_rates) && selectedPlan.conversion_rates.length
         ? selectedPlan.conversion_rates
@@ -78,26 +93,44 @@ export default function ReversePlan() {
 
   const handleDistChange = (idx, field, value) => {
     setDistribution(d => d.map((ch, i) => i === idx ? { ...ch, [field]: Number(value) } : ch));
+    setSaved(false);
   };
 
   const addChannel = () => {
     setDistribution(d => [...d, { channel_name: 'Meta', percent: 0, expected_cpl: 0 }]);
+    setSaved(false);
   };
 
   const removeChannel = (idx) => {
     setDistribution(d => d.filter((_, i) => i !== idx));
+    setSaved(false);
   };
 
   const handleCalculate = () => {
     setResult(calculateReversePlan(targetRevenue, planTicket, planRates, distribution));
   };
 
+  const handleSave = () => {
+    saveMutation.mutate({
+      reverse_plan_enabled: true,
+      target_revenue: targetRevenue,
+      reverse_channel_distribution: distribution,
+    });
+  };
+
   const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
   const fmtPct = v => `${(v * 100).toFixed(1)}%`;
   const canCalculate = selectedPlanId && targetRevenue > 0 && distribution.length > 0 && planTicket > 0;
 
+  const funnelStages = result ? [
+    { label: 'Leads', value: result.required_leads },
+    ...(result.required_appointments > 0 ? [{ label: 'Agendamentos', value: result.required_appointments }] : []),
+    ...(result.required_showups > 0 ? [{ label: 'Comparecimentos', value: result.required_showups }] : []),
+    { label: 'Vendas', value: result.required_sales },
+  ] : [];
+
   return (
-    <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-5xl mx-auto w-full">
+    <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 w-full">
       <PageHeader title="Planejamento Reverso" description="Selecione um cliente e plano de mídia para calcular o investimento necessário." />
 
       <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
@@ -111,11 +144,11 @@ export default function ReversePlan() {
             <SelectContent>
               {allClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
             </SelectContent>
-            </Select>
-            </div>
+          </Select>
+        </div>
 
-            {/* Passo 2: Plano */}
-            {selectedClientId && (
+        {/* Passo 2: Plano */}
+        {selectedClientId && (
           <div className="mb-5">
             <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">2. Selecione o Plano de Mídia</Label>
             {clientPlans.length === 0 ? (
@@ -137,7 +170,7 @@ export default function ReversePlan() {
           </div>
         )}
 
-        {/* Dados do funil do plano selecionado */}
+        {/* Dados do funil */}
         {selectedPlan && (
           <div className="mb-5 p-4 bg-blue-50 rounded-lg border border-blue-100">
             <div className="flex items-center gap-2 mb-3">
@@ -168,7 +201,7 @@ export default function ReversePlan() {
             <div className="mb-5">
               <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">3. Meta de Receita (R$)</Label>
               <div className="mt-2 max-w-xs">
-                <CurrencyInput value={targetRevenue} onChange={v => setTargetRevenue(v || 0)} prefix="R$" />
+                <CurrencyInput value={targetRevenue} onChange={v => { setTargetRevenue(v || 0); setSaved(false); }} prefix="R$" />
               </div>
             </div>
 
@@ -199,13 +232,19 @@ export default function ReversePlan() {
                 </div>
               )}
 
-              <div className="flex gap-3 mt-4">
+              <div className="flex flex-wrap gap-3 mt-4">
                 <Button variant="outline" onClick={addChannel} className="gap-2 text-sm">
                   <Plus className="w-4 h-4" /> Adicionar Canal
                 </Button>
                 <Button onClick={handleCalculate} className="gap-2 bg-blue-600 hover:bg-blue-700" disabled={!canCalculate}>
                   <Calculator className="w-4 h-4" /> Calcular Planejamento Reverso
                 </Button>
+                {result && (
+                  <Button onClick={handleSave} variant="outline" className="gap-2" disabled={saveMutation.isPending || saved}>
+                    {saved ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Save className="w-4 h-4" />}
+                    {saved ? 'Salvo!' : 'Salvar no Plano'}
+                  </Button>
+                )}
               </div>
             </div>
           </>
@@ -227,22 +266,10 @@ export default function ReversePlan() {
             <StatCard label="Meta de Receita" value={fmt(targetRevenue)} icon={TrendingDown} color="green" />
           </div>
 
-          {result.required_appointments > 0 && (
+          {funnelStages.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Projeção do Funil</h3>
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 text-center">
-                {[
-                  { label: 'Leads', value: result.required_leads },
-                  { label: 'Agendamentos', value: result.required_appointments },
-                  { label: 'Comparecimentos', value: result.required_showups },
-                  { label: 'Vendas', value: result.required_sales },
-                ].map((item, i) => (
-                  <div key={i} className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-[10px] text-gray-400 mb-1">{item.label}</p>
-                    <p className="text-lg font-bold text-gray-800">{Number(item.value).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}</p>
-                  </div>
-                ))}
-              </div>
+              <h3 className="text-sm font-semibold text-gray-900 mb-4">Projeção do Funil</h3>
+              <FunnelVisual stages={funnelStages} />
             </div>
           )}
 
