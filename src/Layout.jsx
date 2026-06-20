@@ -24,9 +24,9 @@ const navItems = [
 export default function Layout({ children, currentPageName }) {
   const { user, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const role = user?.role || 'consultant';
+  const role = user?.role || 'user';
 
-  const filteredNav = navItems.filter(item => item.roles.includes(role));
+  const filteredNav = navItems.filter(item => item.roles.includes(role) || item.roles.includes('user'));
 
   if (loading) {
     return (
