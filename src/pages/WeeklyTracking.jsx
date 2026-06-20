@@ -25,7 +25,6 @@ export default function WeeklyTracking() {
   const [weekForm, setWeekForm] = useState({ week_number: 1, investment_actual: 0, leads_actual: 0, appointments_actual: 0, showups_actual: 0 });
 
   const [filterClientId, setFilterClientId] = useState('');
-  const [filterMonth, setFilterMonth] = useState('');
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
@@ -46,13 +45,7 @@ export default function WeeklyTracking() {
   });
 
   const myPlans = user?.role === 'admin' ? plans : plans.filter(p => p.created_by === user?.email);
-
-  const filteredPlans = myPlans.filter(p => {
-    const clientMatch = !filterClientId || p.client_id === filterClientId;
-    const monthMatch = !filterMonth || p.period_month === Number(filterMonth);
-    return clientMatch && monthMatch;
-  });
-
+  const clientPlans = myPlans.filter(p => !filterClientId || p.client_id === filterClientId);
   const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const plan = myPlans.find(p => p.id === selectedPlanId);
   const actuals = allActuals.filter(a => a.plan_id === selectedPlanId);
@@ -135,46 +128,44 @@ export default function WeeklyTracking() {
     <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
       <PageHeader title="Acompanhamento Semanal" description="Acompanhe o desempenho real vs metas planejadas." />
 
-      <div className="flex flex-wrap gap-3 mb-5 sm:mb-6">
-        <div className="flex-1 min-w-48">
-          <Label className="text-xs text-gray-500 mb-1 block">Unidade</Label>
+      <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
+        <div className="mb-5">
+          <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">1. Selecione o Cliente</Label>
           <Select value={filterClientId} onValueChange={v => { setFilterClientId(v); setSelectedPlanId(''); }}>
-            <SelectTrigger className="bg-white">
-              <SelectValue placeholder="Todas as unidades" />
+            <SelectTrigger className="mt-2 max-w-sm">
+              <SelectValue placeholder="Selecione um cliente..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={null}>Todas as unidades</SelectItem>
               {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
-        <div className="flex-1 min-w-36">
-          <Label className="text-xs text-gray-500 mb-1 block">Mês</Label>
-          <Select value={filterMonth} onValueChange={v => { setFilterMonth(v); setSelectedPlanId(''); }}>
-            <SelectTrigger className="bg-white">
-              <SelectValue placeholder="Todos os meses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={null}>Todos os meses</SelectItem>
-              {MESES.map((m, i) => <SelectItem key={i+1} value={String(i+1)}>{m}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex-1 min-w-60">
-          <Label className="text-xs text-gray-500 mb-1 block">Plano de Mídia</Label>
-          <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
-            <SelectTrigger className="bg-white">
-              <SelectValue placeholder="Escolha um plano..." />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredPlans.map(p => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.client_name} — {p.period_month}/{p.period_year}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {filterClientId && (
+          <div>
+            <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">2. Selecione o Plano de Mídia</Label>
+            {clientPlans.length === 0 ? (
+              <p className="text-sm text-gray-400 mt-2">Este cliente não possui planos de mídia cadastrados.</p>
+            ) : (
+              <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+                <SelectTrigger className="mt-2 max-w-sm">
+                  <SelectValue placeholder="Selecione um plano..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {clientPlans.map(p => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {MESES[(p.period_month || 1) - 1]}/{p.period_year} — {p.status === 'active' ? 'Ativo' : p.status === 'draft' ? 'Rascunho' : 'Concluído'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        )}
+        {!filterClientId && (
+          <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center text-gray-400 text-sm">
+            Selecione um cliente para começar
+          </div>
+        )}
       </div>
 
       {!selectedPlanId && (

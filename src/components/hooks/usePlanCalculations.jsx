@@ -158,8 +158,8 @@ export function generateRecommendations(channelResults, weeklyActuals, weeklyTar
       recommendations.push({
         type: 'budget_shift',
         severity: 'high',
-        message: `${worstChannel.channel_name} CPL is ${Math.round((cplDiff - 1) * 100)}% higher than ${bestChannel.channel_name}. Consider shifting 15-20% of ${worstChannel.channel_name} budget to ${bestChannel.channel_name}.`,
-        suggested_action: `Move R$${Math.round(worstChannel.budget_value * 0.15)} from ${worstChannel.channel_name} to ${bestChannel.channel_name}`,
+        message: `CPL de ${worstChannel.channel_name} está ${Math.round((cplDiff - 1) * 100)}% mais alto que ${bestChannel.channel_name}. Considere migrar 15-20% do budget de ${worstChannel.channel_name} para ${bestChannel.channel_name}.`,
+        suggested_action: `Mover R$${Math.round(worstChannel.budget_value * 0.15)} de ${worstChannel.channel_name} para ${bestChannel.channel_name}`,
       });
     }
   }
@@ -173,8 +173,8 @@ export function generateRecommendations(channelResults, weeklyActuals, weeklyTar
       recommendations.push({
         type: 'volume_low',
         severity: 'high',
-        message: `Total leads are ${Math.round((1 - totalActualLeads / expectedLeads) * 100)}% below weekly target. Consider increasing budget or expanding targeting/creatives.`,
-        suggested_action: 'Increase daily budget by 10-15% and review ad creative performance.',
+        message: `Total de leads está ${Math.round((1 - totalActualLeads / expectedLeads) * 100)}% abaixo da meta semanal. Considere aumentar o budget ou expandir segmentação e criativos.`,
+        suggested_action: 'Aumentar o budget diário em 10-15% e revisar o desempenho dos criativos.',
       });
     }
   }
@@ -183,8 +183,8 @@ export function generateRecommendations(channelResults, weeklyActuals, weeklyTar
     recommendations.push({
       type: 'on_track',
       severity: 'low',
-      message: 'All channels are performing within expected parameters. Continue monitoring weekly.',
-      suggested_action: 'Maintain current allocation and review next week.',
+      message: 'Todos os canais estão performando dentro dos parâmetros esperados. Continue monitorando semanalmente.',
+      suggested_action: 'Manter a alocação atual e revisar na próxima semana.',
     });
   }
 
