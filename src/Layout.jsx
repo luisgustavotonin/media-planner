@@ -27,12 +27,7 @@ export default function Layout({ children, currentPageName }) {
   const role = user?.role || 'user';
   const isAdmin = role === 'admin';
 
-  const filteredNav = navItems.filter(item => {
-    // Admin-only items: only show for admins
-    if (item.roles.length === 1 && item.roles[0] === 'admin') return isAdmin;
-    // All other items: show for everyone
-    return true;
-  });
+  const filteredNav = navItems.filter(item => item.roles.includes(role));
 
   if (loading) {
     return (
