@@ -88,15 +88,19 @@ export function calculateConsolidated(channels, conversionRates, averageTicket) 
 }
 
 export function calculateReversePlan(targetRevenue, averageTicket, conversionRates, channelDistribution) {
-  const finalRate = (conversionRates || []).reduce((acc, r) => acc * (r || 0), 1);
-  const requiredSales = targetRevenue / averageTicket;
+  const rates = conversionRates || [];
+  const finalRate = rates.reduce((acc, r) => acc * (r || 0), 1);
+  const requiredSales = averageTicket > 0 ? targetRevenue / averageTicket : 0;
   const requiredLeads = finalRate > 0 ? requiredSales / finalRate : 0;
 
-  // Para exibição intermediária (usa os 3 primeiros se disponíveis)
-  const r0 = conversionRates?.[0] || 0;
-  const r1 = conversionRates?.[1] || 0;
-  const requiredAppointments = requiredLeads * r0;
-  const requiredShowups = requiredAppointments * r1;
+  // Calcula todas as etapas intermediárias dinamicamente (do topo para o fundo)
+  const stageValues = [Math.round(requiredLeads)];
+  let current = requiredLeads;
+  for (let i = 0; i < rates.length - 1; i++) {
+    current = current * (rates[i] || 0);
+    stageValues.push(Math.round(current));
+  }
+  stageValues.push(Math.round(requiredSales));
 
   const channelBudgets = channelDistribution.map(ch => {
     const chLeads = requiredLeads * (ch.percent / 100);
@@ -108,9 +112,11 @@ export function calculateReversePlan(targetRevenue, averageTicket, conversionRat
 
   return {
     required_sales: Math.round(requiredSales * 10) / 10,
-    required_showups: Math.round(requiredShowups),
-    required_appointments: Math.round(requiredAppointments),
     required_leads: Math.round(requiredLeads),
+    stage_values: stageValues, // array dinâmico com todas as etapas
+    // retrocompatibilidade
+    required_appointments: Math.round(requiredLeads * (rates[0] || 0)),
+    required_showups: Math.round(requiredLeads * (rates[0] || 0) * (rates[1] || 0)),
     channel_budgets: channelBudgets,
     total_investment: totalInvestment,
   };

@@ -16,6 +16,27 @@ import { useToast } from '@/components/ui/use-toast';
 const CHANNEL_OPTIONS = ['Meta', 'Google', 'TikTok', 'YouTube', 'LinkedIn', 'Outro'];
 const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
+// Dado um plano e lista de funnelTypes, retorna os labels das etapas
+function getFunnelStageLabels(plan, funnelTypes) {
+  const ft = funnelTypes.find(f => f.id === plan?.funnel_type_id);
+  if (ft?.stages?.length >= 2) return ft.stages.map(s => s.label);
+  return null; // fallback para labels genéricos
+}
+
+// Constrói o array de etapas para o FunnelVisual a partir do resultado e labels do funil
+function buildFunnelVisualStages(result, stageLabels) {
+  if (!result) return [];
+  const stageValues = result.stage_values || [];
+  if (stageValues.length === 0) return [];
+
+  if (stageLabels && stageLabels.length === stageValues.length) {
+    return stageLabels.map((label, i) => ({ label, value: stageValues[i] }));
+  }
+  // fallback genérico
+  const genericLabels = ['Leads', 'Agendamentos', 'Comparecimentos', 'Vendas'];
+  return stageValues.map((v, i) => ({ label: genericLabels[i] || `Etapa ${i + 1}`, value: v }));
+}
+
 // ── Lista: cascata cliente → plano → planejamentos reversos ──
 function PlanList({ records, clients, plans, onSelect, onNew }) {
   const [selectedClientId, setSelectedClientId] = useState('');
@@ -31,14 +52,12 @@ function PlanList({ records, clients, plans, onSelect, onNew }) {
     ? `${MESES_SHORT[(selectedPlan.period_month || 1) - 1]}/${selectedPlan.period_year}`
     : '';
 
-  // Só mostra planejamentos reversos após plano selecionado
   const filtered = selectedPlanId
     ? records.filter(r => r.plan_id === selectedPlanId)
     : [];
 
   return (
     <div>
-      {/* Seletores em cascata */}
       <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
         <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">1. Selecione o Cliente</p>
         <Select value={selectedClientId} onValueChange={v => { setSelectedClientId(v); setSelectedPlanId(''); }}>
@@ -75,7 +94,6 @@ function PlanList({ records, clients, plans, onSelect, onNew }) {
         )}
       </div>
 
-      {/* Planejamentos reversos (só após plano selecionado) */}
       {selectedPlanId && (
         <>
           <div className="flex items-center justify-between mb-4">
@@ -146,13 +164,23 @@ function PlanList({ records, clients, plans, onSelect, onNew }) {
 }
 
 // ── Visualizar planejamento salvo (somente leitura) ──
-function PlanView({ record, clients, onBack }) {
+function PlanView({ record, clients, funnelTypes, onBack }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const cname = clients.find(c => c.id === record.client_id)?.clinic_name || record.client_name || '—';
   const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
   const fmtPct = v => `${(v * 100).toFixed(1)}%`;
   const result = record.result;
+
+  // Tenta reconstruir labels a partir do funnelType salvo no record (via plan_id não temos direto, mas salvamos conversion_rates)
+  // Usamos os labels salvos no record.funnel_stage_labels se existir, senão genérico
+  const stageLabels = record.funnel_stage_labels || null;
+  const funnelVisualStages = buildFunnelVisualStages(result, stageLabels);
+
+  // Labels das taxas para "Dados do Funil"
+  const conversionLabels = stageLabels && stageLabels.length >= 2
+    ? stageLabels.slice(0, -1).map((l, i) => `${l} → ${stageLabels[i + 1]}`)
+    : null;
 
   const deleteMutation = useMutation({
     mutationFn: () => base44.entities.ReversePlanRecord.delete(record.id),
@@ -162,13 +190,6 @@ function PlanView({ record, clients, onBack }) {
       onBack();
     },
   });
-
-  const funnelStages = result ? [
-    { label: 'Leads', value: result.required_leads },
-    ...(result.required_appointments > 0 ? [{ label: 'Agendamentos', value: result.required_appointments }] : []),
-    ...(result.required_showups > 0 ? [{ label: 'Comparecimentos', value: result.required_showups }] : []),
-    { label: 'Vendas', value: result.required_sales },
-  ] : [];
 
   return (
     <div>
@@ -193,16 +214,16 @@ function PlanView({ record, clients, onBack }) {
             <Info className="w-4 h-4 text-blue-500" />
             <span className="text-xs font-semibold text-blue-700">Dados do Funil</span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-xs">
             <div>
               <p className="text-gray-400">Ticket Médio</p>
               <p className="font-semibold text-gray-800">{fmt(record.average_ticket)}</p>
             </div>
             {record.conversion_rates.map((r, i) => {
-              const labels = ['Lead → Agend.', 'Agend. → Compar.', 'Compar. → Venda'];
+              const label = conversionLabels?.[i] || `Taxa ${i + 1}`;
               return (
                 <div key={i}>
-                  <p className="text-gray-400">{labels[i] || `Taxa ${i + 1}`}</p>
+                  <p className="text-gray-400">{label}</p>
                   <p className="font-semibold text-gray-800">{fmtPct(r)}</p>
                 </div>
               );
@@ -225,10 +246,10 @@ function PlanView({ record, clients, onBack }) {
             <StatCard label="Meta de Receita" value={fmt(record.target_revenue)} icon={TrendingDown} color="green" />
           </div>
 
-          {funnelStages.length > 0 && (
+          {funnelVisualStages.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Projeção do Funil</h3>
-              <FunnelVisual stages={funnelStages} />
+              <FunnelVisual stages={funnelVisualStages} />
             </div>
           )}
 
@@ -279,7 +300,7 @@ function PlanView({ record, clients, onBack }) {
 }
 
 // ── Criar novo planejamento ──
-function PlanNew({ clients, plans, onSave, onBack }) {
+function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -295,6 +316,16 @@ function PlanNew({ clients, plans, onSave, onBack }) {
   );
   const clientPlans = plans.filter(p => p.client_id === selectedClientId);
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
+
+  // Busca o funnelType do plano selecionado para obter os labels das etapas
+  const funnelType = funnelTypes.find(f => f.id === selectedPlan?.funnel_type_id);
+  const funnelStages = funnelType?.stages || [];
+  const stageLabels = funnelStages.length >= 2 ? funnelStages.map(s => s.label) : null;
+
+  // Labels de conversão para exibir nos "Dados do Funil"
+  const conversionLabels = stageLabels && stageLabels.length >= 2
+    ? stageLabels.slice(0, -1).map((l, i) => `${l} → ${stageLabels[i + 1]}`)
+    : ['Lead → Agend.', 'Agend. → Compar.', 'Compar. → Venda'];
 
   useEffect(() => {
     setSelectedPlanId('');
@@ -332,6 +363,9 @@ function PlanNew({ clients, plans, onSave, onBack }) {
     setDistribution(d => d.map((ch, i) => i === idx ? { ...ch, [field]: Number(value) } : ch));
   };
 
+  // Constrói visual do funil usando stage_values dinâmico + labels do funil
+  const funnelVisualStages = buildFunnelVisualStages(result, stageLabels);
+
   const saveMutation = useMutation({
     mutationFn: (data) => base44.entities.ReversePlanRecord.create(data),
     onSuccess: () => {
@@ -356,17 +390,11 @@ function PlanNew({ clients, plans, onSave, onBack }) {
       target_revenue: targetRevenue,
       average_ticket: planTicket,
       conversion_rates: planRates,
+      funnel_stage_labels: stageLabels, // salva os labels para uso futuro na view
       distribution,
       result: calc,
     });
   };
-
-  const funnelStages = result ? [
-    { label: 'Leads', value: result.required_leads },
-    ...(result.required_appointments > 0 ? [{ label: 'Agendamentos', value: result.required_appointments }] : []),
-    ...(result.required_showups > 0 ? [{ label: 'Comparecimentos', value: result.required_showups }] : []),
-    { label: 'Vendas', value: result.required_sales },
-  ] : [];
 
   return (
     <div>
@@ -428,26 +456,29 @@ function PlanNew({ clients, plans, onSave, onBack }) {
           </div>
         )}
 
+        {/* Dados do Funil — dinâmico com os labels reais das etapas */}
         {selectedPlan && planTicket > 0 && (
           <div className="mb-5 p-4 bg-blue-50 rounded-lg border border-blue-100">
             <div className="flex items-center gap-2 mb-3">
               <Info className="w-4 h-4 text-blue-500" />
               <span className="text-xs font-semibold text-blue-700">Dados do Funil</span>
+              {funnelType && (
+                <span className="ml-auto text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-600">
+                  {funnelType.name}
+                </span>
+              )}
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-xs">
               <div>
                 <p className="text-gray-400">Ticket Médio</p>
                 <p className="font-semibold text-gray-800">{fmt(planTicket)}</p>
               </div>
-              {planRates.map((r, i) => {
-                const labels = ['Lead → Agend.', 'Agend. → Compar.', 'Compar. → Venda'];
-                return (
-                  <div key={i}>
-                    <p className="text-gray-400">{labels[i] || `Taxa ${i + 1}`}</p>
-                    <p className="font-semibold text-gray-800">{fmtPct(r)}</p>
-                  </div>
-                );
-              })}
+              {planRates.map((r, i) => (
+                <div key={i}>
+                  <p className="text-gray-400">{conversionLabels[i] || `Taxa ${i + 1}`}</p>
+                  <p className="font-semibold text-gray-800">{fmtPct(r)}</p>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -489,7 +520,11 @@ function PlanNew({ clients, plans, onSave, onBack }) {
                 <Button variant="outline" onClick={() => setDistribution(d => [...d, { channel_name: 'Meta', percent: 0, expected_cpl: 0 }])} className="gap-2 text-sm">
                   <Plus className="w-4 h-4" /> Adicionar Canal
                 </Button>
-                <Button onClick={() => setResult(calculateReversePlan(targetRevenue, planTicket, planRates, distribution))} className="gap-2 bg-blue-600 hover:bg-blue-700" disabled={!canCalculate}>
+                <Button
+                  onClick={() => setResult(calculateReversePlan(targetRevenue, planTicket, planRates, distribution))}
+                  className="gap-2 bg-blue-600 hover:bg-blue-700"
+                  disabled={!canCalculate}
+                >
                   <Calculator className="w-4 h-4" /> Calcular
                 </Button>
               </div>
@@ -507,10 +542,10 @@ function PlanNew({ clients, plans, onSave, onBack }) {
             <StatCard label="Meta de Receita" value={fmt(targetRevenue)} icon={TrendingDown} color="green" />
           </div>
 
-          {funnelStages.length > 0 && (
+          {funnelVisualStages.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Projeção do Funil</h3>
-              <FunnelVisual stages={funnelStages} />
+              <FunnelVisual stages={funnelVisualStages} />
             </div>
           )}
 
@@ -580,6 +615,11 @@ export default function ReversePlan() {
     queryFn: () => base44.entities.ReversePlanRecord.list('-created_date'),
   });
 
+  const { data: funnelTypes = [] } = useQuery({
+    queryKey: ['funnel-types'],
+    queryFn: () => base44.entities.FunnelType.list(),
+  });
+
   return (
     <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
       <PageHeader title="Planejamento Reverso" description="Calcule o investimento necessário para atingir suas metas de receita." />
@@ -597,6 +637,7 @@ export default function ReversePlan() {
         <PlanView
           record={selectedRecord}
           clients={clients}
+          funnelTypes={funnelTypes}
           onBack={() => { setSelectedRecord(null); setView('list'); }}
         />
       )}
@@ -604,6 +645,7 @@ export default function ReversePlan() {
         <PlanNew
           clients={clients}
           plans={plans}
+          funnelTypes={funnelTypes}
           onSave={() => setView('list')}
           onBack={() => setView('list')}
         />

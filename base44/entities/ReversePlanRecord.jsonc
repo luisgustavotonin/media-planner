@@ -10,15 +10,14 @@
     },
     "plan_id": {
       "type": "string",
-      "description": "Refer\u00eancia opcional ao MediaPlan"
+      "description": "Refer\u00eancia ao MediaPlan"
     },
     "plan_label": {
       "type": "string",
       "description": "Label do plano (m\u00eas/ano)"
     },
     "title": {
-      "type": "string",
-      "description": "Nome/t\u00edtulo do planejamento reverso"
+      "type": "string"
     },
     "target_revenue": {
       "type": "number"
@@ -30,6 +29,13 @@
       "type": "array",
       "items": {
         "type": "number"
+      }
+    },
+    "funnel_stage_labels": {
+      "type": "array",
+      "description": "Labels das etapas do funil no momento do c\u00e1lculo",
+      "items": {
+        "type": "string"
       }
     },
     "distribution": {
