@@ -11,7 +11,7 @@ import ChannelStrategies from './ChannelStrategies';
 const CHANNELS = ['Meta', 'Google', 'TikTok', 'YouTube', 'Other'];
 const OBJECTIVES = ['Leads', 'Remarketing', 'Awareness', 'Traffic'];
 
-export default function ChannelEditor({ channels, onChange, totalInvestment, readOnly, days = 30 }) {
+export default function ChannelEditor({ channels, onChange, totalInvestment, readOnly, days = 30, funnelStages = [] }) {
   const [expandedIdx, setExpandedIdx] = React.useState(null);
 
   const updateChannel = (idx, field, value) => {
@@ -120,19 +120,46 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                   <span className="text-xs text-gray-600">Taxas de funil personalizadas para este canal</span>
                 </div>
                 {ch.use_custom_funnel && (
-                  <div className="grid grid-cols-3 gap-3 mb-4">
-                    <div>
-                      <label className="text-[10px] text-gray-400">Lead→Agend.</label>
-                      <PercentInput value={ch.lead_to_appointment_rate_override || 0} onChange={v => updateChannel(idx, 'lead_to_appointment_rate_override', v)} className="h-8 text-xs" disabled={readOnly} />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-gray-400">Agend.→Compar.</label>
-                      <PercentInput value={ch.appointment_to_show_rate_override || 0} onChange={v => updateChannel(idx, 'appointment_to_show_rate_override', v)} className="h-8 text-xs" disabled={readOnly} />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-gray-400">Compar.→Venda</label>
-                      <PercentInput value={ch.show_to_sale_rate_override || 0} onChange={v => updateChannel(idx, 'show_to_sale_rate_override', v)} className="h-8 text-xs" disabled={readOnly} />
-                    </div>
+                  <div className="mb-4">
+                    {funnelStages.length >= 2 ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {funnelStages.slice(0, -1).map((stage, si) => {
+                          const nextStage = funnelStages[si + 1];
+                          const key = `conversion_rate_override_${si}`;
+                          const overrides = ch.conversion_rate_overrides || [];
+                          return (
+                            <div key={si}>
+                              <label className="text-[10px] text-gray-400">{stage.label}→{nextStage.label}</label>
+                              <PercentInput
+                                value={overrides[si] ?? 0}
+                                onChange={v => {
+                                  const updated = [...(ch.conversion_rate_overrides || funnelStages.slice(0, -1).map(() => 0))];
+                                  updated[si] = v;
+                                  updateChannel(idx, 'conversion_rate_overrides', updated);
+                                }}
+                                className="h-8 text-xs"
+                                disabled={readOnly}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="text-[10px] text-gray-400">Lead→Agend.</label>
+                          <PercentInput value={ch.lead_to_appointment_rate_override || 0} onChange={v => updateChannel(idx, 'lead_to_appointment_rate_override', v)} className="h-8 text-xs" disabled={readOnly} />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-400">Agend.→Compar.</label>
+                          <PercentInput value={ch.appointment_to_show_rate_override || 0} onChange={v => updateChannel(idx, 'appointment_to_show_rate_override', v)} className="h-8 text-xs" disabled={readOnly} />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-400">Compar.→Venda</label>
+                          <PercentInput value={ch.show_to_sale_rate_override || 0} onChange={v => updateChannel(idx, 'show_to_sale_rate_override', v)} className="h-8 text-xs" disabled={readOnly} />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 {(ch.channel_name === 'Meta' || ch.channel_name === 'Google') && (

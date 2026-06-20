@@ -1,18 +1,20 @@
 import React from 'react';
 
-const COLORS = ['#4ECDC4', '#FF6B6B', '#FFD166', '#2D4159'];
-
-// Fixed proportional widths for each stage (top to bottom)
-const FIXED_WIDTHS = [100, 72, 50, 32];
+const COLORS = ['#4ECDC4', '#FF6B6B', '#FFD166', '#2D4159', '#A8DADC', '#E76F51'];
 
 export default function FunnelVisual({ stages }) {
   if (!stages || stages.length === 0) return null;
 
+  const n = stages.length;
+  // Gera larguras proporcionais dinamicamente: topo 100%, fundo ~20%, distribuídas linearmente
+  const getWidth = (i) => Math.round(100 - (i * (80 / Math.max(n - 1, 1))));
+
   return (
     <div className="flex flex-col items-center w-full py-4">
       {stages.map((stage, i) => {
-        const topW = FIXED_WIDTHS[i] ?? Math.max(20, 100 - i * 20);
-        const botW = FIXED_WIDTHS[i + 1] ?? Math.max(10, topW - 20);
+        const topW = getWidth(i);
+        const step = Math.round(80 / Math.max(n - 1, 1));
+        const botW = i === n - 1 ? Math.max(10, topW - step) : getWidth(i + 1);
         const isLast = i === stages.length - 1;
 
         return (

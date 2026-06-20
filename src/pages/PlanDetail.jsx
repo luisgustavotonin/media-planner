@@ -242,7 +242,7 @@ export default function PlanDetail() {
       )}
 
       <div className="mb-6">
-        <ChannelEditor channels={channels} onChange={handleChannelsChange} totalInvestment={totalInvestment} readOnly={readOnly} days={daysInMonth} />
+        <ChannelEditor channels={channels} onChange={handleChannelsChange} totalInvestment={totalInvestment} readOnly={readOnly} days={daysInMonth} funnelStages={funnelStages} />
       </div>
 
       <div className="mb-6">
