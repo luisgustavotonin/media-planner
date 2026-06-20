@@ -16,126 +16,137 @@ import { useToast } from '@/components/ui/use-toast';
 const CHANNEL_OPTIONS = ['Meta', 'Google', 'TikTok', 'YouTube', 'LinkedIn', 'Outro'];
 const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
-// ── Vista: lista de planejamentos salvos (com filtros de cliente/mês) ──
-function PlanList({ records, clients, onSelect, onNew }) {
-  const [filterClient, setFilterClient] = useState('');
-  const [filterMonth, setFilterMonth] = useState('');
+// ── Lista: cascata cliente → plano → planejamentos reversos ──
+function PlanList({ records, clients, plans, onSelect, onNew }) {
+  const [selectedClientId, setSelectedClientId] = useState('');
+  const [selectedPlanId, setSelectedPlanId] = useState('');
 
   const sortedClients = [...clients].sort((a, b) =>
     (a.clinic_name || '').localeCompare(b.clinic_name || '', 'pt-BR')
   );
 
-  const allMonths = [...new Set(records.map(r => r.plan_label).filter(Boolean))].sort();
+  const clientPlans = plans.filter(p => p.client_id === selectedClientId);
+  const selectedPlan = plans.find(p => p.id === selectedPlanId);
+  const planLabel = selectedPlan
+    ? `${MESES_SHORT[(selectedPlan.period_month || 1) - 1]}/${selectedPlan.period_year}`
+    : '';
 
-  const filtered = records.filter(r => {
-    if (filterClient && r.client_id !== filterClient) return false;
-    if (filterMonth && r.plan_label !== filterMonth) return false;
-    return true;
-  });
+  // Só mostra planejamentos reversos após plano selecionado
+  const filtered = selectedPlanId
+    ? records.filter(r => r.plan_id === selectedPlanId)
+    : [];
 
   return (
     <div>
-      {/* Seletor de cliente */}
+      {/* Seletores em cascata */}
       <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
-        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">1. Filtrar por Cliente</p>
-        <Select value={filterClient} onValueChange={setFilterClient}>
+        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">1. Selecione o Cliente</p>
+        <Select value={selectedClientId} onValueChange={v => { setSelectedClientId(v); setSelectedPlanId(''); }}>
           <SelectTrigger className="max-w-xs">
-            <SelectValue placeholder="Todos os clientes..." />
+            <SelectValue placeholder="Selecione um cliente..." />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={null}>Todos os clientes</SelectItem>
             {sortedClients.map(c => (
               <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        {allMonths.length > 0 && (
+        {selectedClientId && (
           <>
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-4">2. Filtrar por Mês</p>
-            <Select value={filterMonth} onValueChange={setFilterMonth}>
-              <SelectTrigger className="max-w-xs">
-                <SelectValue placeholder="Todos os meses..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={null}>Todos os meses</SelectItem>
-                {allMonths.map(m => (
-                  <SelectItem key={m} value={m}>{m}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-4">2. Selecione o Plano de Mídia</p>
+            {clientPlans.length === 0 ? (
+              <p className="text-sm text-gray-400">Este cliente não possui planos de mídia.</p>
+            ) : (
+              <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+                <SelectTrigger className="max-w-xs">
+                  <SelectValue placeholder="Selecione um plano..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {clientPlans.map(p => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {MESES_SHORT[(p.period_month || 1) - 1]}/{p.period_year} — {p.status === 'active' ? 'Ativo' : p.status === 'draft' ? 'Rascunho' : 'Concluído'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </>
         )}
       </div>
 
-      {/* Cabeçalho da lista */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-base font-semibold text-gray-900">Planejamentos Salvos</h2>
-          <p className="text-sm text-gray-500">{filtered.length} planejamento(s) reverso(s)</p>
-        </div>
-        <Button onClick={onNew} className="gap-2 bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4" /> Novo Planejamento
-        </Button>
-      </div>
+      {/* Planejamentos reversos (só após plano selecionado) */}
+      {selectedPlanId && (
+        <>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-base font-semibold text-gray-900">Planejamentos Reversos</h2>
+              <p className="text-sm text-gray-500">{planLabel} · {filtered.length} planejamento(s)</p>
+            </div>
+            <Button onClick={onNew} className="gap-2 bg-blue-600 hover:bg-blue-700">
+              <Plus className="w-4 h-4" /> Novo Planejamento
+            </Button>
+          </div>
 
-      {filtered.length === 0 ? (
-        <div className="border-2 border-dashed border-gray-200 rounded-xl p-12 text-center">
-          <Target className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 font-medium">Nenhum planejamento reverso salvo</p>
-          <p className="text-gray-400 text-sm mt-1">Crie seu primeiro planejamento para começar</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {filtered.map(r => {
-            const cname = clients.find(c => c.id === r.client_id)?.clinic_name || r.client_name || '—';
-            const sales = r.result?.required_sales || 0;
-            const inv = r.result?.total_investment || 0;
-            return (
-              <div
-                key={r.id}
-                onClick={() => onSelect(r)}
-                className="bg-white rounded-xl border border-gray-100 px-5 py-4 flex items-center justify-between cursor-pointer hover:border-blue-200 hover:shadow-sm transition-all"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center">
-                    <Target className="w-4 h-4 text-purple-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{r.title || cname}</p>
-                    <p className="text-xs text-gray-400">{cname}{r.plan_label ? ` · ${r.plan_label}` : ''}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-8">
-                  <div className="text-right hidden sm:block">
-                    <p className="text-xs text-gray-400">Meta de Receita</p>
-                    <p className="text-sm font-semibold text-gray-800">R${Math.round(r.target_revenue || 0).toLocaleString('pt-BR')}</p>
-                  </div>
-                  {inv > 0 && (
-                    <div className="text-right hidden md:block">
-                      <p className="text-xs text-gray-400">Investimento</p>
-                      <p className="text-sm font-semibold text-gray-800">R${Math.round(inv).toLocaleString('pt-BR')}</p>
+          {filtered.length === 0 ? (
+            <div className="border-2 border-dashed border-gray-200 rounded-xl p-12 text-center">
+              <Target className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">Nenhum planejamento reverso para este plano</p>
+              <p className="text-gray-400 text-sm mt-1">Clique em "Novo Planejamento" para criar</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filtered.map(r => {
+                const cname = clients.find(c => c.id === r.client_id)?.clinic_name || r.client_name || '—';
+                const sales = r.result?.required_sales || 0;
+                const inv = r.result?.total_investment || 0;
+                return (
+                  <div
+                    key={r.id}
+                    onClick={() => onSelect(r)}
+                    className="bg-white rounded-xl border border-gray-100 px-5 py-4 flex items-center justify-between cursor-pointer hover:border-blue-200 hover:shadow-sm transition-all"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center">
+                        <Target className="w-4 h-4 text-purple-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{r.title || cname}</p>
+                        <p className="text-xs text-gray-400">{cname}{r.plan_label ? ` · ${r.plan_label}` : ''}</p>
+                      </div>
                     </div>
-                  )}
-                  {sales > 0 && (
-                    <div className="text-right hidden md:block">
-                      <p className="text-xs text-gray-400">Vendas Nec.</p>
-                      <p className="text-sm font-semibold text-gray-800">{sales}</p>
+                    <div className="flex items-center gap-8">
+                      <div className="text-right hidden sm:block">
+                        <p className="text-xs text-gray-400">Meta de Receita</p>
+                        <p className="text-sm font-semibold text-gray-800">R${Math.round(r.target_revenue || 0).toLocaleString('pt-BR')}</p>
+                      </div>
+                      {inv > 0 && (
+                        <div className="text-right hidden md:block">
+                          <p className="text-xs text-gray-400">Investimento</p>
+                          <p className="text-sm font-semibold text-gray-800">R${Math.round(inv).toLocaleString('pt-BR')}</p>
+                        </div>
+                      )}
+                      {sales > 0 && (
+                        <div className="text-right hidden md:block">
+                          <p className="text-xs text-gray-400">Vendas Nec.</p>
+                          <p className="text-sm font-semibold text-gray-800">{sales}</p>
+                        </div>
+                      )}
+                      <ChevronRight className="w-4 h-4 text-gray-300" />
                     </div>
-                  )}
-                  <ChevronRight className="w-4 h-4 text-gray-300" />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 }
 
-// ── Vista: visualizar planejamento salvo (somente leitura) ──
-function PlanView({ record, clients, onBack, onDelete }) {
+// ── Visualizar planejamento salvo (somente leitura) ──
+function PlanView({ record, clients, onBack }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const cname = clients.find(c => c.id === record.client_id)?.clinic_name || record.client_name || '—';
@@ -161,7 +172,6 @@ function PlanView({ record, clients, onBack, onDelete }) {
 
   return (
     <div>
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
@@ -172,17 +182,11 @@ function PlanView({ record, clients, onBack, onDelete }) {
             <p className="text-sm text-gray-500">{cname}{record.plan_label ? ` · ${record.plan_label}` : ''}</p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => deleteMutation.mutate()}
-          disabled={deleteMutation.isPending}
-          className="text-red-500 border-red-200 hover:bg-red-50"
-        >
+        <Button variant="outline" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending} className="text-red-500 border-red-200 hover:bg-red-50">
           <Trash2 className="w-4 h-4" />
         </Button>
       </div>
 
-      {/* Dados do funil */}
       {record.conversion_rates?.length > 0 && record.average_ticket > 0 && (
         <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
           <div className="flex items-center gap-2 mb-3">
@@ -207,13 +211,11 @@ function PlanView({ record, clients, onBack, onDelete }) {
         </div>
       )}
 
-      {/* Meta de receita */}
       <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
         <p className="text-xs text-gray-400 mb-1">Meta de Receita</p>
         <p className="text-2xl font-bold text-gray-900">{fmt(record.target_revenue || 0)}</p>
       </div>
 
-      {/* Resultados */}
       {result && (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
@@ -276,7 +278,7 @@ function PlanView({ record, clients, onBack, onDelete }) {
   );
 }
 
-// ── Vista: criar novo planejamento (sequência: cliente → plano → dados → calcular → salvar) ──
+// ── Criar novo planejamento ──
 function PlanNew({ clients, plans, onSave, onBack }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -330,10 +332,6 @@ function PlanNew({ clients, plans, onSave, onBack }) {
     setDistribution(d => d.map((ch, i) => i === idx ? { ...ch, [field]: Number(value) } : ch));
   };
 
-  const handleCalculate = () => {
-    setResult(calculateReversePlan(targetRevenue, planTicket, planRates, distribution));
-  };
-
   const saveMutation = useMutation({
     mutationFn: (data) => base44.entities.ReversePlanRecord.create(data),
     onSuccess: () => {
@@ -348,6 +346,7 @@ function PlanNew({ clients, plans, onSave, onBack }) {
     const planLabel = selectedPlan
       ? `${MESES_SHORT[(selectedPlan.period_month || 1) - 1]}/${selectedPlan.period_year}`
       : '';
+    const calc = calculateReversePlan(targetRevenue, planTicket, planRates, distribution);
     saveMutation.mutate({
       client_id: selectedClientId,
       client_name: cname,
@@ -358,7 +357,7 @@ function PlanNew({ clients, plans, onSave, onBack }) {
       average_ticket: planTicket,
       conversion_rates: planRates,
       distribution,
-      result,
+      result: calc,
     });
   };
 
@@ -371,7 +370,6 @@ function PlanNew({ clients, plans, onSave, onBack }) {
 
   return (
     <div>
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
@@ -389,10 +387,7 @@ function PlanNew({ clients, plans, onSave, onBack }) {
         )}
       </div>
 
-      {/* Seleção sequencial: cliente → plano */}
       <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
-
-        {/* Título */}
         <div className="mb-5">
           <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Título (opcional)</Label>
           <input
@@ -403,7 +398,6 @@ function PlanNew({ clients, plans, onSave, onBack }) {
           />
         </div>
 
-        {/* 1. Cliente */}
         <div className="mb-5">
           <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">1. Selecione o Cliente</p>
           <Select value={selectedClientId} onValueChange={setSelectedClientId}>
@@ -414,7 +408,6 @@ function PlanNew({ clients, plans, onSave, onBack }) {
           </Select>
         </div>
 
-        {/* 2. Plano (só aparece após cliente) */}
         {selectedClientId && (
           <div className="mb-5">
             <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">2. Selecione o Plano de Mídia</p>
@@ -435,7 +428,6 @@ function PlanNew({ clients, plans, onSave, onBack }) {
           </div>
         )}
 
-        {/* Dados do funil (só aparece após plano) */}
         {selectedPlan && planTicket > 0 && (
           <div className="mb-5 p-4 bg-blue-50 rounded-lg border border-blue-100">
             <div className="flex items-center gap-2 mb-3">
@@ -460,7 +452,6 @@ function PlanNew({ clients, plans, onSave, onBack }) {
           </div>
         )}
 
-        {/* Meta + canais (só aparece após plano selecionado) */}
         {selectedPlanId && (
           <>
             <div className="mb-5">
@@ -498,7 +489,7 @@ function PlanNew({ clients, plans, onSave, onBack }) {
                 <Button variant="outline" onClick={() => setDistribution(d => [...d, { channel_name: 'Meta', percent: 0, expected_cpl: 0 }])} className="gap-2 text-sm">
                   <Plus className="w-4 h-4" /> Adicionar Canal
                 </Button>
-                <Button onClick={handleCalculate} className="gap-2 bg-blue-600 hover:bg-blue-700" disabled={!canCalculate}>
+                <Button onClick={() => setResult(calculateReversePlan(targetRevenue, planTicket, planRates, distribution))} className="gap-2 bg-blue-600 hover:bg-blue-700" disabled={!canCalculate}>
                   <Calculator className="w-4 h-4" /> Calcular
                 </Button>
               </div>
@@ -507,7 +498,6 @@ function PlanNew({ clients, plans, onSave, onBack }) {
         )}
       </div>
 
-      {/* Resultados */}
       {result && (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
@@ -572,7 +562,7 @@ function PlanNew({ clients, plans, onSave, onBack }) {
 
 // ── Página principal ──
 export default function ReversePlan() {
-  const [view, setView] = useState('list'); // 'list' | 'new' | 'view'
+  const [view, setView] = useState('list');
   const [selectedRecord, setSelectedRecord] = useState(null);
 
   const { data: clients = [] } = useQuery({
@@ -598,6 +588,7 @@ export default function ReversePlan() {
         <PlanList
           records={records}
           clients={clients}
+          plans={plans}
           onSelect={r => { setSelectedRecord(r); setView('view'); }}
           onNew={() => setView('new')}
         />
@@ -607,7 +598,6 @@ export default function ReversePlan() {
           record={selectedRecord}
           clients={clients}
           onBack={() => { setSelectedRecord(null); setView('list'); }}
-          onDelete={() => { setSelectedRecord(null); setView('list'); }}
         />
       )}
       {view === 'new' && (
