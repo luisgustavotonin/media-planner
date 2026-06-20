@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { TrendingUp, TrendingDown, Minus, SlidersHorizontal, ChevronDown, ChevronUp, Settings } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, SlidersHorizontal, ChevronDown, ChevronUp, Settings, FileDown } from 'lucide-react';
+import { exportScenariosPdf } from '../components/scenarios/ScenariosPdfExport';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -90,6 +91,18 @@ export default function Scenarios() {
 
   const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
   const fmtN = v => Math.round(v).toLocaleString('pt-BR');
+  const calcRoas = (revenue, budget) => budget > 0 ? (revenue / budget) : 0;
+
+  const handleExportPdf = () => {
+    const client = allClients.find(c => c.id === selectedClientId);
+    exportScenariosPdf({
+      plan,
+      scenarios,
+      stageLabels,
+      clientName: client?.clinic_name || plan?.client_name || 'Cliente',
+      MESES_SHORT,
+    });
+  };
 
   const scenarioConfigs = [
     { key: 'optimistic', label: 'Otimista', icon: TrendingUp, color: 'emerald' },
@@ -254,7 +267,13 @@ export default function Scenarios() {
       {scenarios && (
         <>
           <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Comparação de Cenários</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gray-900">Comparação de Cenários</h3>
+              <Button onClick={handleExportPdf} variant="outline" size="sm" className="gap-2 text-xs">
+                <FileDown className="w-3.5 h-3.5" />
+                Exportar PDF
+              </Button>
+            </div>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} barCategoryGap="25%">
@@ -291,6 +310,7 @@ export default function Scenarios() {
                     ))}
                     <div className="pt-3 border-t border-gray-50">
                       <div className="flex justify-between"><span className="text-xs text-gray-500">Receita</span><span className="text-sm font-bold text-emerald-600">{fmt(s.totals.total_revenue)}</span></div>
+                      <div className="flex justify-between mt-1"><span className="text-xs text-gray-500">ROAS</span><span className="text-sm font-semibold">{calcRoas(s.totals.total_revenue, s.totals.total_budget).toFixed(2)}x</span></div>
                       <div className="flex justify-between mt-1"><span className="text-xs text-gray-500">CPL Médio</span><span className="text-sm font-semibold">{fmt(s.blended_cpl)}</span></div>
                       <div className="flex justify-between mt-1"><span className="text-xs text-gray-500">ROI</span><span className="text-sm font-semibold">{s.overall_roi.toFixed(0)}%</span></div>
                     </div>
