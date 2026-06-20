@@ -34,6 +34,11 @@ export default function Scenarios() {
     queryFn: () => base44.entities.MediaPlan.list('-created_date'),
   });
 
+  const { data: funnelTypes = [] } = useQuery({
+    queryKey: ['funnelTypes'],
+    queryFn: () => base44.entities.FunnelType.list(),
+  });
+
   const myPlans = plans.filter(p => allClients.some(c => c.id === p.client_id));
 
   const clientPlans = myPlans.filter(p => p.client_id === selectedClientId);
@@ -66,9 +71,14 @@ export default function Scenarios() {
     conservative_conv_adj: adjForm.conservative_conv_adj / 100,
   } : plan?.scenario_adjustments;
 
+  // Labels dinâmicos das etapas do funil
+  const funnelType = funnelTypes.find(ft => ft.id === plan?.funnel_type_id);
+  const stageLabels = funnelType?.stages?.map(s => s.label) || ['Lead', 'Agendamento', 'Comparecimento', 'Venda'];
+
   let scenarios = null;
+  let rates = [];
   if (plan && plan.channels?.length > 0) {
-    const rates = Array.isArray(plan.conversion_rates) && plan.conversion_rates.length
+    rates = Array.isArray(plan.conversion_rates) && plan.conversion_rates.length
       ? plan.conversion_rates
       : [
           plan.lead_to_appointment_rate || 0.35,
@@ -87,12 +97,13 @@ export default function Scenarios() {
     { key: 'conservative', label: 'Conservador', icon: TrendingDown, color: 'amber' },
   ];
 
-  const chartData = scenarios ? [
-    { name: 'Leads', Otimista: scenarios.optimistic.totals.total_leads, Realista: scenarios.realistic.totals.total_leads, Conservador: scenarios.conservative.totals.total_leads },
-    { name: 'Agendamentos', Otimista: scenarios.optimistic.totals.total_appointments, Realista: scenarios.realistic.totals.total_appointments, Conservador: scenarios.conservative.totals.total_appointments },
-    { name: 'Comparec.', Otimista: scenarios.optimistic.totals.total_showups, Realista: scenarios.realistic.totals.total_showups, Conservador: scenarios.conservative.totals.total_showups },
-    { name: 'Vendas', Otimista: Math.round(scenarios.optimistic.totals.total_sales), Realista: Math.round(scenarios.realistic.totals.total_sales), Conservador: Math.round(scenarios.conservative.totals.total_sales) },
-  ] : [];
+  // chartData dinâmico usando stageValues do funil
+  const chartData = scenarios ? stageLabels.map((label, i) => ({
+    name: label.length > 10 ? label.substring(0, 10) + '.' : label,
+    Otimista: scenarios.optimistic.totals.stageValues?.[i] ?? 0,
+    Realista: scenarios.realistic.totals.stageValues?.[i] ?? 0,
+    Conservador: scenarios.conservative.totals.stageValues?.[i] ?? 0,
+  })) : [];
 
   return (
     <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
@@ -272,10 +283,12 @@ export default function Scenarios() {
                     <h4 className="text-sm font-semibold text-gray-900">{sc.label}</h4>
                   </div>
                   <div className="space-y-3">
-                    <div className="flex justify-between"><span className="text-xs text-gray-500">Leads</span><span className="text-sm font-semibold">{fmtN(s.totals.total_leads)}</span></div>
-                    <div className="flex justify-between"><span className="text-xs text-gray-500">Agendamentos</span><span className="text-sm font-semibold">{fmtN(s.totals.total_appointments)}</span></div>
-                    <div className="flex justify-between"><span className="text-xs text-gray-500">Comparecimentos</span><span className="text-sm font-semibold">{fmtN(s.totals.total_showups)}</span></div>
-                    <div className="flex justify-between"><span className="text-xs text-gray-500">Vendas</span><span className="text-sm font-semibold">{fmtN(s.totals.total_sales)}</span></div>
+                    {stageLabels.map((label, i) => (
+                      <div key={i} className="flex justify-between">
+                        <span className="text-xs text-gray-500">{label}</span>
+                        <span className="text-sm font-semibold">{fmtN(s.totals.stageValues?.[i] ?? 0)}</span>
+                      </div>
+                    ))}
                     <div className="pt-3 border-t border-gray-50">
                       <div className="flex justify-between"><span className="text-xs text-gray-500">Receita</span><span className="text-sm font-bold text-emerald-600">{fmt(s.totals.total_revenue)}</span></div>
                       <div className="flex justify-between mt-1"><span className="text-xs text-gray-500">CPL Médio</span><span className="text-sm font-semibold">{fmt(s.blended_cpl)}</span></div>
