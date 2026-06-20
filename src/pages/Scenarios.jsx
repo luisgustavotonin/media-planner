@@ -95,7 +95,7 @@ export default function Scenarios() {
   ] : [];
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+    <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
       <PageHeader title="Simulador de Cenários" description="Compare projeções otimista, realista e conservadora." />
 
       <div className="bg-white rounded-xl border border-gray-100 p-6 mb-8">
@@ -164,7 +164,7 @@ export default function Scenarios() {
               <p className="text-xs text-gray-400 mt-4 mb-4">
                 O <strong>Realista</strong> é o plano atual sem alterações. Os demais cenários aplicam ajustes sobre o CPL e as taxas de conversão:
               </p>
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 {/* Otimista */}
                 <div className="space-y-3">
                   <h5 className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Otimista</h5>
@@ -254,7 +254,7 @@ export default function Scenarios() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-5 sm:mb-6">
             {scenarioConfigs.map(sc => {
               const s = scenarios[sc.key];
               return (

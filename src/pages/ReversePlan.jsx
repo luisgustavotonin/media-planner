@@ -97,7 +97,7 @@ export default function ReversePlan() {
   const canCalculate = selectedPlanId && targetRevenue > 0 && distribution.length > 0 && planTicket > 0;
 
   return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto">
+    <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-5xl mx-auto w-full">
       <PageHeader title="Planejamento Reverso" description="Selecione um cliente e plano de mídia para calcular o investimento necessário." />
 
       <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
@@ -144,7 +144,7 @@ export default function ReversePlan() {
               <Info className="w-4 h-4 text-blue-500" />
               <span className="text-xs font-semibold text-blue-700">Dados do Funil — {selectedPlan.funnel_type_name || 'Funil do Plano'}</span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
               <div>
                 <p className="text-gray-400">Ticket Médio</p>
                 <p className="font-semibold text-gray-800">{fmt(planTicket)}</p>
@@ -178,11 +178,11 @@ export default function ReversePlan() {
                 <p className="text-sm text-gray-400 mb-3">Nenhum canal. Clique em "Adicionar Canal" para começar.</p>
               ) : (
                 <div className="space-y-2 mb-4">
-                  <div className="grid grid-cols-[1fr_1fr_1fr_32px] gap-3 text-[10px] text-gray-400 font-medium uppercase tracking-wider px-1">
+                  <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_32px] gap-3 text-[10px] text-gray-400 font-medium uppercase tracking-wider px-1">
                     <span>Canal</span><span>% do Budget</span><span>CPL (R$)</span><span></span>
                   </div>
                   {distribution.map((ch, idx) => (
-                    <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_32px] gap-3 items-center">
+                    <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_32px] gap-2 sm:gap-3 items-center">
                       <Select value={ch.channel_name} onValueChange={v => handleDistChange(idx, 'channel_name', v)}>
                         <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -220,7 +220,7 @@ export default function ReversePlan() {
 
       {result && (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5 sm:mb-6">
             <StatCard label="Investimento Necessário" value={fmt(result.total_investment)} icon={DollarSign} color="blue" />
             <StatCard label="Leads Necessários" value={result.required_leads.toLocaleString()} icon={Users} color="purple" />
             <StatCard label="Vendas Necessárias" value={result.required_sales.toLocaleString()} icon={Target} color="orange" />
@@ -230,7 +230,7 @@ export default function ReversePlan() {
           {result.required_appointments > 0 && (
             <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
               <h3 className="text-sm font-semibold text-gray-900 mb-3">Projeção do Funil</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 text-center">
                 {[
                   { label: 'Leads', value: result.required_leads },
                   { label: 'Agendamentos', value: result.required_appointments },

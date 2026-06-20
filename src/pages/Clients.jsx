@@ -80,7 +80,7 @@ export default function Clients() {
   const getEspecialidadeLabel = (val) => ESPECIALIDADES.find(e => e.value === val)?.label || val;
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+    <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
       <PageHeader
         title="Clientes"
         description="Gerencie suas clínicas odontológicas."
@@ -103,7 +103,7 @@ export default function Clients() {
           </Button>
         } />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {filtered.map(client => (
             <div key={client.id} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-sm transition-shadow group">
               <div className="flex items-start justify-between mb-4">

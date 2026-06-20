@@ -168,7 +168,7 @@ export default function PlanDetail() {
   const segmentoLabel = SEGMENTOS[localPlan.segment] || localPlan.segment || 'Geral';
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+    <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
       <div className="mb-6">
         <Link to={createPageUrl('MediaPlans')} className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 mb-4">
           <ArrowLeft className="w-3 h-3" /> Voltar aos Planos
@@ -177,7 +177,7 @@ export default function PlanDetail() {
           title={`${localPlan.client_name || 'Sem nome'} — ${MESES[(localPlan.period_month || 1) - 1]} ${localPlan.period_year}`}
           description={`Segmento: ${segmentoLabel} · Status: ${statusLabel}`}
           actions={
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 className="gap-2 h-9 text-xs"
@@ -206,7 +206,7 @@ export default function PlanDetail() {
         />
       </div>
 
-      <div className={`grid grid-cols-2 gap-4 mb-6 ${hasAnyTax ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
+      <div className={`grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6 ${hasAnyTax ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
         <StatCard label="Investimento Bruto" value={`R$${totalInvestment.toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" />
         {hasAnyTax && (
           <StatCard label="Investimento Líquido" value={`R$${Math.round(netInvestment).toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" sublabel="após impostos" />
@@ -226,7 +226,7 @@ export default function PlanDetail() {
               </span>
             )}
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {conversionPairs.map((pair, i) => (
               <div key={pair.field}>
                 <Label className="text-xs">{pair.label} (%)</Label>

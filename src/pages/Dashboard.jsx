@@ -60,7 +60,7 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+      <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
         <div className="flex items-center justify-center h-96">
           <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
         </div>
@@ -69,7 +69,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
+    <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full space-y-6 sm:space-y-8">
       {/* Header */}
       <PageHeader 
         title="Dashboard"
@@ -81,7 +81,7 @@ export default function Dashboard() {
         <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">
           Este Mês ({MESES_SHORT[currentMonth - 1]}/{currentYear})
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <StatCard 
             label="Planos Ativos" 
             value={activePlans.length.toString()} 
@@ -114,7 +114,7 @@ export default function Dashboard() {
         <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">
           Totais (Todos os Períodos)
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <StatCard 
             label="Clientes" 
             value={clients.length.toString()} 
@@ -183,7 +183,7 @@ export default function Dashboard() {
       )}
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <Link 
           to={createPageUrl('Clients')}
           className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200 p-6 hover:border-blue-300 hover:shadow-md transition-all"
