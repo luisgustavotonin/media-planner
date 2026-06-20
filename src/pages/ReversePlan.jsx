@@ -16,32 +16,32 @@ import { useToast } from '@/components/ui/use-toast';
 const CHANNEL_OPTIONS = ['Meta', 'Google', 'TikTok', 'YouTube', 'LinkedIn', 'Outro'];
 const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
-// Calcula stageValues completo para qualquer número de etapas
-function calcAllStages(requiredLeads, conversionRates) {
-  const stages = [Math.round(requiredLeads)];
-  for (let i = 0; i < conversionRates.length; i++) {
-    stages.push(Math.round(stages[i] * (conversionRates[i] || 0)));
-  }
-  return stages;
-}
-
-// ── Lista: cascata cliente → planejamento reverso ──
-function PlanList({ records, clients, onSelect, onNew }) {
+// ── Lista: cascata cliente → plano → planejamentos reversos ──
+function PlanList({ records, clients, plans, onSelect, onNew }) {
   const [selectedClientId, setSelectedClientId] = useState('');
+  const [selectedPlanId, setSelectedPlanId] = useState('');
 
   const sortedClients = [...clients].sort((a, b) =>
     (a.clinic_name || '').localeCompare(b.clinic_name || '', 'pt-BR')
   );
 
-  const clientRecords = selectedClientId
-    ? records.filter(r => r.client_id === selectedClientId)
+  const clientPlans = plans.filter(p => p.client_id === selectedClientId);
+  const selectedPlan = plans.find(p => p.id === selectedPlanId);
+  const planLabel = selectedPlan
+    ? `${MESES_SHORT[(selectedPlan.period_month || 1) - 1]}/${selectedPlan.period_year}`
+    : '';
+
+  // Só mostra planejamentos reversos após plano selecionado
+  const filtered = selectedPlanId
+    ? records.filter(r => r.plan_id === selectedPlanId)
     : [];
 
   return (
     <div>
+      {/* Seletores em cascata */}
       <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
         <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">1. Selecione o Cliente</p>
-        <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+        <Select value={selectedClientId} onValueChange={v => { setSelectedClientId(v); setSelectedPlanId(''); }}>
           <SelectTrigger className="max-w-xs">
             <SelectValue placeholder="Selecione um cliente..." />
           </SelectTrigger>
@@ -51,29 +51,53 @@ function PlanList({ records, clients, onSelect, onNew }) {
             ))}
           </SelectContent>
         </Select>
+
+        {selectedClientId && (
+          <>
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-4">2. Selecione o Plano de Mídia</p>
+            {clientPlans.length === 0 ? (
+              <p className="text-sm text-gray-400">Este cliente não possui planos de mídia.</p>
+            ) : (
+              <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+                <SelectTrigger className="max-w-xs">
+                  <SelectValue placeholder="Selecione um plano..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {clientPlans.map(p => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {MESES_SHORT[(p.period_month || 1) - 1]}/{p.period_year} — {p.status === 'active' ? 'Ativo' : p.status === 'draft' ? 'Rascunho' : 'Concluído'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </>
+        )}
       </div>
 
-      {selectedClientId && (
+      {/* Planejamentos reversos (só após plano selecionado) */}
+      {selectedPlanId && (
         <>
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-base font-semibold text-gray-900">Planejamentos Reversos</h2>
-              <p className="text-sm text-gray-500">{clientRecords.length} planejamento(s)</p>
+              <p className="text-sm text-gray-500">{planLabel} · {filtered.length} planejamento(s)</p>
             </div>
             <Button onClick={onNew} className="gap-2 bg-blue-600 hover:bg-blue-700">
               <Plus className="w-4 h-4" /> Novo Planejamento
             </Button>
           </div>
 
-          {clientRecords.length === 0 ? (
+          {filtered.length === 0 ? (
             <div className="border-2 border-dashed border-gray-200 rounded-xl p-12 text-center">
               <Target className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 font-medium">Nenhum planejamento reverso para este cliente</p>
+              <p className="text-gray-500 font-medium">Nenhum planejamento reverso para este plano</p>
               <p className="text-gray-400 text-sm mt-1">Clique em "Novo Planejamento" para criar</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {clientRecords.map(r => {
+              {filtered.map(r => {
+                const cname = clients.find(c => c.id === r.client_id)?.clinic_name || r.client_name || '—';
                 const sales = r.result?.required_sales || 0;
                 const inv = r.result?.total_investment || 0;
                 return (
@@ -87,8 +111,8 @@ function PlanList({ records, clients, onSelect, onNew }) {
                         <Target className="w-4 h-4 text-purple-500" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">{r.title || r.client_name || '—'}</p>
-                        <p className="text-xs text-gray-400">{r.plan_label || ''}</p>
+                        <p className="text-sm font-semibold text-gray-900">{r.title || cname}</p>
+                        <p className="text-xs text-gray-400">{cname}{r.plan_label ? ` · ${r.plan_label}` : ''}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-8">
@@ -127,6 +151,7 @@ function PlanView({ record, clients, onBack }) {
   const queryClient = useQueryClient();
   const cname = clients.find(c => c.id === record.client_id)?.clinic_name || record.client_name || '—';
   const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
+  const fmtPct = v => `${(v * 100).toFixed(1)}%`;
   const result = record.result;
 
   const deleteMutation = useMutation({
@@ -138,17 +163,12 @@ function PlanView({ record, clients, onBack }) {
     },
   });
 
-  // Funnel dinâmico: usa stageLabels salvo ou reconstrói a partir das taxas
-  const stageLabels = record.stage_labels || [];
-  const convRates = record.conversion_rates || [];
-  const allStageValues = result
-    ? calcAllStages(result.required_leads, convRates)
-    : [];
-
-  const funnelStages = allStageValues.map((v, i) => ({
-    label: stageLabels[i] || (i === 0 ? 'Leads' : i === allStageValues.length - 1 ? 'Vendas' : `Etapa ${i + 1}`),
-    value: v,
-  }));
+  const funnelStages = result ? [
+    { label: 'Leads', value: result.required_leads },
+    ...(result.required_appointments > 0 ? [{ label: 'Agendamentos', value: result.required_appointments }] : []),
+    ...(result.required_showups > 0 ? [{ label: 'Comparecimentos', value: result.required_showups }] : []),
+    { label: 'Vendas', value: result.required_sales },
+  ] : [];
 
   return (
     <div>
@@ -167,8 +187,7 @@ function PlanView({ record, clients, onBack }) {
         </Button>
       </div>
 
-      {/* Dados do funil */}
-      {convRates.length > 0 && record.average_ticket > 0 && (
+      {record.conversion_rates?.length > 0 && record.average_ticket > 0 && (
         <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
           <div className="flex items-center gap-2 mb-3">
             <Info className="w-4 h-4 text-blue-500" />
@@ -179,13 +198,12 @@ function PlanView({ record, clients, onBack }) {
               <p className="text-gray-400">Ticket Médio</p>
               <p className="font-semibold text-gray-800">{fmt(record.average_ticket)}</p>
             </div>
-            {convRates.map((r, i) => {
-              const fromLabel = stageLabels[i] || `Etapa ${i + 1}`;
-              const toLabel = stageLabels[i + 1] || `Etapa ${i + 2}`;
+            {record.conversion_rates.map((r, i) => {
+              const labels = ['Lead → Agend.', 'Agend. → Compar.', 'Compar. → Venda'];
               return (
                 <div key={i}>
-                  <p className="text-gray-400">{fromLabel} → {toLabel}</p>
-                  <p className="font-semibold text-gray-800">{(r * 100).toFixed(1)}%</p>
+                  <p className="text-gray-400">{labels[i] || `Taxa ${i + 1}`}</p>
+                  <p className="font-semibold text-gray-800">{fmtPct(r)}</p>
                 </div>
               );
             })}
@@ -203,7 +221,7 @@ function PlanView({ record, clients, onBack }) {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
             <StatCard label="Investimento Necessário" value={fmt(result.total_investment)} icon={DollarSign} color="blue" />
             <StatCard label="Leads Necessários" value={result.required_leads.toLocaleString()} icon={Users} color="purple" />
-            <StatCard label="Vendas Necessárias" value={String(result.required_sales)} icon={Target} color="orange" />
+            <StatCard label="Vendas Necessárias" value={result.required_sales.toLocaleString()} icon={Target} color="orange" />
             <StatCard label="Meta de Receita" value={fmt(record.target_revenue)} icon={TrendingDown} color="green" />
           </div>
 
@@ -261,7 +279,7 @@ function PlanView({ record, clients, onBack }) {
 }
 
 // ── Criar novo planejamento ──
-function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
+function PlanNew({ clients, plans, onSave, onBack }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -277,23 +295,6 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
   );
   const clientPlans = plans.filter(p => p.client_id === selectedClientId);
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
-
-  // Funnel type dinâmico
-  const funnelType = funnelTypes.find(ft => ft.id === selectedPlan?.funnel_type_id);
-  const funnelStages = funnelType?.stages || [];
-
-  // Taxas de conversão do plano selecionado
-  const planRates = selectedPlan
-    ? (Array.isArray(selectedPlan.conversion_rates) && selectedPlan.conversion_rates.length
-        ? selectedPlan.conversion_rates
-        : [selectedPlan.lead_to_appointment_rate || 0, selectedPlan.appointment_to_show_rate || 0, selectedPlan.show_to_sale_rate || 0])
-    : [];
-  const planTicket = selectedPlan?.average_ticket || 0;
-
-  // Labels das etapas
-  const stageLabels = funnelStages.length > 0
-    ? funnelStages.map(s => s.label)
-    : ['Leads', 'Agendamentos', 'Comparecimentos', 'Vendas'];
 
   useEffect(() => {
     setSelectedPlanId('');
@@ -316,7 +317,15 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
     setResult(null);
   }, [selectedPlanId]);
 
+  const planRates = selectedPlan
+    ? (Array.isArray(selectedPlan.conversion_rates) && selectedPlan.conversion_rates.length
+        ? selectedPlan.conversion_rates
+        : [selectedPlan.lead_to_appointment_rate || 0, selectedPlan.appointment_to_show_rate || 0, selectedPlan.show_to_sale_rate || 0])
+    : [];
+  const planTicket = selectedPlan?.average_ticket || 0;
+
   const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
+  const fmtPct = v => `${(v * 100).toFixed(1)}%`;
   const canCalculate = selectedPlanId && targetRevenue > 0 && distribution.length > 0 && planTicket > 0;
 
   const handleDistChange = (idx, field, value) => {
@@ -347,18 +356,17 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
       target_revenue: targetRevenue,
       average_ticket: planTicket,
       conversion_rates: planRates,
-      stage_labels: stageLabels,
       distribution,
       result: calc,
     });
   };
 
-  // Projeção dinâmica do funil
-  const resultStageValues = result ? calcAllStages(result.required_leads, planRates) : [];
-  const funnelVisualStages = resultStageValues.map((v, i) => ({
-    label: stageLabels[i] || (i === 0 ? 'Leads' : `Etapa ${i + 1}`),
-    value: v,
-  }));
+  const funnelStages = result ? [
+    { label: 'Leads', value: result.required_leads },
+    ...(result.required_appointments > 0 ? [{ label: 'Agendamentos', value: result.required_appointments }] : []),
+    ...(result.required_showups > 0 ? [{ label: 'Comparecimentos', value: result.required_showups }] : []),
+    { label: 'Vendas', value: result.required_sales },
+  ] : [];
 
   return (
     <div>
@@ -380,7 +388,6 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
-        {/* Título */}
         <div className="mb-5">
           <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Título (opcional)</Label>
           <input
@@ -391,7 +398,6 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
           />
         </div>
 
-        {/* 1. Cliente */}
         <div className="mb-5">
           <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">1. Selecione o Cliente</p>
           <Select value={selectedClientId} onValueChange={setSelectedClientId}>
@@ -402,7 +408,6 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
           </Select>
         </div>
 
-        {/* 2. Plano de mídia */}
         {selectedClientId && (
           <div className="mb-5">
             <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">2. Selecione o Plano de Mídia</p>
@@ -423,25 +428,23 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
           </div>
         )}
 
-        {/* Dados do funil dinâmico */}
-        {selectedPlan && planTicket > 0 && planRates.length > 0 && (
+        {selectedPlan && planTicket > 0 && (
           <div className="mb-5 p-4 bg-blue-50 rounded-lg border border-blue-100">
             <div className="flex items-center gap-2 mb-3">
               <Info className="w-4 h-4 text-blue-500" />
-              <span className="text-xs font-semibold text-blue-700">Dados do Funil{funnelType ? ` — ${funnelType.name}` : ''}</span>
+              <span className="text-xs font-semibold text-blue-700">Dados do Funil</span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs flex-wrap">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
               <div>
                 <p className="text-gray-400">Ticket Médio</p>
                 <p className="font-semibold text-gray-800">{fmt(planTicket)}</p>
               </div>
               {planRates.map((r, i) => {
-                const fromLabel = stageLabels[i] || `Etapa ${i + 1}`;
-                const toLabel = stageLabels[i + 1] || `Etapa ${i + 2}`;
+                const labels = ['Lead → Agend.', 'Agend. → Compar.', 'Compar. → Venda'];
                 return (
                   <div key={i}>
-                    <p className="text-gray-400">{fromLabel} → {toLabel}</p>
-                    <p className="font-semibold text-gray-800">{(r * 100).toFixed(1)}%</p>
+                    <p className="text-gray-400">{labels[i] || `Taxa ${i + 1}`}</p>
+                    <p className="font-semibold text-gray-800">{fmtPct(r)}</p>
                   </div>
                 );
               })}
@@ -449,7 +452,6 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
           </div>
         )}
 
-        {/* Meta + canais */}
         {selectedPlanId && (
           <>
             <div className="mb-5">
@@ -487,11 +489,7 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
                 <Button variant="outline" onClick={() => setDistribution(d => [...d, { channel_name: 'Meta', percent: 0, expected_cpl: 0 }])} className="gap-2 text-sm">
                   <Plus className="w-4 h-4" /> Adicionar Canal
                 </Button>
-                <Button
-                  onClick={() => setResult(calculateReversePlan(targetRevenue, planTicket, planRates, distribution))}
-                  className="gap-2 bg-blue-600 hover:bg-blue-700"
-                  disabled={!canCalculate}
-                >
+                <Button onClick={() => setResult(calculateReversePlan(targetRevenue, planTicket, planRates, distribution))} className="gap-2 bg-blue-600 hover:bg-blue-700" disabled={!canCalculate}>
                   <Calculator className="w-4 h-4" /> Calcular
                 </Button>
               </div>
@@ -500,20 +498,19 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
         )}
       </div>
 
-      {/* Resultados dinâmicos */}
       {result && (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
             <StatCard label="Investimento Necessário" value={fmt(result.total_investment)} icon={DollarSign} color="blue" />
-            <StatCard label={`${stageLabels[0] || 'Leads'} Necessários`} value={result.required_leads.toLocaleString()} icon={Users} color="purple" />
-            <StatCard label={`${stageLabels[stageLabels.length - 1] || 'Vendas'} Necessárias`} value={String(result.required_sales)} icon={Target} color="orange" />
+            <StatCard label="Leads Necessários" value={result.required_leads.toLocaleString()} icon={Users} color="purple" />
+            <StatCard label="Vendas Necessárias" value={result.required_sales.toLocaleString()} icon={Target} color="orange" />
             <StatCard label="Meta de Receita" value={fmt(targetRevenue)} icon={TrendingDown} color="green" />
           </div>
 
-          {funnelVisualStages.length > 0 && (
+          {funnelStages.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Projeção do Funil</h3>
-              <FunnelVisual stages={funnelVisualStages} />
+              <FunnelVisual stages={funnelStages} />
             </div>
           )}
 
@@ -529,7 +526,7 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
                       <th className="text-left py-2.5 px-4 font-medium text-gray-500">Canal</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Distribuição</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">CPL</th>
-                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">{stageLabels[0] || 'Leads'} Nec.</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Leads Nec.</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Budget Nec.</th>
                     </tr>
                   </thead>
@@ -583,11 +580,6 @@ export default function ReversePlan() {
     queryFn: () => base44.entities.ReversePlanRecord.list('-created_date'),
   });
 
-  const { data: funnelTypes = [] } = useQuery({
-    queryKey: ['funnel-types'],
-    queryFn: () => base44.entities.FunnelType.list(),
-  });
-
   return (
     <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
       <PageHeader title="Planejamento Reverso" description="Calcule o investimento necessário para atingir suas metas de receita." />
@@ -596,6 +588,7 @@ export default function ReversePlan() {
         <PlanList
           records={records}
           clients={clients}
+          plans={plans}
           onSelect={r => { setSelectedRecord(r); setView('view'); }}
           onNew={() => setView('new')}
         />
@@ -611,7 +604,6 @@ export default function ReversePlan() {
         <PlanNew
           clients={clients}
           plans={plans}
-          funnelTypes={funnelTypes}
           onSave={() => setView('list')}
           onBack={() => setView('list')}
         />

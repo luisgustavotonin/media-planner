@@ -32,13 +32,6 @@
         "type": "number"
       }
     },
-    "stage_labels": {
-      "type": "array",
-      "description": "Labels das etapas do funil (din\u00e2mico, ex: Leads, Agendamentos, ...)",
-      "items": {
-        "type": "string"
-      }
-    },
     "distribution": {
       "type": "array",
       "items": {
