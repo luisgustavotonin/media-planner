@@ -1,0 +1,60 @@
+{
+  "name": "ReversePlanRecord",
+  "type": "object",
+  "properties": {
+    "client_id": {
+      "type": "string"
+    },
+    "client_name": {
+      "type": "string"
+    },
+    "plan_id": {
+      "type": "string",
+      "description": "Refer\u00eancia opcional ao MediaPlan"
+    },
+    "plan_label": {
+      "type": "string",
+      "description": "Label do plano (m\u00eas/ano)"
+    },
+    "title": {
+      "type": "string",
+      "description": "Nome/t\u00edtulo do planejamento reverso"
+    },
+    "target_revenue": {
+      "type": "number"
+    },
+    "average_ticket": {
+      "type": "number"
+    },
+    "conversion_rates": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      }
+    },
+    "distribution": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "channel_name": {
+            "type": "string"
+          },
+          "percent": {
+            "type": "number"
+          },
+          "expected_cpl": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "result": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "client_id",
+    "target_revenue"
+  ]
+}

@@ -11,116 +11,183 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Target, DollarSign, Users, TrendingDown, Calculator, Plus, Trash2, Info, Save, CheckCircle } from 'lucide-react';
+import { Target, DollarSign, Users, TrendingDown, Calculator, Plus, Trash2, Info, Save, ArrowLeft, ChevronRight } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
 const CHANNEL_OPTIONS = ['Meta', 'Google', 'TikTok', 'YouTube', 'LinkedIn', 'Outro'];
 const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
-export default function ReversePlan() {
-  const { user } = useAuth();
+function PlanList({ records, clients, onSelect, onCreate }) {
+  const byClient = {};
+  records.forEach(r => {
+    const cname = clients.find(c => c.id === r.client_id)?.clinic_name || r.client_name || 'Cliente';
+    if (!byClient[r.client_id]) byClient[r.client_id] = { name: cname, records: [] };
+    byClient[r.client_id].records.push(r);
+  });
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Planejamentos Salvos</h2>
+          <p className="text-sm text-gray-500">{records.length} planejamento(s) reverso(s)</p>
+        </div>
+        <Button onClick={onCreate} className="gap-2 bg-blue-600 hover:bg-blue-700">
+          <Plus className="w-4 h-4" /> Novo Planejamento
+        </Button>
+      </div>
+
+      {records.length === 0 ? (
+        <div className="border-2 border-dashed border-gray-200 rounded-xl p-12 text-center">
+          <Target className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500 font-medium">Nenhum planejamento reverso salvo</p>
+          <p className="text-gray-400 text-sm mt-1">Crie seu primeiro planejamento para começar</p>
+          <Button onClick={onCreate} className="mt-4 gap-2 bg-blue-600 hover:bg-blue-700">
+            <Plus className="w-4 h-4" /> Novo Planejamento
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {records.map(r => {
+            const cname = clients.find(c => c.id === r.client_id)?.clinic_name || r.client_name || '—';
+            const sales = r.result?.required_sales || 0;
+            const inv = r.result?.total_investment || 0;
+            return (
+              <div
+                key={r.id}
+                onClick={() => onSelect(r)}
+                className="bg-white rounded-xl border border-gray-100 px-5 py-4 flex items-center justify-between cursor-pointer hover:border-blue-200 hover:shadow-sm transition-all"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center">
+                    <Target className="w-4 h-4 text-purple-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{r.title || cname}</p>
+                    <p className="text-xs text-gray-400">{cname} {r.plan_label ? `· ${r.plan_label}` : ''}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-8">
+                  <div className="text-right hidden sm:block">
+                    <p className="text-xs text-gray-400">Meta de Receita</p>
+                    <p className="text-sm font-semibold text-gray-800">R${Math.round(r.target_revenue || 0).toLocaleString('pt-BR')}</p>
+                  </div>
+                  {inv > 0 && (
+                    <div className="text-right hidden md:block">
+                      <p className="text-xs text-gray-400">Investimento</p>
+                      <p className="text-sm font-semibold text-gray-800">R${Math.round(inv).toLocaleString('pt-BR')}</p>
+                    </div>
+                  )}
+                  {sales > 0 && (
+                    <div className="text-right hidden md:block">
+                      <p className="text-xs text-gray-400">Vendas Nec.</p>
+                      <p className="text-sm font-semibold text-gray-800">{sales}</p>
+                    </div>
+                  )}
+                  <ChevronRight className="w-4 h-4 text-gray-300" />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlanForm({ editRecord, clients, plans, onSave, onDelete, onBack }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedClientId, setSelectedClientId] = useState('');
-  const [selectedPlanId, setSelectedPlanId] = useState('');
-  const [targetRevenue, setTargetRevenue] = useState(0);
-  const [distribution, setDistribution] = useState([]);
-  const [result, setResult] = useState(null);
-  const [saved, setSaved] = useState(false);
 
-  const { data: allClients = [] } = useQuery({
-    queryKey: ['clients'],
-    queryFn: async () => {
-      const data = await base44.entities.Client.list();
-      return data.sort((a, b) => (a.clinic_name || '').localeCompare(b.clinic_name || '', 'pt-BR'));
-    },
-  });
+  const [selectedClientId, setSelectedClientId] = useState(editRecord?.client_id || '');
+  const [selectedPlanId, setSelectedPlanId] = useState(editRecord?.plan_id || '');
+  const [title, setTitle] = useState(editRecord?.title || '');
+  const [targetRevenue, setTargetRevenue] = useState(editRecord?.target_revenue || 0);
+  const [distribution, setDistribution] = useState(editRecord?.distribution || []);
+  const [result, setResult] = useState(editRecord?.result || null);
 
-  const { data: plans = [] } = useQuery({
-    queryKey: ['plans'],
-    queryFn: () => base44.entities.MediaPlan.list('-created_date'),
-  });
+  const clientPlans = plans.filter(p => p.client_id === selectedClientId);
+  const selectedPlan = plans.find(p => p.id === selectedPlanId);
 
-  const myPlans = plans.filter(p => allClients.some(c => c.id === p.client_id));
-  const clientPlans = myPlans.filter(p => p.client_id === selectedClientId);
-  const selectedPlan = myPlans.find(p => p.id === selectedPlanId);
-
-  const saveMutation = useMutation({
-    mutationFn: (data) => base44.entities.MediaPlan.update(selectedPlanId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['plans'] });
-      setSaved(true);
-      toast({ title: 'Planejamento Reverso salvo!', description: 'Os dados foram salvos no plano de mídia.' });
-      setTimeout(() => setSaved(false), 3000);
-    },
-  });
+  const sortedClients = [...clients].sort((a, b) => (a.clinic_name || '').localeCompare(b.clinic_name || '', 'pt-BR'));
 
   useEffect(() => {
     setSelectedPlanId('');
-    setResult(null);
     setDistribution([]);
+    setResult(null);
   }, [selectedClientId]);
 
   useEffect(() => {
-    if (!selectedPlan) return;
-    setResult(null);
-    setSaved(false);
-    if (selectedPlan.reverse_plan_enabled && selectedPlan.reverse_channel_distribution?.length > 0) {
-      setDistribution(selectedPlan.reverse_channel_distribution);
-      setTargetRevenue(selectedPlan.target_revenue || 0);
-    } else if (selectedPlan.channels?.length > 0) {
+    if (!selectedPlan || editRecord) return;
+    if (selectedPlan.channels?.length > 0) {
       const totalBudget = selectedPlan.channels.reduce((s, c) => s + (c.budget_value || 0), 0);
       setDistribution(selectedPlan.channels.map(ch => ({
         channel_name: ch.channel_name,
         percent: totalBudget > 0 ? Math.round((ch.budget_value / totalBudget) * 100) : 0,
         expected_cpl: ch.expected_cpl || 0,
       })));
-    } else {
-      setDistribution([]);
     }
   }, [selectedPlanId]);
 
   const planRates = selectedPlan
     ? (Array.isArray(selectedPlan.conversion_rates) && selectedPlan.conversion_rates.length
         ? selectedPlan.conversion_rates
-        : [
-            selectedPlan.lead_to_appointment_rate || 0,
-            selectedPlan.appointment_to_show_rate || 0,
-            selectedPlan.show_to_sale_rate || 0,
-          ])
-    : [];
-  const planTicket = selectedPlan?.average_ticket || 0;
+        : [selectedPlan.lead_to_appointment_rate || 0, selectedPlan.appointment_to_show_rate || 0, selectedPlan.show_to_sale_rate || 0])
+    : (editRecord?.conversion_rates || []);
+
+  const planTicket = selectedPlan?.average_ticket || editRecord?.average_ticket || 0;
+
+  const saveMutation = useMutation({
+    mutationFn: (data) => editRecord
+      ? base44.entities.ReversePlanRecord.update(editRecord.id, data)
+      : base44.entities.ReversePlanRecord.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reverse-plans'] });
+      toast({ title: 'Planejamento salvo!', description: 'Dados salvos com sucesso.' });
+      onSave();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => base44.entities.ReversePlanRecord.delete(editRecord.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reverse-plans'] });
+      toast({ title: 'Planejamento excluído.' });
+      onBack();
+    },
+  });
 
   const handleDistChange = (idx, field, value) => {
     setDistribution(d => d.map((ch, i) => i === idx ? { ...ch, [field]: Number(value) } : ch));
-    setSaved(false);
-  };
-
-  const addChannel = () => {
-    setDistribution(d => [...d, { channel_name: 'Meta', percent: 0, expected_cpl: 0 }]);
-    setSaved(false);
-  };
-
-  const removeChannel = (idx) => {
-    setDistribution(d => d.filter((_, i) => i !== idx));
-    setSaved(false);
   };
 
   const handleCalculate = () => {
-    setResult(calculateReversePlan(targetRevenue, planTicket, planRates, distribution));
+    const r = calculateReversePlan(targetRevenue, planTicket, planRates, distribution);
+    setResult(r);
   };
 
   const handleSave = () => {
+    const cname = clients.find(c => c.id === selectedClientId)?.clinic_name || '';
+    const planLabel = selectedPlan
+      ? `${MESES_SHORT[(selectedPlan.period_month || 1) - 1]}/${selectedPlan.period_year}`
+      : '';
     saveMutation.mutate({
-      reverse_plan_enabled: true,
+      client_id: selectedClientId || editRecord?.client_id,
+      client_name: cname || editRecord?.client_name,
+      plan_id: selectedPlanId || editRecord?.plan_id,
+      plan_label: planLabel || editRecord?.plan_label,
+      title: title || `Planejamento — ${cname}`,
       target_revenue: targetRevenue,
-      reverse_channel_distribution: distribution,
+      average_ticket: planTicket,
+      conversion_rates: planRates,
+      distribution,
+      result,
     });
   };
 
   const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
   const fmtPct = v => `${(v * 100).toFixed(1)}%`;
-  const canCalculate = selectedPlanId && targetRevenue > 0 && distribution.length > 0 && planTicket > 0;
+  const canCalculate = (selectedPlanId || editRecord?.plan_id) && targetRevenue > 0 && distribution.length > 0 && planTicket > 0;
 
   const funnelStages = result ? [
     { label: 'Leads', value: result.required_leads },
@@ -130,34 +197,64 @@ export default function ReversePlan() {
   ] : [];
 
   return (
-    <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
-      <PageHeader title="Planejamento Reverso" description="Selecione um cliente e plano de mídia para calcular o investimento necessário." />
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+            <ArrowLeft className="w-5 h-5 text-gray-500" />
+          </button>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">{editRecord ? 'Editar Planejamento' : 'Novo Planejamento Reverso'}</h2>
+            <p className="text-sm text-gray-500">Calcule o investimento necessário para atingir sua meta</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          {editRecord && (
+            <Button variant="outline" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending} className="text-red-500 border-red-200 hover:bg-red-50">
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          )}
+          <Button onClick={handleSave} disabled={saveMutation.isPending || !selectedClientId} className="gap-2 bg-blue-600 hover:bg-blue-700">
+            <Save className="w-4 h-4" /> Salvar
+          </Button>
+        </div>
+      </div>
 
       <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
-        {/* Passo 1: Cliente */}
+        {/* Título */}
         <div className="mb-5">
-          <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">1. Selecione o Cliente</Label>
-          <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-            <SelectTrigger className="mt-2 max-w-sm">
-              <SelectValue placeholder="Selecione um cliente..." />
-            </SelectTrigger>
-            <SelectContent>
-              {allClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Título (opcional)</Label>
+          <input
+            className="mt-2 w-full max-w-sm border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Ex: Meta Q3 2026"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+          />
         </div>
 
-        {/* Passo 2: Plano */}
-        {selectedClientId && (
+        {/* Cliente */}
+        {!editRecord && (
           <div className="mb-5">
-            <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">2. Selecione o Plano de Mídia</Label>
+            <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">1. Selecione o Cliente</Label>
+            <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+              <SelectTrigger className="mt-2 max-w-sm"><SelectValue placeholder="Selecione um cliente..." /></SelectTrigger>
+              <SelectContent>
+                {sortedClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Plano */}
+        {(selectedClientId || editRecord) && !editRecord && (
+          <div className="mb-5">
+            <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">2. Selecione o Plano de Mídia (opcional)</Label>
             {clientPlans.length === 0 ? (
-              <p className="text-sm text-gray-400 mt-2">Este cliente não possui planos de mídia cadastrados.</p>
+              <p className="text-sm text-gray-400 mt-2">Este cliente não possui planos de mídia.</p>
             ) : (
               <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
-                <SelectTrigger className="mt-2 max-w-sm">
-                  <SelectValue placeholder="Selecione um plano..." />
-                </SelectTrigger>
+                <SelectTrigger className="mt-2 max-w-sm"><SelectValue placeholder="Selecione um plano..." /></SelectTrigger>
                 <SelectContent>
                   {clientPlans.map(p => (
                     <SelectItem key={p.id} value={p.id}>
@@ -171,13 +268,13 @@ export default function ReversePlan() {
         )}
 
         {/* Dados do funil */}
-        {selectedPlan && (
+        {(selectedPlan || editRecord?.conversion_rates?.length > 0) && planTicket > 0 && (
           <div className="mb-5 p-4 bg-blue-50 rounded-lg border border-blue-100">
             <div className="flex items-center gap-2 mb-3">
               <Info className="w-4 h-4 text-blue-500" />
-              <span className="text-xs font-semibold text-blue-700">Dados do Funil — {selectedPlan.funnel_type_name || 'Funil do Plano'}</span>
+              <span className="text-xs font-semibold text-blue-700">Dados do Funil</span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
               <div>
                 <p className="text-gray-400">Ticket Médio</p>
                 <p className="font-semibold text-gray-800">{fmt(planTicket)}</p>
@@ -195,22 +292,20 @@ export default function ReversePlan() {
           </div>
         )}
 
-        {/* Meta de receita + canais */}
-        {selectedPlanId && (
+        {/* Meta + Canais */}
+        {(selectedClientId || editRecord) && (
           <>
             <div className="mb-5">
-              <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">3. Meta de Receita (R$)</Label>
+              <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Meta de Receita (R$)</Label>
               <div className="mt-2 max-w-xs">
-                <CurrencyInput value={targetRevenue} onChange={v => { setTargetRevenue(v || 0); setSaved(false); }} prefix="R$" />
+                <CurrencyInput value={targetRevenue} onChange={v => setTargetRevenue(v || 0)} prefix="R$" />
               </div>
             </div>
 
             <div className="mb-4">
-              <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2 block">4. Distribuição por Canal</Label>
-              {distribution.length === 0 ? (
-                <p className="text-sm text-gray-400 mb-3">Nenhum canal. Clique em "Adicionar Canal" para começar.</p>
-              ) : (
-                <div className="space-y-2 mb-4">
+              <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2 block">Distribuição por Canal</Label>
+              {distribution.length > 0 && (
+                <div className="space-y-2 mb-3">
                   <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_32px] gap-3 text-[10px] text-gray-400 font-medium uppercase tracking-wider px-1">
                     <span>Canal</span><span>% do Budget</span><span>CPL (R$)</span><span></span>
                   </div>
@@ -224,7 +319,7 @@ export default function ReversePlan() {
                       </Select>
                       <CurrencyInput value={ch.percent} onChange={v => handleDistChange(idx, 'percent', v)} className="text-xs" placeholder="%" />
                       <CurrencyInput value={ch.expected_cpl} onChange={v => handleDistChange(idx, 'expected_cpl', v)} prefix="R$" className="text-xs" placeholder="CPL" />
-                      <button onClick={() => removeChannel(idx)} className="p-1.5 rounded-md hover:bg-red-50 text-red-400">
+                      <button onClick={() => setDistribution(d => d.filter((_, i) => i !== idx))} className="p-1.5 rounded-md hover:bg-red-50 text-red-400">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -232,34 +327,23 @@ export default function ReversePlan() {
                 </div>
               )}
 
-              <div className="flex flex-wrap gap-3 mt-4">
-                <Button variant="outline" onClick={addChannel} className="gap-2 text-sm">
+              <div className="flex flex-wrap gap-3 mt-3">
+                <Button variant="outline" onClick={() => setDistribution(d => [...d, { channel_name: 'Meta', percent: 0, expected_cpl: 0 }])} className="gap-2 text-sm">
                   <Plus className="w-4 h-4" /> Adicionar Canal
                 </Button>
                 <Button onClick={handleCalculate} className="gap-2 bg-blue-600 hover:bg-blue-700" disabled={!canCalculate}>
-                  <Calculator className="w-4 h-4" /> Calcular Planejamento Reverso
+                  <Calculator className="w-4 h-4" /> Calcular
                 </Button>
-                {result && (
-                  <Button onClick={handleSave} variant="outline" className="gap-2" disabled={saveMutation.isPending || saved}>
-                    {saved ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Save className="w-4 h-4" />}
-                    {saved ? 'Salvo!' : 'Salvar no Plano'}
-                  </Button>
-                )}
               </div>
             </div>
           </>
         )}
-
-        {!selectedClientId && (
-          <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center text-gray-400 text-sm">
-            Selecione um cliente para começar
-          </div>
-        )}
       </div>
 
+      {/* Resultados */}
       {result && (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5 sm:mb-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
             <StatCard label="Investimento Necessário" value={fmt(result.total_investment)} icon={DollarSign} color="blue" />
             <StatCard label="Leads Necessários" value={result.required_leads.toLocaleString()} icon={Users} color="purple" />
             <StatCard label="Vendas Necessárias" value={result.required_sales.toLocaleString()} icon={Target} color="orange" />
@@ -273,7 +357,7 @@ export default function ReversePlan() {
             </div>
           )}
 
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
             <div className="px-6 py-4 border-b border-gray-50">
               <h3 className="text-sm font-semibold text-gray-900">Orçamento por Canal</h3>
             </div>
@@ -284,8 +368,8 @@ export default function ReversePlan() {
                     <th className="text-left py-2.5 px-4 font-medium text-gray-500">Canal</th>
                     <th className="text-right py-2.5 px-4 font-medium text-gray-500">Distribuição</th>
                     <th className="text-right py-2.5 px-4 font-medium text-gray-500">CPL</th>
-                    <th className="text-right py-2.5 px-4 font-medium text-gray-500">Leads Necessários</th>
-                    <th className="text-right py-2.5 px-4 font-medium text-gray-500">Budget Necessário</th>
+                    <th className="text-right py-2.5 px-4 font-medium text-gray-500">Leads Nec.</th>
+                    <th className="text-right py-2.5 px-4 font-medium text-gray-500">Budget Nec.</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -303,7 +387,7 @@ export default function ReversePlan() {
                   <tr className="bg-gray-50 border-t border-gray-200 font-semibold">
                     <td className="py-3 px-4">Total</td>
                     <td className="py-3 px-4 text-right">100%</td>
-                    <td className="py-3 px-4"></td>
+                    <td></td>
                     <td className="py-3 px-4 text-right">{result.required_leads.toLocaleString()}</td>
                     <td className="py-3 px-4 text-right">{fmt(result.total_investment)}</td>
                   </tr>
@@ -312,6 +396,53 @@ export default function ReversePlan() {
             </div>
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+export default function ReversePlan() {
+  const [view, setView] = useState('list'); // 'list' | 'new' | 'edit'
+  const [editRecord, setEditRecord] = useState(null);
+
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients'],
+    queryFn: async () => {
+      const data = await base44.entities.Client.list();
+      return data.sort((a, b) => (a.clinic_name || '').localeCompare(b.clinic_name || '', 'pt-BR'));
+    },
+  });
+
+  const { data: plans = [] } = useQuery({
+    queryKey: ['plans'],
+    queryFn: () => base44.entities.MediaPlan.list('-created_date'),
+  });
+
+  const { data: records = [] } = useQuery({
+    queryKey: ['reverse-plans'],
+    queryFn: () => base44.entities.ReversePlanRecord.list('-created_date'),
+  });
+
+  const handleSelect = (r) => { setEditRecord(r); setView('edit'); };
+  const handleCreate = () => { setEditRecord(null); setView('new'); };
+  const handleBack = () => { setEditRecord(null); setView('list'); };
+
+  return (
+    <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
+      <PageHeader title="Planejamento Reverso" description="Calcule o investimento necessário para atingir suas metas de receita." />
+
+      {view === 'list' && (
+        <PlanList records={records} clients={clients} onSelect={handleSelect} onCreate={handleCreate} />
+      )}
+      {(view === 'new' || view === 'edit') && (
+        <PlanForm
+          editRecord={editRecord}
+          clients={clients}
+          plans={plans}
+          onSave={handleBack}
+          onDelete={handleBack}
+          onBack={handleBack}
+        />
       )}
     </div>
   );
