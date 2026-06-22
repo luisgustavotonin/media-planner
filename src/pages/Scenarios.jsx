@@ -105,9 +105,9 @@ export default function Scenarios() {
   };
 
   const scenarioConfigs = [
-    { key: 'optimistic', label: 'Otimista', icon: TrendingUp, color: 'emerald' },
-    { key: 'realistic', label: 'Realista', icon: Minus, color: 'blue' },
-    { key: 'conservative', label: 'Conservador', icon: TrendingDown, color: 'amber' },
+    { key: 'optimistic', label: 'Otimista', icon: TrendingUp },
+    { key: 'realistic', label: 'Realista', icon: Minus },
+    { key: 'conservative', label: 'Conservador', icon: TrendingDown },
   ];
 
   // chartData dinâmico usando stageValues do funil
@@ -188,7 +188,7 @@ export default function Scenarios() {
 
           {showAdj && (
             <div className="px-6 pb-6 border-t border-gray-50">
-              <div className="mt-4 mb-5 p-3 bg-blue-50 rounded-lg border border-blue-100 text-xs text-blue-700 space-y-1">
+              <div className="mt-4 mb-5 p-3 bg-secondary/40 rounded-lg border border-border text-xs text-secondary-foreground space-y-1">
                 <p><strong>Como funcionam os cenários:</strong></p>
                 <p>• <strong>Realista</strong>: plano atual sem nenhuma alteração.</p>
                 <p>• <strong>CPL (%)</strong>: ajuste no Custo por Lead de cada canal. Negativo = leads mais baratos (mais leads pelo mesmo budget). Positivo = leads mais caros.</p>
@@ -197,7 +197,7 @@ export default function Scenarios() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 {/* Otimista */}
                 <div className="space-y-3">
-                  <h5 className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Otimista</h5>
+                  <h5 className="text-xs font-semibold text-secondary-foreground uppercase tracking-wider">Otimista</h5>
                   <div>
                     <Label className="text-xs text-gray-500">Variação do CPL (%)</Label>
                     <div className="flex items-center gap-2 mt-1">
@@ -225,7 +225,7 @@ export default function Scenarios() {
                 </div>
                 {/* Conservador */}
                 <div className="space-y-3">
-                  <h5 className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Conservador</h5>
+                  <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Conservador</h5>
                   <div>
                     <Label className="text-xs text-gray-500">Variação do CPL (%)</Label>
                     <div className="flex items-center gap-2 mt-1">
@@ -255,7 +255,7 @@ export default function Scenarios() {
               <Button
                 onClick={() => saveAdjMut.mutate(liveAdjustments)}
                 disabled={saveAdjMut.isPending}
-                className="mt-5 h-8 text-xs bg-blue-600 hover:bg-blue-700"
+                className="mt-5 h-8 text-xs bg-primary hover:bg-primary/90"
               >
                 {saveAdjMut.isPending ? 'Salvando...' : 'Salvar premissas'}
               </Button>
@@ -282,9 +282,9 @@ export default function Scenarios() {
                   <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }} />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
-                  <Bar dataKey="Otimista" fill="#10b981" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Realista" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Conservador" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Otimista" fill="#F85D07" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Realista" fill="#7E6951" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Conservador" fill="#312B1D" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -296,8 +296,8 @@ export default function Scenarios() {
               return (
                 <div key={sc.key} className="bg-white rounded-xl border border-gray-100 p-5">
                   <div className="flex items-center gap-2 mb-4">
-                    <div className={`w-8 h-8 rounded-lg bg-${sc.color}-50 flex items-center justify-center`}>
-                      <sc.icon className={`w-4 h-4 text-${sc.color}-500`} />
+                    <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                      <sc.icon className="w-4 h-4 text-secondary-foreground" />
                     </div>
                     <h4 className="text-sm font-semibold text-gray-900">{sc.label}</h4>
                   </div>
@@ -309,7 +309,7 @@ export default function Scenarios() {
                       </div>
                     ))}
                     <div className="pt-3 border-t border-gray-50">
-                      <div className="flex justify-between"><span className="text-xs text-gray-500">Receita</span><span className="text-sm font-bold text-emerald-600">{fmt(s.totals.total_revenue)}</span></div>
+                      <div className="flex justify-between"><span className="text-xs text-gray-500">Receita</span><span className="text-sm font-bold text-primary">{fmt(s.totals.total_revenue)}</span></div>
                       <div className="flex justify-between mt-1"><span className="text-xs text-gray-500">ROAS</span><span className="text-sm font-semibold">{calcRoas(s.totals.total_revenue, s.totals.total_budget).toFixed(2)}x</span></div>
                       <div className="flex justify-between mt-1"><span className="text-xs text-gray-500">CPL Médio</span><span className="text-sm font-semibold">{fmt(s.blended_cpl)}</span></div>
                       <div className="flex justify-between mt-1"><span className="text-xs text-gray-500">ROI</span><span className="text-sm font-semibold">{s.overall_roi.toFixed(0)}%</span></div>

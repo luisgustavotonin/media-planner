@@ -93,7 +93,7 @@ export default function PlanDetail() {
   };
 
   if (isLoading || !localPlan) {
-    return <div className="flex items-center justify-center h-64"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>;
+    return <div className="flex items-center justify-center h-64"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
   }
 
   const funnelType = funnelTypes.find(f => f.id === localPlan.funnel_type_id);
@@ -196,7 +196,7 @@ export default function PlanDetail() {
                   <Button onClick={handleDelete} variant="outline" className="gap-2 h-9 text-xs text-red-600 hover:text-red-700 hover:bg-red-50" disabled={deleteMut.isPending}>
                     <Trash2 className="w-4 h-4" /> {deleteMut.isPending ? 'Deletando...' : 'Deletar'}
                   </Button>
-                  <Button onClick={handleSave} className="gap-2 bg-blue-600 hover:bg-blue-700" disabled={saveMut.isPending}>
+                  <Button onClick={handleSave} className="gap-2 bg-primary hover:bg-primary/90" disabled={saveMut.isPending}>
                     <Save className="w-4 h-4" /> Salvar
                   </Button>
                 </>
@@ -221,7 +221,7 @@ export default function PlanDetail() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Premissas do Funil</h3>
             {funnelType && (
-              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-secondary/60 text-secondary-foreground border border-border">
                 {funnelType.name}
               </span>
             )}

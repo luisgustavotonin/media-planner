@@ -108,7 +108,7 @@ export default function Benchmarks() {
         title="Benchmarks"
         description="Taxas de conversão e CPL padrão por funil e segmento."
         actions={
-          <Button onClick={openNew} className="gap-2 bg-blue-600 hover:bg-blue-700 h-9 text-xs">
+          <Button onClick={openNew} className="gap-2 bg-primary hover:bg-primary/90 h-9 text-xs">
             <Plus className="w-4 h-4" /> Novo Benchmark
           </Button>
         }
@@ -237,7 +237,7 @@ export default function Benchmarks() {
 
             <Button
               onClick={handleSave}
-              className="w-full bg-blue-600 hover:bg-blue-700"
+              className="w-full bg-primary hover:bg-primary/90"
               disabled={saveMut.isPending || !form.funnel_type_id || !form.segment_label}
             >
               {saveMut.isPending ? 'Salvando...' : editing ? 'Salvar Alterações' : 'Criar Benchmark'}
@@ -258,7 +258,7 @@ export default function Benchmarks() {
           <div className="flex gap-2 mt-4">
             <Button variant="outline" className="flex-1" onClick={() => setDeleteConfirm(null)}>Cancelar</Button>
             <Button
-              className="flex-1 bg-red-600 hover:bg-red-700"
+              className="flex-1 bg-destructive hover:bg-destructive/90"
               disabled={deleteMut.isPending}
               onClick={() => deleteMut.mutate(deleteConfirm.id)}
             >

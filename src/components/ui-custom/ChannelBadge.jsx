@@ -37,10 +37,10 @@ const YouTubeLogo = () => (
 );
 
 const channelConfig = {
-  Meta: { bg: 'bg-blue-50 border-blue-100', Logo: MetaLogo },
-  Google: { bg: 'bg-gray-50 border-gray-200', Logo: GoogleLogo },
-  TikTok: { bg: 'bg-gray-50 border-gray-200', Logo: TikTokLogo },
-  YouTube: { bg: 'bg-red-50 border-red-100', Logo: YouTubeLogo },
+  Meta: { bg: 'bg-secondary/40 border-border', Logo: MetaLogo },
+  Google: { bg: 'bg-secondary/40 border-border', Logo: GoogleLogo },
+  TikTok: { bg: 'bg-secondary/40 border-border', Logo: TikTokLogo },
+  YouTube: { bg: 'bg-secondary/40 border-border', Logo: YouTubeLogo },
 };
 
 const fallbackDotColor = {
@@ -65,8 +65,8 @@ export default function ChannelBadge({ channel }) {
 
   // Fallback genérico para canais não mapeados
   return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-slate-50 border-slate-100 text-slate-700">
-      <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-secondary/40 border-border text-secondary-foreground">
+      <span className="w-1.5 h-1.5 rounded-full bg-secondary-foreground" />
       {channel}
     </span>
   );

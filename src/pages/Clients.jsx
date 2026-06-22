@@ -23,7 +23,7 @@ const ESPECIALIDADES = [
   { value: 'other', label: 'Outro' },
 ];
 
-const emptyClient = { clinic_name: '', responsible_person: '', phone: '', email: '', city: '', specialty: 'general', average_ticket: 5000, primary_brand_color: '#3b82f6', secondary_brand_color: '#1e40af', logo_url: '' };
+const emptyClient = { clinic_name: '', responsible_person: '', phone: '', email: '', city: '', specialty: 'general', average_ticket: 5000, primary_brand_color: '#F85D07', secondary_brand_color: '#312B1D', logo_url: '' };
 
 export default function Clients() {
   const { user } = useAuth();
@@ -64,7 +64,7 @@ export default function Clients() {
 
   const handleEdit = (client) => {
     setEditing(client);
-    setForm({ clinic_name: client.clinic_name || '', responsible_person: client.responsible_person || '', phone: client.phone || '', email: client.email || '', city: client.city || '', specialty: client.specialty || 'general', average_ticket: client.average_ticket || 5000, primary_brand_color: client.primary_brand_color || '#3b82f6', secondary_brand_color: client.secondary_brand_color || '#1e40af', logo_url: client.logo_url || '' });
+    setForm({ clinic_name: client.clinic_name || '', responsible_person: client.responsible_person || '', phone: client.phone || '', email: client.email || '', city: client.city || '', specialty: client.specialty || 'general', average_ticket: client.average_ticket || 5000, primary_brand_color: client.primary_brand_color || '#F85D07', secondary_brand_color: client.secondary_brand_color || '#312B1D', logo_url: client.logo_url || '' });
     setOpen(true);
   };
 
@@ -85,7 +85,7 @@ export default function Clients() {
         title="Clientes"
         description="Gerencie suas clínicas odontológicas."
         actions={
-          <Button onClick={() => { setEditing(null); setForm(emptyClient); setOpen(true); }} className="gap-2 bg-blue-600 hover:bg-blue-700">
+          <Button onClick={() => { setEditing(null); setForm(emptyClient); setOpen(true); }} className="gap-2 bg-primary hover:bg-primary/90">
             <Plus className="w-4 h-4" /> Adicionar Cliente
           </Button>
         }
@@ -111,7 +111,7 @@ export default function Clients() {
                   {client.logo_url ? (
                     <img src={client.logo_url} alt="" className="w-10 h-10 rounded-lg object-cover" />
                   ) : (
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: client.primary_brand_color || '#3b82f6' }}>
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: client.primary_brand_color || '#F85D07' }}>
                       <span className="text-white text-sm font-bold">{client.clinic_name?.[0]}</span>
                     </div>
                   )}
@@ -212,7 +212,7 @@ export default function Clients() {
                 </div>
               </div>
             </div>
-            <Button onClick={handleSubmit} className="w-full bg-blue-600 hover:bg-blue-700" disabled={!form.clinic_name || createMut.isPending || updateMut.isPending}>
+            <Button onClick={handleSubmit} className="w-full bg-primary hover:bg-primary/90" disabled={!form.clinic_name || createMut.isPending || updateMut.isPending}>
               {editing ? 'Atualizar Cliente' : 'Criar Cliente'}
             </Button>
           </div>

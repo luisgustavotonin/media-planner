@@ -17,9 +17,9 @@ const METRIC_TYPES = [
 ];
 
 const METRIC_COLORS = {
-  quantidade: 'bg-blue-50 text-blue-700 border-blue-100',
-  percentual: 'bg-purple-50 text-purple-700 border-purple-100',
-  valor: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  quantidade: 'bg-secondary/60 text-secondary-foreground border-border',
+  percentual: 'bg-secondary/60 text-secondary-foreground border-border',
+  valor: 'bg-secondary/60 text-secondary-foreground border-border',
 };
 
 const emptyStage = () => ({
@@ -127,7 +127,7 @@ export default function FunnelTypes() {
         title="Tipos de Funil"
         description="Configure modelos de funil totalmente livres — etapas, métricas e taxas de conversão."
         actions={
-          <Button onClick={handleNew} className="gap-2 bg-blue-600 hover:bg-blue-700">
+          <Button onClick={handleNew} className="gap-2 bg-primary hover:bg-primary/90">
             <Plus className="w-4 h-4" /> Novo Tipo de Funil
           </Button>
         }
@@ -138,8 +138,8 @@ export default function FunnelTypes() {
           <div key={f.id} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-sm transition-shadow group">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
-                  <GitBranch className="w-4 h-4 text-blue-500" />
+                <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center">
+                  <GitBranch className="w-4 h-4 text-secondary-foreground" />
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900">{f.name}</h3>
@@ -165,7 +165,7 @@ export default function FunnelTypes() {
                   </span>
                 ))}
               </div>
-              <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${f.is_active !== false ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-gray-100 text-gray-500'}`}>
+              <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${f.is_active !== false ? 'bg-primary/15 text-primary border border-primary/20' : 'bg-muted text-muted-foreground'}`}>
                 {f.is_active !== false ? 'Ativo' : 'Inativo'}
               </span>
             </div>
@@ -281,7 +281,7 @@ export default function FunnelTypes() {
               <Switch checked={form.is_active !== false} onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))} />
             </div>
 
-            <Button onClick={handleSubmit} className="w-full bg-blue-600 hover:bg-blue-700"
+            <Button onClick={handleSubmit} className="w-full bg-primary hover:bg-primary/90"
               disabled={!form.name || form.stages.length < 2 || createMut.isPending || updateMut.isPending}>
               {editing ? 'Atualizar' : 'Criar Funil'}
             </Button>

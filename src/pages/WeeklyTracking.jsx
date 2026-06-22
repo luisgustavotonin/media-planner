@@ -13,9 +13,9 @@ import { Save, AlertTriangle, CheckCircle, Info, TrendingUp, Target, DollarSign,
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const SEVERITY_STYLES = {
-  high: { icon: AlertTriangle, bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-100' },
-  medium: { icon: Info, bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-100' },
-  low: { icon: CheckCircle, bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-100' },
+  high: { icon: AlertTriangle, bg: 'bg-primary/10', text: 'text-primary', border: 'border-primary/20' },
+  medium: { icon: Info, bg: 'bg-secondary/50', text: 'text-secondary-foreground', border: 'border-border' },
+  low: { icon: CheckCircle, bg: 'bg-muted', text: 'text-muted-foreground', border: 'border-border' },
 };
 
 export default function WeeklyTracking() {
@@ -270,7 +270,7 @@ export default function WeeklyTracking() {
                         <td className="py-2.5 px-3 text-right">{t.leads}</td>
                         <td className="py-2.5 px-3 text-right">{actual?.leads_actual ?? '—'}</td>
                         <td className="py-2.5 px-3 text-right">
-                          {pct !== null ? <span className={`font-semibold ${pct >= 80 ? 'text-emerald-600' : 'text-red-500'}`}>{pct}%</span> : '—'}
+                          {pct !== null ? <span className={`font-semibold ${pct >= 80 ? 'text-primary' : 'text-destructive'}`}>{pct}%</span> : '—'}
                         </td>
                       </tr>
                     );

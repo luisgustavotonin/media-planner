@@ -101,7 +101,7 @@ function PlanList({ records, clients, plans, onSelect, onNew }) {
               <h2 className="text-base font-semibold text-gray-900">Planejamentos Reversos</h2>
               <p className="text-sm text-gray-500">{planLabel} · {filtered.length} planejamento(s)</p>
             </div>
-            <Button onClick={onNew} className="gap-2 bg-blue-600 hover:bg-blue-700">
+            <Button onClick={onNew} className="gap-2 bg-primary hover:bg-primary/90">
               <Plus className="w-4 h-4" /> Novo Planejamento
             </Button>
           </div>
@@ -122,11 +122,11 @@ function PlanList({ records, clients, plans, onSelect, onNew }) {
                   <div
                     key={r.id}
                     onClick={() => onSelect(r)}
-                    className="bg-white rounded-xl border border-gray-100 px-5 py-4 flex items-center justify-between cursor-pointer hover:border-blue-200 hover:shadow-sm transition-all"
+                    className="bg-white rounded-xl border border-gray-100 px-5 py-4 flex items-center justify-between cursor-pointer hover:border-primary/40 hover:shadow-sm transition-all"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center">
-                        <Target className="w-4 h-4 text-purple-500" />
+                      <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center">
+                        <Target className="w-4 h-4 text-secondary-foreground" />
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-gray-900">{r.title || cname}</p>
@@ -211,8 +211,8 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
       {record.conversion_rates?.length > 0 && record.average_ticket > 0 && (
         <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
           <div className="flex items-center gap-2 mb-3">
-            <Info className="w-4 h-4 text-blue-500" />
-            <span className="text-xs font-semibold text-blue-700">Dados do Funil</span>
+            <Info className="w-4 h-4 text-secondary-foreground" />
+            <span className="text-xs font-semibold text-secondary-foreground">Dados do Funil</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-xs">
             <div>
@@ -409,7 +409,7 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
           </div>
         </div>
         {result && (
-          <Button onClick={handleSave} disabled={saveMutation.isPending} className="gap-2 bg-blue-600 hover:bg-blue-700">
+          <Button onClick={handleSave} disabled={saveMutation.isPending} className="gap-2 bg-primary hover:bg-primary/90">
             <Save className="w-4 h-4" /> Salvar
           </Button>
         )}
@@ -419,7 +419,7 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
         <div className="mb-5">
           <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Título (opcional)</Label>
           <input
-            className="mt-2 w-full max-w-sm border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="mt-2 w-full max-w-sm border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             placeholder="Ex: Meta Q3 2026"
             value={title}
             onChange={e => setTitle(e.target.value)}
@@ -458,12 +458,12 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
 
         {/* Dados do Funil — dinâmico com os labels reais das etapas */}
         {selectedPlan && planTicket > 0 && (
-          <div className="mb-5 p-4 bg-blue-50 rounded-lg border border-blue-100">
+          <div className="mb-5 p-4 bg-secondary/40 rounded-lg border border-border">
             <div className="flex items-center gap-2 mb-3">
-              <Info className="w-4 h-4 text-blue-500" />
-              <span className="text-xs font-semibold text-blue-700">Dados do Funil</span>
+              <Info className="w-4 h-4 text-secondary-foreground" />
+              <span className="text-xs font-semibold text-secondary-foreground">Dados do Funil</span>
               {funnelType && (
-                <span className="ml-auto text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-600">
+                <span className="ml-auto text-[10px] font-medium px-2 py-0.5 rounded-full bg-secondary/60 text-secondary-foreground">
                   {funnelType.name}
                 </span>
               )}
@@ -522,7 +522,7 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
                 </Button>
                 <Button
                   onClick={() => setResult(calculateReversePlan(targetRevenue, planTicket, planRates, distribution))}
-                  className="gap-2 bg-blue-600 hover:bg-blue-700"
+                  className="gap-2 bg-primary hover:bg-primary/90"
                   disabled={!canCalculate}
                 >
                   <Calculator className="w-4 h-4" /> Calcular

@@ -11,9 +11,9 @@ const FUNNEL_STAGES = [
 ];
 
 const STAGE_COLORS = {
-  topo: 'bg-blue-50 text-blue-600 border-blue-100',
-  meio: 'bg-amber-50 text-amber-600 border-amber-100',
-  fundo: 'bg-green-50 text-green-600 border-green-100',
+  topo: 'bg-secondary/60 text-secondary-foreground border-border',
+  meio: 'bg-secondary/60 text-secondary-foreground border-border',
+  fundo: 'bg-secondary/60 text-secondary-foreground border-border',
 };
 
 const fmtBRL = (n) => `R$ ${(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -39,7 +39,7 @@ function AdSet({ adset, days, onChange, onRemove, readOnly, maxBudget }) {
           onChange={e => updateField('name', e.target.value)}
           placeholder="Nome do conjunto de anúncios"
           disabled={readOnly}
-          className="flex-1 h-7 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50"
+          className="flex-1 h-7 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50"
         />
         <div className="w-36">
           <CurrencyInput
@@ -92,7 +92,7 @@ function ParamField({ label, value, onChange, placeholder, readOnly }) {
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         disabled={readOnly}
-        className="w-full h-7 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50"
+        className="w-full h-7 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50"
       />
     </div>
   );
@@ -132,7 +132,7 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, channelRemaini
           onChange={e => updateField('name', e.target.value)}
           placeholder="Nome da campanha"
           disabled={readOnly}
-          className="flex-1 h-8 border border-gray-200 rounded-md text-xs px-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50"
+          className="flex-1 h-8 border border-gray-200 rounded-md text-xs px-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50"
         />
         {readOnly ? (
           <span className={`text-[10px] font-medium px-2 py-1 rounded-full border ${STAGE_COLORS[campaign.funnel_stage] || 'bg-gray-50 text-gray-500 border-gray-100'}`}>
@@ -216,10 +216,10 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly }) {
           onChange={e => updateField('name', e.target.value)}
           placeholder="Nome da campanha"
           disabled={readOnly}
-          className="flex-1 h-8 border border-gray-200 rounded-md text-xs px-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50"
+          className="flex-1 h-8 border border-gray-200 rounded-md text-xs px-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50"
         />
         {readOnly ? (
-          <span className="text-[10px] font-medium px-2 py-1 rounded-full border bg-blue-50 text-blue-600 border-blue-100">
+          <span className="text-[10px] font-medium px-2 py-1 rounded-full border bg-secondary/60 text-secondary-foreground border-border">
             {GOOGLE_CAMPAIGN_TYPES.find(t => t.value === campaign.type)?.label || campaign.type}
           </span>
         ) : (
@@ -255,7 +255,7 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly }) {
                 placeholder="Ex: implante dentário, clínica de implantes SP..."
                 disabled={readOnly}
                 rows={3}
-                className="w-full border border-gray-200 rounded-md text-xs px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 resize-none"
+                className="w-full border border-gray-200 rounded-md text-xs px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50 resize-none"
               />
             </div>
           ) : (

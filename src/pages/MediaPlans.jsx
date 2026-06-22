@@ -112,7 +112,7 @@ export default function MediaPlans() {
         title="Planos de Mídia"
         description="Crie e gerencie planos de mídia multicanal."
         actions={!isClientRole && selectedClientId && (
-          <Button onClick={() => { setForm(f => ({ ...f, client_id: selectedClientId })); setOpen(true); }} className="gap-2 bg-blue-600 hover:bg-blue-700">
+          <Button onClick={() => { setForm(f => ({ ...f, client_id: selectedClientId })); setOpen(true); }} className="gap-2 bg-primary hover:bg-primary/90">
             <Plus className="w-4 h-4" /> Novo Plano
           </Button>
         )}
@@ -160,8 +160,8 @@ export default function MediaPlans() {
         <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
           <Link to={createPageUrl(`PlanDetail?id=${selectedPlan.id}`)} className="flex items-center justify-between hover:opacity-75 transition-opacity">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center">
-                <Target className="w-5 h-5 text-blue-500" />
+              <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center">
+                <Target className="w-5 h-5 text-secondary-foreground" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-900">{selectedPlan.client_name || 'Sem nome'}</p>
@@ -173,9 +173,9 @@ export default function MediaPlans() {
             <div className="text-right">
               <p className="text-lg font-semibold text-gray-900">R${(selectedPlan.total_investment || 0).toLocaleString('pt-BR')}</p>
               <span className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full inline-block mt-1 ${
-                selectedPlan.status === 'active' ? 'bg-emerald-50 text-emerald-700' :
-                selectedPlan.status === 'completed' ? 'bg-gray-100 text-gray-600' :
-                'bg-amber-50 text-amber-700'
+                selectedPlan.status === 'active' ? 'bg-primary/15 text-primary' :
+                selectedPlan.status === 'completed' ? 'bg-muted text-muted-foreground' :
+                'bg-secondary/60 text-secondary-foreground'
               }`}>
                 {STATUS_LABELS[selectedPlan.status] || 'rascunho'}
               </span>
@@ -238,7 +238,7 @@ export default function MediaPlans() {
                 ) : null;
               })()}
             </div>
-            <Button onClick={() => createMut.mutate(form)} className="w-full bg-blue-600 hover:bg-blue-700" disabled={!form.client_id || createMut.isPending}>
+            <Button onClick={() => createMut.mutate(form)} className="w-full bg-primary hover:bg-primary/90" disabled={!form.client_id || createMut.isPending}>
               Criar Plano
             </Button>
           </div>

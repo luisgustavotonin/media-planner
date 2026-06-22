@@ -1,8 +1,8 @@
 import React from 'react';
 
-const PLAN_COLOR = '#3b82f6';
-const BENCH_COLOR = '#f59e0b';
-const STAGE_COLORS = ['#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#ec4899', '#10b981'];
+const PLAN_COLOR = '#F85D07';
+const BENCH_COLOR = '#7E6951';
+const STAGE_COLORS = ['#312B1D', '#4A3F2B', '#5C4E36', '#7E6951', '#6B5A45', '#9C8466'];
 
 const DEFAULT_STAGES = ['Lead', 'Agendamento', 'Comparecimento', 'Venda'];
 const DEFAULT_KEYS = ['total_leads', 'total_appointments', 'total_showups', 'total_sales'];
@@ -116,7 +116,7 @@ export default function FunnelChart({ data, title, funnelStages, benchmark, conv
               {/* Delta */}
               <div className="w-16 text-right">
                 {hasGap ? (
-                  <span className={`text-xs font-semibold ${isGood ? 'text-emerald-600' : 'text-red-500'}`}>
+                  <span className={`text-xs font-semibold ${isGood ? 'text-primary' : 'text-destructive'}`}>
                     {delta > 0 ? '+' : ''}{delta.toFixed(0)}%
                   </span>
                 ) : delta !== null ? (
@@ -142,7 +142,7 @@ export default function FunnelChart({ data, title, funnelStages, benchmark, conv
                 <span className="text-[11px] text-gray-400">{stage.stage} → {next.stage}</span>
                 <span className="text-[11px] font-semibold text-gray-700">{rate}%</span>
                 {bmRate && (
-                  <span className="text-[10px] text-amber-600 font-medium">(meta: {bmRate}%)</span>
+                  <span className="text-[10px] text-muted-foreground font-medium">(meta: {bmRate}%)</span>
                 )}
               </div>
             </div>
