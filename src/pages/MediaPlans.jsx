@@ -213,7 +213,7 @@ export default function MediaPlans() {
               </div>
             </div>
             <div>
-              <Label className="text-xs">Segmento</Label>
+              <Label className="text-xs">Objetivo</Label>
               <Select value={form.segment} onValueChange={v => setForm({...form, segment: v})}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>

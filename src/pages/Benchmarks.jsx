@@ -131,7 +131,7 @@ export default function Benchmarks() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-100">
-                      <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Segmento</th>
+                      <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Objetivo</th>
                       {pairs.map((p, i) => (
                         <th key={i} className="text-center py-3 px-3 text-xs font-medium text-gray-500">{p}</th>
                       ))}
@@ -198,7 +198,7 @@ export default function Benchmarks() {
             </div>
 
             <div>
-              <Label className="text-xs">Nome do Segmento</Label>
+              <Label className="text-xs">Nome do Objetivo</Label>
               <Input
                 value={form.segment_label || ''}
                 onChange={e => setForm(f => ({ ...f, segment_label: e.target.value }))}
