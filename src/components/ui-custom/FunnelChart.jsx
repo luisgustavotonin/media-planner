@@ -1,8 +1,8 @@
 import React from 'react';
 
 const PLAN_COLOR = '#F85D07';
-const BENCH_COLOR = '#7E6951';
-const STAGE_COLORS = ['#312B1D', '#4A3F2B', '#5C4E36', '#7E6951', '#6B5A45', '#9C8466'];
+const BENCH_COLOR = '#9C8466';
+const STAGE_COLORS = ['#F85D07', '#F85D07', '#F85D07', '#F85D07', '#F85D07', '#F85D07'];
 
 const DEFAULT_STAGES = ['Lead', 'Agendamento', 'Comparecimento', 'Venda'];
 const DEFAULT_KEYS = ['total_leads', 'total_appointments', 'total_showups', 'total_sales'];

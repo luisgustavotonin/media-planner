@@ -1,6 +1,6 @@
 import React from 'react';
 
-const COLORS = ['#312B1D', '#4A3F2B', '#5C4E36', '#7E6951', '#6B5A45', '#9C8466'];
+const COLORS = ['#312B1D', '#5C4531', '#7E6951', '#A68C6D', '#C4A882', '#E2CCAF'];
 
 export default function FunnelVisual({ stages }) {
   if (!stages || stages.length === 0) return null;
