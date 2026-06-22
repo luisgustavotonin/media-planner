@@ -62,7 +62,7 @@ export default function Dashboard() {
     return (
       <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
         <div className="flex items-center justify-center h-96">
-          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       </div>
     );
@@ -159,12 +159,12 @@ export default function Dashboard() {
                   className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50 hover:border-gray-200 transition-all group"
                 >
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900 group-hover:text-blue-600">{clientInfo?.clinic_name || 'Sem cliente'}</p>
+                    <p className="font-medium text-gray-900 group-hover:text-primary">{clientInfo?.clinic_name || 'Sem cliente'}</p>
                     <p className="text-xs text-gray-500 mt-0.5">{plan.channels?.length || 0} canais • {Math.round(leads)} leads estimados</p>
                   </div>
                   <div className="text-right ml-4">
                     <p className="font-semibold text-gray-900">R${Math.round(investment).toLocaleString('pt-BR')}</p>
-                    <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-blue-600 mt-1 ml-auto transition-colors" />
+                    <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-primary mt-1 ml-auto transition-colors" />
                   </div>
                 </Link>
               );
@@ -186,60 +186,60 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <Link 
           to={createPageUrl('Clients')}
-          className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200 p-6 hover:border-blue-300 hover:shadow-md transition-all"
+          className="bg-secondary/50 rounded-xl border border-border p-6 hover:border-primary/40 hover:shadow-sm transition-all"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-secondary-foreground" />
             </div>
             <div>
-              <p className="font-semibold text-gray-900">Gerenciar Clientes</p>
-              <p className="text-sm text-gray-600">{clients.length} clientes cadastrados</p>
+              <p className="font-semibold text-foreground">Gerenciar Clientes</p>
+              <p className="text-sm text-muted-foreground">{clients.length} clientes cadastrados</p>
             </div>
           </div>
         </Link>
 
         <Link 
           to={createPageUrl('MediaPlans')}
-          className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200 p-6 hover:border-green-300 hover:shadow-md transition-all"
+          className="bg-secondary/50 rounded-xl border border-border p-6 hover:border-primary/40 hover:shadow-sm transition-all"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-500 flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
+              <BarChart3 className="w-5 h-5 text-secondary-foreground" />
             </div>
             <div>
-              <p className="font-semibold text-gray-900">Planos de Mídia</p>
-              <p className="text-sm text-gray-600">{plans.length} planos no total</p>
+              <p className="font-semibold text-foreground">Planos de Mídia</p>
+              <p className="text-sm text-muted-foreground">{plans.length} planos no total</p>
             </div>
           </div>
         </Link>
 
         <Link 
           to={createPageUrl('ReversePlan')}
-          className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl border border-purple-200 p-6 hover:border-purple-300 hover:shadow-md transition-all"
+          className="bg-secondary/50 rounded-xl border border-border p-6 hover:border-primary/40 hover:shadow-sm transition-all"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-purple-500 flex items-center justify-center">
-              <Target className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
+              <Target className="w-5 h-5 text-secondary-foreground" />
             </div>
             <div>
-              <p className="font-semibold text-gray-900">Planejamento Reverso</p>
-              <p className="text-sm text-gray-600">Calcule orçamentos necessários</p>
+              <p className="font-semibold text-foreground">Planejamento Reverso</p>
+              <p className="text-sm text-muted-foreground">Calcule orçamentos necessários</p>
             </div>
           </div>
         </Link>
 
         <Link 
           to={createPageUrl('Scenarios')}
-          className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200 p-6 hover:border-orange-300 hover:shadow-md transition-all"
+          className="bg-secondary/50 rounded-xl border border-border p-6 hover:border-primary/40 hover:shadow-sm transition-all"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-orange-500 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-secondary-foreground" />
             </div>
             <div>
-              <p className="font-semibold text-gray-900">Cenários</p>
-              <p className="text-sm text-gray-600">Compare diferentes projeções</p>
+              <p className="font-semibold text-foreground">Cenários</p>
+              <p className="text-sm text-muted-foreground">Compare diferentes projeções</p>
             </div>
           </div>
         </Link>

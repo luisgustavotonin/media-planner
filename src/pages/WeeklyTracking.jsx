@@ -118,7 +118,7 @@ export default function WeeklyTracking() {
       <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
         <PageHeader title="Acompanhamento Semanal" description="Acompanhe o desempenho real vs metas planejadas." />
         <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       </div>
     );
@@ -204,7 +204,7 @@ export default function WeeklyTracking() {
                   <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }} />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
                   <Line type="monotone" dataKey="Meta Leads" stroke="#94a3b8" strokeDasharray="5 5" dot={false} />
-                  <Line type="monotone" dataKey="Real Leads" stroke="#3b82f6" strokeWidth={2} />
+                  <Line type="monotone" dataKey="Real Leads" stroke="#F85D07" strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -235,7 +235,7 @@ export default function WeeklyTracking() {
                 <CurrencyInput value={weekForm.appointments_actual} onChange={v => setWeekForm(f => ({...f, appointments_actual: v || 0}))} className="mt-1" />
               </div>
               <div className="flex items-end">
-                <Button onClick={() => saveMut.mutate(weekForm)} className="w-full gap-2 bg-blue-600 hover:bg-blue-700" disabled={saveMut.isPending}>
+                <Button onClick={() => saveMut.mutate(weekForm)} className="w-full gap-2 bg-primary hover:bg-primary/90" disabled={saveMut.isPending}>
                   <Save className="w-4 h-4" /> {saveMut.isPending ? 'Salvando...' : 'Salvar'}
                 </Button>
               </div>
