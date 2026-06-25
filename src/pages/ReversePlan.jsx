@@ -9,6 +9,7 @@ import FunnelVisual from '../components/ui-custom/FunnelVisual';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
+import PercentInput from '../components/ui-custom/PercentInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Target, DollarSign, Users, TrendingDown, Calculator, Plus, Trash2, Info, Save, ArrowLeft, ChevronRight } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
@@ -309,7 +310,15 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
   const [title, setTitle] = useState('');
   const [targetRevenue, setTargetRevenue] = useState(0);
   const [distribution, setDistribution] = useState([]);
+  const [conversionRates, setConversionRates] = useState([]);
+  const [editedTicket, setEditedTicket] = useState(0);
   const [result, setResult] = useState(null);
+
+  const updateRate = (i, v) => {
+    setConversionRates(rs => rs.map((x, j) => j === i ? v : x));
+    setResult(null);
+  };
+  const updateTicket = (v) => { setEditedTicket(v || 0); setResult(null); };
 
   const sortedClients = [...clients].sort((a, b) =>
     (a.clinic_name || '').localeCompare(b.clinic_name || '', 'pt-BR')
@@ -334,7 +343,13 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
   }, [selectedClientId]);
 
   useEffect(() => {
-    if (!selectedPlan) return;
+    if (!selectedPlan) {
+      setDistribution([]);
+      setConversionRates([]);
+      setEditedTicket(0);
+      setResult(null);
+      return;
+    }
     if (selectedPlan.channels?.length > 0) {
       const totalBudget = selectedPlan.channels.reduce((s, c) => s + (c.budget_value || 0), 0);
       setDistribution(selectedPlan.channels.map(ch => ({
@@ -345,19 +360,17 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
     } else {
       setDistribution([]);
     }
+    const rates = (Array.isArray(selectedPlan.conversion_rates) && selectedPlan.conversion_rates.length
+        ? selectedPlan.conversion_rates
+        : [selectedPlan.lead_to_appointment_rate || 0, selectedPlan.appointment_to_show_rate || 0, selectedPlan.show_to_sale_rate || 0]);
+    setConversionRates(rates);
+    setEditedTicket(selectedPlan.average_ticket || 0);
     setResult(null);
   }, [selectedPlanId]);
 
-  const planRates = selectedPlan
-    ? (Array.isArray(selectedPlan.conversion_rates) && selectedPlan.conversion_rates.length
-        ? selectedPlan.conversion_rates
-        : [selectedPlan.lead_to_appointment_rate || 0, selectedPlan.appointment_to_show_rate || 0, selectedPlan.show_to_sale_rate || 0])
-    : [];
-  const planTicket = selectedPlan?.average_ticket || 0;
-
   const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
   const fmtPct = v => `${(v * 100).toFixed(1)}%`;
-  const canCalculate = selectedPlanId && targetRevenue > 0 && distribution.length > 0 && planTicket > 0;
+  const canCalculate = selectedPlanId && targetRevenue > 0 && distribution.length > 0 && editedTicket > 0;
 
   const handleDistChange = (idx, field, value) => {
     setDistribution(d => d.map((ch, i) => i === idx ? { ...ch, [field]: Number(value) } : ch));
@@ -380,7 +393,7 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
     const planLabel = selectedPlan
       ? `${MESES_SHORT[(selectedPlan.period_month || 1) - 1]}/${selectedPlan.period_year}`
       : '';
-    const calc = calculateReversePlan(targetRevenue, planTicket, planRates, distribution);
+    const calc = calculateReversePlan(targetRevenue, editedTicket, conversionRates, distribution);
     saveMutation.mutate({
       client_id: selectedClientId,
       client_name: cname,
@@ -388,8 +401,8 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
       plan_label: planLabel,
       title: title || `Planejamento — ${cname}`,
       target_revenue: targetRevenue,
-      average_ticket: planTicket,
-      conversion_rates: planRates,
+      average_ticket: editedTicket,
+      conversion_rates: conversionRates,
       funnel_stage_labels: stageLabels, // salva os labels para uso futuro na view
       distribution,
       result: calc,
@@ -457,11 +470,11 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
         )}
 
         {/* Dados do Funil — dinâmico com os labels reais das etapas */}
-        {selectedPlan && planTicket > 0 && (
+        {selectedPlan && editedTicket > 0 && (
           <div className="mb-5 p-4 bg-secondary/40 rounded-lg border border-border">
             <div className="flex items-center gap-2 mb-3">
               <Info className="w-4 h-4 text-secondary-foreground" />
-              <span className="text-xs font-semibold text-secondary-foreground">Dados do Funil</span>
+              <span className="text-xs font-semibold text-secondary-foreground">Dados do Funil (editável)</span>
               {funnelType && (
                 <span className="ml-auto text-[10px] font-medium px-2 py-0.5 rounded-full bg-secondary/60 text-secondary-foreground">
                   {funnelType.name}
@@ -470,16 +483,17 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-xs">
               <div>
-                <p className="text-gray-400">Ticket Médio</p>
-                <p className="font-semibold text-gray-800">{fmt(planTicket)}</p>
+                <p className="text-gray-400 mb-1">Ticket Médio</p>
+                <CurrencyInput value={editedTicket} onChange={updateTicket} prefix="R$" className="text-xs h-9" />
               </div>
-              {planRates.map((r, i) => (
+              {conversionRates.map((r, i) => (
                 <div key={i}>
-                  <p className="text-gray-400">{conversionLabels[i] || `Taxa ${i + 1}`}</p>
-                  <p className="font-semibold text-gray-800">{fmtPct(r)}</p>
+                  <p className="text-gray-400 mb-1">{conversionLabels[i] || `Taxa ${i + 1}`}</p>
+                  <PercentInput value={r} onChange={v => updateRate(i, v)} className="text-xs" />
                 </div>
               ))}
             </div>
+            <p className="text-[11px] text-gray-500 mt-3">Edite os valores acima para simular cenários diferentes antes de calcular.</p>
           </div>
         )}
 
@@ -521,7 +535,7 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
                   <Plus className="w-4 h-4" /> Adicionar Canal
                 </Button>
                 <Button
-                  onClick={() => setResult(calculateReversePlan(targetRevenue, planTicket, planRates, distribution))}
+                  onClick={() => setResult(calculateReversePlan(targetRevenue, editedTicket, conversionRates, distribution))}
                   className="gap-2 bg-primary hover:bg-primary/90"
                   disabled={!canCalculate}
                 >
