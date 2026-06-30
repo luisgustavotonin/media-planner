@@ -10,6 +10,25 @@
       "type": "string",
       "description": "Descri\u00e7\u00e3o do objetivo"
     },
+    "type": {
+      "type": "string",
+      "enum": [
+        "performance",
+        "branding"
+      ],
+      "default": "performance",
+      "description": "Tipo do objetivo: performance (funil de vendas) ou branding (awareness/alcance)"
+    },
+    "kpi_unit": {
+      "type": "string",
+      "enum": [
+        "moeda",
+        "percentual",
+        "numero"
+      ],
+      "default": "moeda",
+      "description": "Unidade do valor do KPI: moeda (R$), percentual (0-1), ou n\u00famero"
+    },
     "metrics": {
       "type": "array",
       "description": "M\u00e9tricas/KPIs a acompanhar para este objetivo",

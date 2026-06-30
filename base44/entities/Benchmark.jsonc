@@ -44,6 +44,18 @@
     "google_default_cpl": {
       "type": "number",
       "description": "CPL padr\u00e3o Google (R$)"
+    },
+    "default_cpm": {
+      "type": "number",
+      "description": "CPM padr\u00e3o para campanhas de awareness (R$)"
+    },
+    "default_cpc": {
+      "type": "number",
+      "description": "CPC padr\u00e3o para campanhas de tr\u00e1fego (R$)"
+    },
+    "default_ctr": {
+      "type": "number",
+      "description": "CTR padr\u00e3o esperado (0-1)"
     }
   },
   "required": [
