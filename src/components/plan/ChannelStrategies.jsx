@@ -102,34 +102,39 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
   return (
     <div className={`border rounded-xl overflow-hidden ${isCampaignOver ? 'border-red-300' : 'border-gray-200'}`}>
       {/* Campaign header */}
-      <div className="flex items-center gap-2 p-3 bg-white flex-wrap">
-        <button onClick={() => setOpen(o => !o)} className="p-0.5 text-gray-400 hover:text-gray-600">
+      <div className="flex items-end gap-2 p-3 bg-white flex-wrap">
+        <button onClick={() => setOpen(o => !o)} className="p-0.5 text-gray-400 hover:text-gray-600 mb-1.5">
           {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
-        <input type="text" value={campaign.name || ''} onChange={e => updateField('name', e.target.value)}
-          placeholder="Nome da campanha" disabled={readOnly}
-          className="flex-1 min-w-[120px] h-8 border border-gray-200 rounded-md text-xs px-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
-        {/* Budget da campanha */}
+        <div className="flex-1 min-w-[120px]">
+          <label className="text-[10px] text-gray-400 block mb-1">Nome da campanha</label>
+          <input type="text" value={campaign.name || ''} onChange={e => updateField('name', e.target.value)}
+            placeholder="Ex: Topo de funil" disabled={readOnly}
+            className="w-full h-8 border border-gray-200 rounded-md text-xs px-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
+        </div>
         <div className="w-32 shrink-0">
+          <label className="text-[10px] text-gray-400 block mb-1">Valor da campanha</label>
           <CurrencyInput value={campaignBudget} onChange={v => updateField('budget_value', Number(v))}
             prefix="R$" className={`text-xs h-8 ${isCampaignOver ? 'border-red-400 ring-1 ring-red-300' : ''}`}
             disabled={readOnly} placeholder="Budget" />
         </div>
-        {readOnly ? (
-          <span className="text-[10px] font-medium px-2 py-1 rounded-full border bg-secondary/60 text-secondary-foreground border-border whitespace-nowrap">
-            {campaign.objective || '—'}
-          </span>
-        ) : (
-          <div className="w-28 shrink-0">
+        <div className="w-28 shrink-0">
+          <label className="text-[10px] text-gray-400 block mb-1">Objetivo</label>
+          {readOnly ? (
+            <span className="text-[10px] font-medium px-2 py-1 rounded-full border bg-secondary/60 text-secondary-foreground border-border whitespace-nowrap">
+              {campaign.objective || '—'}
+            </span>
+          ) : (
             <Select value={campaign.objective || ''} onValueChange={v => updateField('objective', v)}>
               <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Objetivo" /></SelectTrigger>
               <SelectContent>
                 {objectives.map(o => <SelectItem key={o.id} value={o.name}>{o.name}</SelectItem>)}
               </SelectContent>
             </Select>
-          </div>
-        )}
+          )}
+        </div>
         <div className="w-24 shrink-0">
+          <label className="text-[10px] text-gray-400 block mb-1">Valor do KPI ({kpiLabel})</label>
           {readOnly ? (
             <span className="text-xs font-semibold text-gray-700">{fmtBRL(campaign.kpi_value || 0)}</span>
           ) : (
@@ -137,11 +142,8 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
               prefix="R$" className="text-xs h-8" placeholder="KPI" />
           )}
         </div>
-        <div className="text-right w-16 shrink-0">
-          <span className="text-[10px] text-gray-400 block">{kpiLabel}</span>
-        </div>
         {!readOnly && (
-          <button onClick={onRemove} className="p-1.5 rounded hover:bg-red-50 ml-1">
+          <button onClick={onRemove} className="p-1.5 rounded hover:bg-red-50 ml-1 mb-1.5">
             <Trash2 className="w-3.5 h-3.5 text-red-400" />
           </button>
         )}
@@ -197,28 +199,33 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
 
   return (
     <div className={`border rounded-xl overflow-hidden ${isOver ? 'border-red-300' : 'border-gray-200'}`}>
-      <div className="flex items-center gap-2 p-3 bg-white flex-wrap">
-        <button onClick={() => setOpen(o => !o)} className="p-0.5 text-gray-400 hover:text-gray-600">
+      <div className="flex items-end gap-2 p-3 bg-white flex-wrap">
+        <button onClick={() => setOpen(o => !o)} className="p-0.5 text-gray-400 hover:text-gray-600 mb-1.5">
           {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
-        <input type="text" value={campaign.name || ''} onChange={e => updateField('name', e.target.value)}
-          placeholder="Nome da campanha" disabled={readOnly}
-          className="flex-1 min-w-[120px] h-8 border border-gray-200 rounded-md text-xs px-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
-        {readOnly ? (
-          <span className="text-[10px] font-medium px-2 py-1 rounded-full border bg-secondary/60 text-secondary-foreground border-border whitespace-nowrap">
-            {campaign.objective || '—'}
-          </span>
-        ) : (
-          <div className="w-28 shrink-0">
+        <div className="flex-1 min-w-[120px]">
+          <label className="text-[10px] text-gray-400 block mb-1">Nome da campanha</label>
+          <input type="text" value={campaign.name || ''} onChange={e => updateField('name', e.target.value)}
+            placeholder="Ex: Topo de funil" disabled={readOnly}
+            className="w-full h-8 border border-gray-200 rounded-md text-xs px-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
+        </div>
+        <div className="w-28 shrink-0">
+          <label className="text-[10px] text-gray-400 block mb-1">Objetivo</label>
+          {readOnly ? (
+            <span className="text-[10px] font-medium px-2 py-1 rounded-full border bg-secondary/60 text-secondary-foreground border-border whitespace-nowrap">
+              {campaign.objective || '—'}
+            </span>
+          ) : (
             <Select value={campaign.objective || ''} onValueChange={v => updateField('objective', v)}>
               <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Objetivo" /></SelectTrigger>
               <SelectContent>
                 {objectives.map(o => <SelectItem key={o.id} value={o.name}>{o.name}</SelectItem>)}
               </SelectContent>
             </Select>
-          </div>
-        )}
+          )}
+        </div>
         <div className="w-24 shrink-0">
+          <label className="text-[10px] text-gray-400 block mb-1">Valor do KPI ({kpiLabel})</label>
           {readOnly ? (
             <span className="text-xs font-semibold text-gray-700">{fmtBRL(campaign.kpi_value || 0)}</span>
           ) : (
@@ -226,10 +233,8 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
               prefix="R$" className="text-xs h-8" placeholder="KPI" />
           )}
         </div>
-        <div className="text-right w-12 shrink-0">
-          <span className="text-[10px] text-gray-400 block">{kpiLabel}</span>
-        </div>
         <div className="w-28 shrink-0">
+          <label className="text-[10px] text-gray-400 block mb-1">Valor da campanha</label>
           <CurrencyInput value={campaign.budget_value || 0} onChange={v => updateField('budget_value', Number(v))}
             prefix="R$" className={`text-xs h-8 ${isOver ? 'border-red-400 ring-1 ring-red-300' : ''}`} disabled={readOnly} />
         </div>
@@ -238,7 +243,7 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
           <p className="text-[11px] font-medium text-gray-600">{fmtDaily(campaign.budget_value || 0, days)}</p>
         </div>
         {!readOnly && (
-          <button onClick={onRemove} className="p-1.5 rounded hover:bg-red-50 ml-1">
+          <button onClick={onRemove} className="p-1.5 rounded hover:bg-red-50 ml-1 mb-1.5">
             <Trash2 className="w-3.5 h-3.5 text-red-400" />
           </button>
         )}

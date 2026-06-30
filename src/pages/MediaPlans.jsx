@@ -61,16 +61,17 @@ export default function MediaPlans() {
       const bm = benchmarks.find(b => b.funnel_type_id === d.funnel_type_id)
         || benchmarks.find(b => b.funnel_type_name === ft?.name);
 
-      // Pega as taxas padrão do FunnelType: cada etapa (a partir da 2ª) tem default_rate = taxa de conversão da etapa anterior para ela
       const ftStages = ft?.stages || [];
-      // conversion_rates[i] = default_rate da etapa [i+1] (par i → i+1)
-      const conversion_rates = ftStages.length >= 2
-        ? ftStages.slice(1).map(s => s.default_rate ?? 0)
-        : [
-            bm?.lead_to_appointment_rate || 0.35,
-            bm?.appointment_to_show_rate || 0.7,
-            bm?.show_to_sale_rate || 0.35,
-          ];
+      // Prioriza as taxas do benchmark cadastrado; se não houver, usa default_rate do FunnelType
+      const conversion_rates = bm?.conversion_rates?.length > 0
+        ? bm.conversion_rates
+        : ftStages.length >= 2
+          ? ftStages.slice(1).map(s => s.default_rate ?? 0)
+          : [
+              bm?.lead_to_appointment_rate ?? 0.35,
+              bm?.appointment_to_show_rate ?? 0.7,
+              bm?.show_to_sale_rate ?? 0.35,
+            ];
 
       return base44.entities.MediaPlan.create({
         ...d,
