@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import PercentInput from '../components/ui-custom/PercentInput';
-import { Save, Users, DollarSign, TrendingUp, Target, ArrowLeft, FileDown, Trash2 } from 'lucide-react';
+import { Save, Users, DollarSign, TrendingUp, Target, ArrowLeft, FileDown, Trash2, Eye, MousePointer, Megaphone } from 'lucide-react';
 import { exportPlanToPdf } from '../components/plan/PlanPdfExport';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -51,6 +51,11 @@ export default function PlanDetail() {
   const { data: benchmarks = [] } = useQuery({
     queryKey: ['benchmarks'],
     queryFn: () => base44.entities.Benchmark.list(),
+  });
+
+  const { data: objectives = [] } = useQuery({
+    queryKey: ['campaign-objectives'],
+    queryFn: () => base44.entities.CampaignObjective.filter({ is_active: true }),
   });
 
   const [localPlan, setLocalPlan] = useState(null);
@@ -142,7 +147,7 @@ export default function PlanDetail() {
   const daysInMonth = new Date(localPlan.period_year || new Date().getFullYear(), localPlan.period_month || 1, 0).getDate();
   const channels = localPlan.channels || [];
   const avgTicket = localPlan.average_ticket || 0;
-  const consolidated = calculateConsolidated(channels, activeRates, avgTicket);
+  const consolidated = calculateConsolidated(channels, activeRates, avgTicket, objectives);
   const totalInvestment = channels.reduce((s, c) => s + (c.budget_value || 0), 0);
   const netInvestment = channels.reduce((s, c) => {
     const tax = (c.tax_percent || 0) / 100;
@@ -214,6 +219,21 @@ export default function PlanDetail() {
         <StatCard label="Vendas Esperadas" value={Math.round(consolidated.totals.total_sales).toLocaleString()} icon={Target} color="orange" />
         <StatCard label="Receita Projetada" value={`R$${Math.round(consolidated.totals.total_revenue).toLocaleString('pt-BR')}`} icon={TrendingUp} color="green" />
       </div>
+
+      {consolidated.totals.branding && consolidated.totals.branding.investment > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6 lg:grid-cols-4">
+          <StatCard label="Investimento Brand" value={`R$${Math.round(consolidated.totals.branding.investment).toLocaleString('pt-BR')}`} icon={Megaphone} color="orange" sublabel="branding" />
+          {consolidated.totals.branding.impressions > 0 && (
+            <StatCard label="Impressões Esperadas" value={consolidated.totals.branding.impressions.toLocaleString('pt-BR')} icon={Eye} color="blue" sublabel="CPM" />
+          )}
+          {consolidated.totals.branding.clicks > 0 && (
+            <StatCard label="Cliques Esperados" value={consolidated.totals.branding.clicks.toLocaleString('pt-BR')} icon={MousePointer} color="purple" sublabel="CPC" />
+          )}
+          {consolidated.totals.branding.impressions > 0 && consolidated.totals.branding.clicks > 0 && (
+            <StatCard label="CTR Projetado" value={`${(consolidated.totals.branding.clicks / consolidated.totals.branding.impressions * 100).toFixed(2)}%`} icon={TrendingUp} color="green" sublabel="cliques/impressões" />
+          )}
+        </div>
+      )}
 
       {!readOnly && (
         <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">

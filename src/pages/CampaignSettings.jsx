@@ -14,6 +14,8 @@ const PRESET_OBJECTIVES = [
   {
     name: 'Lead',
     description: 'Captação de leads via formulários ou landing pages.',
+    type: 'performance',
+    kpi_unit: 'moeda',
     primary_kpi_label: 'Custo por Lead (CPL)',
     metrics: [
       { key: 'leads', label: 'Leads', unit: 'numero', is_primary: true },
@@ -25,6 +27,8 @@ const PRESET_OBJECTIVES = [
   {
     name: 'Tráfego',
     description: 'Direcionar usuários para uma página ou site.',
+    type: 'branding',
+    kpi_unit: 'moeda',
     primary_kpi_label: 'Custo por Clique (CPC)',
     metrics: [
       { key: 'clicks', label: 'Cliques', unit: 'numero', is_primary: true },
@@ -36,10 +40,25 @@ const PRESET_OBJECTIVES = [
   {
     name: 'Awareness',
     description: 'Alcance e reconhecimento de marca.',
+    type: 'branding',
+    kpi_unit: 'moeda',
     primary_kpi_label: 'Custo por Mil Impressões (CPM)',
     metrics: [
       { key: 'impressions', label: 'Impressões', unit: 'numero', is_primary: true },
       { key: 'reach', label: 'Alcance', unit: 'numero', is_primary: false },
+      { key: 'cost', label: 'Investimento (R$)', unit: 'moeda', is_primary: false },
+    ],
+    is_active: true,
+  },
+  {
+    name: 'Engajamento',
+    description: 'Engajamento e taxa de cliques (CTR).',
+    type: 'branding',
+    kpi_unit: 'percentual',
+    primary_kpi_label: 'CTR (Taxa de Cliques)',
+    metrics: [
+      { key: 'ctr', label: 'CTR', unit: 'percentual', is_primary: true },
+      { key: 'clicks', label: 'Cliques', unit: 'numero', is_primary: false },
       { key: 'cost', label: 'Investimento (R$)', unit: 'moeda', is_primary: false },
     ],
     is_active: true,
@@ -169,6 +188,33 @@ function ObjectiveForm({ initial, onSave, onCancel, saving }) {
             placeholder="Ex: Custo por Lead (CPL)" value={form.primary_kpi_label} onChange={e => setField('primary_kpi_label', e.target.value)} />
         </div>
       </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Tipo do Objetivo</Label>
+          <div className="flex gap-2 mt-1.5">
+            <button type="button" onClick={() => setField('type', 'performance')}
+              className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium border transition-all ${form.type === 'performance' ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+              Performance (Funil)
+            </button>
+            <button type="button" onClick={() => setField('type', 'branding')}
+              className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium border transition-all ${form.type === 'branding' ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+              Branding (Awareness)
+            </button>
+          </div>
+          <p className="text-[10px] text-gray-400 mt-1">
+            {form.type === 'branding' ? 'Não passa pelo funil de vendas — apenas métricas de eficiência (CPM, CTR, etc.).' : 'Passa pelo funil de vendas (leads → agendamento → venda).'}
+          </p>
+        </div>
+        <div>
+          <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Unidade do Valor do KPI</Label>
+          <select className="mt-1.5 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
+            value={form.kpi_unit || 'moeda'} onChange={e => setField('kpi_unit', e.target.value)}>
+            <option value="moeda">Moeda (R$) — ex: CPL, CPC, CPM</option>
+            <option value="percentual">Percentual (%) — ex: CTR</option>
+            <option value="numero">Número — ex: Alcance</option>
+          </select>
+        </div>
+      </div>
       <div>
         <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Descrição</Label>
         <input className="mt-1.5 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -244,7 +290,11 @@ function ObjectivesTab() {
     else updateMut.mutate({ id: editingId, data: form });
   };
   const addPresets = async () => {
-    for (const p of PRESET_OBJECTIVES) { await base44.entities.CampaignObjective.create(p); }
+    for (const p of PRESET_OBJECTIVES) {
+      if (!objectives.find(o => o.name.toLowerCase() === p.name.toLowerCase())) {
+        await base44.entities.CampaignObjective.create(p);
+      }
+    }
     queryClient.invalidateQueries({ queryKey: ['campaign-objectives'] });
     toast({ title: 'Objetivos padrão adicionados!' });
   };
@@ -267,7 +317,7 @@ function ObjectivesTab() {
             <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg hover:bg-gray-100"><X className="w-4 h-4 text-gray-400" /></button>
           </div>
           <ObjectiveForm
-            initial={editingId === 'new' ? { name: '', description: '', primary_kpi_label: '', metrics: [{ key: '', label: '', unit: 'numero', is_primary: true }], is_active: true } : { ...editingObj }}
+            initial={editingId === 'new' ? { name: '', description: '', type: 'performance', kpi_unit: 'moeda', primary_kpi_label: '', metrics: [{ key: '', label: '', unit: 'numero', is_primary: true }], is_active: true } : { type: 'performance', kpi_unit: 'moeda', ...editingObj }}
             onSave={handleSave} onCancel={() => setEditingId(null)} saving={createMut.isPending || updateMut.isPending}
           />
         </div>
@@ -289,6 +339,9 @@ function ObjectivesTab() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-semibold text-gray-900">{obj.name}</p>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${obj.type === 'branding' ? 'bg-secondary/60 text-secondary-foreground border border-border' : 'bg-primary/10 text-primary border border-primary/20'}`}>
+                        {obj.type === 'branding' ? 'Branding' : 'Performance'}
+                      </span>
                       {!obj.is_active && <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">Inativo</span>}
                     </div>
                     {obj.description && <p className="text-xs text-gray-400 mt-0.5">{obj.description}</p>}

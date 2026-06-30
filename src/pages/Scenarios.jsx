@@ -40,6 +40,11 @@ export default function Scenarios() {
     queryFn: () => base44.entities.FunnelType.list(),
   });
 
+  const { data: objectives = [] } = useQuery({
+    queryKey: ['campaign-objectives'],
+    queryFn: () => base44.entities.CampaignObjective.filter({ is_active: true }),
+  });
+
   const myPlans = plans.filter(p => allClients.some(c => c.id === p.client_id));
 
   const clientPlans = myPlans.filter(p => p.client_id === selectedClientId);
@@ -86,7 +91,7 @@ export default function Scenarios() {
           plan.appointment_to_show_rate || 0.7,
           plan.show_to_sale_rate || 0.35,
         ];
-    scenarios = calculateScenarios(plan.channels, rates, plan.average_ticket || 5000, liveAdjustments);
+    scenarios = calculateScenarios(plan.channels, rates, plan.average_ticket || 5000, liveAdjustments, objectives);
   }
 
   const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;

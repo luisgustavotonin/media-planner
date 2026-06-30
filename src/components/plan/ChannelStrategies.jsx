@@ -3,19 +3,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Trash2, Plus, ChevronDown, ChevronRight, Layers } from 'lucide-react';
 import CurrencyInput from '../ui-custom/CurrencyInput';
+import PercentInput from '../ui-custom/PercentInput';
 
 const fmtBRL = (n) => `R$ ${(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtDaily = (budget, days) => days > 0 ? fmtBRL(budget / days) : fmtBRL(0);
 
-// Retorna o rótulo do KPI de custo para um objetivo selecionado
-function getKpiLabel(objectiveName, objectives) {
+// Retorna info do objetivo selecionado: tipo, unidade do KPI e rótulo
+function getObjectiveInfo(objectiveName, objectives) {
   const obj = objectives.find(o => o.name === objectiveName);
-  if (!obj) return 'Custo por unidade';
+  if (!obj) return { type: 'performance', kpiUnit: 'moeda', kpiLabel: 'Custo' };
   const primaryMetric = (obj.metrics || []).find(m => m.is_primary);
-  if (primaryMetric?.key === 'leads') return 'CPL';
-  if (primaryMetric?.key === 'clicks') return 'CPC';
-  if (primaryMetric?.key === 'impressions') return 'CPM';
-  return obj.primary_kpi_label || 'Custo';
+  let kpiLabel = obj.primary_kpi_label || 'Custo';
+  if (primaryMetric?.key === 'leads') kpiLabel = 'CPL';
+  else if (primaryMetric?.key === 'clicks') kpiLabel = 'CPC';
+  else if (primaryMetric?.key === 'impressions') kpiLabel = 'CPM';
+  else if (primaryMetric?.key === 'ctr') kpiLabel = 'CTR';
+  return { type: obj.type || 'performance', kpiUnit: obj.kpi_unit || 'moeda', kpiLabel };
 }
 
 // ─── Ad Set (Conjunto de Anúncios) ───────────────────────────────────────────
@@ -95,9 +98,52 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
   const campaignBudget = campaign.budget_value || 0;
   const adsetTotal = (campaign.adsets || []).reduce((s, a) => s + (a.budget_value || 0), 0);
   const campaignRemaining = campaignBudget - adsetTotal;
-  const kpiLabel = getKpiLabel(campaign.objective, objectives);
+  const objInfo = getObjectiveInfo(campaign.objective, objectives);
+  const isBranding = objInfo.type === 'branding';
   const isCampaignOver = maxCampaignBudget !== undefined && campaignBudget > maxCampaignBudget + 0.01;
   const isAdsetOver = adsetTotal > campaignBudget + 0.01;
+
+  const renderKpiInput = () => {
+    const label = isBranding ? `Meta (${objInfo.kpiLabel})` : `Valor do KPI (${objInfo.kpiLabel})`;
+    if (readOnly) {
+      const display = objInfo.kpiUnit === 'percentual'
+        ? `${((campaign.kpi_value || 0) * 100).toFixed(1)}%`
+        : objInfo.kpiUnit === 'numero'
+          ? (campaign.kpi_value || 0).toLocaleString('pt-BR')
+          : fmtBRL(campaign.kpi_value || 0);
+      return (
+        <div className="w-24 shrink-0">
+          <label className="text-[10px] text-gray-400 block mb-1">{label}</label>
+          <span className="text-xs font-semibold text-gray-700">{display}</span>
+        </div>
+      );
+    }
+    if (objInfo.kpiUnit === 'percentual') {
+      return (
+        <div className="w-24 shrink-0">
+          <label className="text-[10px] text-gray-400 block mb-1">{label}</label>
+          <PercentInput value={campaign.kpi_value || 0} onChange={v => updateField('kpi_value', v)} className="h-8 text-xs" />
+        </div>
+      );
+    }
+    if (objInfo.kpiUnit === 'numero') {
+      return (
+        <div className="w-24 shrink-0">
+          <label className="text-[10px] text-gray-400 block mb-1">{label}</label>
+          <input type="number" min="0" value={campaign.kpi_value || ''} placeholder="Meta"
+            onChange={e => updateField('kpi_value', parseFloat(e.target.value) || 0)}
+            className="w-full h-8 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-primary" />
+        </div>
+      );
+    }
+    return (
+      <div className="w-24 shrink-0">
+        <label className="text-[10px] text-gray-400 block mb-1">{label}</label>
+        <CurrencyInput value={campaign.kpi_value || 0} onChange={v => updateField('kpi_value', v)}
+          prefix="R$" className="text-xs h-8" placeholder="KPI" />
+      </div>
+    );
+  };
 
   return (
     <div className={`border rounded-xl overflow-hidden ${isCampaignOver ? 'border-red-300' : 'border-gray-200'}`}>
@@ -133,15 +179,7 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
             </Select>
           )}
         </div>
-        <div className="w-24 shrink-0">
-          <label className="text-[10px] text-gray-400 block mb-1">Valor do KPI ({kpiLabel})</label>
-          {readOnly ? (
-            <span className="text-xs font-semibold text-gray-700">{fmtBRL(campaign.kpi_value || 0)}</span>
-          ) : (
-            <CurrencyInput value={campaign.kpi_value || 0} onChange={v => updateField('kpi_value', v)}
-              prefix="R$" className="text-xs h-8" placeholder="KPI" />
-          )}
-        </div>
+        {renderKpiInput()}
         {!readOnly && (
           <button onClick={onRemove} className="p-1.5 rounded hover:bg-red-50 ml-1 mb-1.5">
             <Trash2 className="w-3.5 h-3.5 text-red-400" />
@@ -194,8 +232,51 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
   const [open, setOpen] = useState(true);
   const updateField = (field, val) => onChange({ ...campaign, [field]: val });
   const updateParam = (field, val) => onChange({ ...campaign, params: { ...(campaign.params || {}), [field]: val } });
-  const kpiLabel = getKpiLabel(campaign.objective, objectives);
+  const objInfo = getObjectiveInfo(campaign.objective, objectives);
+  const isBranding = objInfo.type === 'branding';
   const isOver = maxCampaignBudget !== undefined && (campaign.budget_value || 0) > maxCampaignBudget + 0.01;
+
+  const renderKpiInput = () => {
+    const label = isBranding ? `Meta (${objInfo.kpiLabel})` : `Valor do KPI (${objInfo.kpiLabel})`;
+    if (readOnly) {
+      const display = objInfo.kpiUnit === 'percentual'
+        ? `${((campaign.kpi_value || 0) * 100).toFixed(1)}%`
+        : objInfo.kpiUnit === 'numero'
+          ? (campaign.kpi_value || 0).toLocaleString('pt-BR')
+          : fmtBRL(campaign.kpi_value || 0);
+      return (
+        <div className="w-24 shrink-0">
+          <label className="text-[10px] text-gray-400 block mb-1">{label}</label>
+          <span className="text-xs font-semibold text-gray-700">{display}</span>
+        </div>
+      );
+    }
+    if (objInfo.kpiUnit === 'percentual') {
+      return (
+        <div className="w-24 shrink-0">
+          <label className="text-[10px] text-gray-400 block mb-1">{label}</label>
+          <PercentInput value={campaign.kpi_value || 0} onChange={v => updateField('kpi_value', v)} className="h-8 text-xs" />
+        </div>
+      );
+    }
+    if (objInfo.kpiUnit === 'numero') {
+      return (
+        <div className="w-24 shrink-0">
+          <label className="text-[10px] text-gray-400 block mb-1">{label}</label>
+          <input type="number" min="0" value={campaign.kpi_value || ''} placeholder="Meta"
+            onChange={e => updateField('kpi_value', parseFloat(e.target.value) || 0)}
+            className="w-full h-8 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-primary" />
+        </div>
+      );
+    }
+    return (
+      <div className="w-24 shrink-0">
+        <label className="text-[10px] text-gray-400 block mb-1">{label}</label>
+        <CurrencyInput value={campaign.kpi_value || 0} onChange={v => updateField('kpi_value', v)}
+          prefix="R$" className="text-xs h-8" placeholder="KPI" />
+      </div>
+    );
+  };
 
   return (
     <div className={`border rounded-xl overflow-hidden ${isOver ? 'border-red-300' : 'border-gray-200'}`}>
@@ -224,15 +305,7 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
             </Select>
           )}
         </div>
-        <div className="w-24 shrink-0">
-          <label className="text-[10px] text-gray-400 block mb-1">Valor do KPI ({kpiLabel})</label>
-          {readOnly ? (
-            <span className="text-xs font-semibold text-gray-700">{fmtBRL(campaign.kpi_value || 0)}</span>
-          ) : (
-            <CurrencyInput value={campaign.kpi_value || 0} onChange={v => updateField('kpi_value', v)}
-              prefix="R$" className="text-xs h-8" placeholder="KPI" />
-          )}
-        </div>
+        {renderKpiInput()}
         <div className="w-28 shrink-0">
           <label className="text-[10px] text-gray-400 block mb-1">Valor da campanha</label>
           <CurrencyInput value={campaign.budget_value || 0} onChange={v => updateField('budget_value', Number(v))}

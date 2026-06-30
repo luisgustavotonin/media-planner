@@ -1,7 +1,7 @@
 // Calcula métricas de um canal agregando os KPIs das campanhas (strategies)
 // Cada campanha tem: objective, kpi_value (custo por unidade na 1ª etapa do funil), budget_value
 // Retorna também stageValues: array com o volume em cada etapa [leads, stage1, stage2, ..., sales]
-export function calculateChannelMetrics(channel, conversionRates, averageTicket) {
+export function calculateChannelMetrics(channel, conversionRates, averageTicket, objectives = []) {
   // Se o canal tem taxas personalizadas ativas, usa os overrides do canal
   let rates = Array.isArray(conversionRates) ? conversionRates : [];
   if (channel.use_custom_funnel) {
@@ -15,16 +15,34 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket)
   const taxRate = (channel.tax_percent || 0) / 100;
   const netBudget = budget * (1 - taxRate);
 
-  // Soma as unidades da 1ª etapa do funil a partir das campanhas
   let leads = 0;
+  let branding = { impressions: 0, clicks: 0, reach: 0, investment: 0 };
   const campaigns = channel.strategies || [];
   for (const camp of campaigns) {
     const campBudget = camp.budget_value
       || (camp.adsets || []).reduce((s, a) => s + (a.budget_value || 0), 0);
     const campNetBudget = campBudget * (1 - taxRate);
     const kpiValue = camp.kpi_value || 0;
-    if (kpiValue > 0) {
-      leads += campNetBudget / kpiValue;
+
+    const obj = objectives.find(o => o.name === camp.objective);
+    const objType = obj?.type || 'performance';
+    const kpiUnit = obj?.kpi_unit || 'moeda';
+    const primaryMetric = (obj?.metrics || []).find(m => m.is_primary);
+    const pmKey = (primaryMetric?.key || '').toLowerCase();
+
+    if (objType === 'branding') {
+      branding.investment += campBudget;
+      if (kpiValue > 0 && kpiUnit === 'moeda') {
+        if (pmKey.includes('impress') || pmKey.includes('impress')) {
+          branding.impressions += (campNetBudget / kpiValue) * 1000;
+        } else if (pmKey.includes('click') || pmKey.includes('clique')) {
+          branding.clicks += campNetBudget / kpiValue;
+        }
+      }
+    } else {
+      if (kpiValue > 0) {
+        leads += campNetBudget / kpiValue;
+      }
     }
   }
 
@@ -58,22 +76,35 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket)
     cost_per_showup: showups > 0 ? budget / showups : 0,
     cost_per_sale: salesRounded > 0 ? budget / salesRounded : 0,
     roi: budget > 0 ? ((revenue - budget) / budget) * 100 : 0,
+    branding: {
+      impressions: Math.round(branding.impressions),
+      clicks: Math.round(branding.clicks),
+      reach: Math.round(branding.reach),
+      investment: branding.investment,
+    },
   };
 }
 
-export function calculateConsolidated(channels, conversionRates, averageTicket) {
+export function calculateConsolidated(channels, conversionRates, averageTicket, objectives = []) {
   const channelResults = channels.map(ch => ({
     ...ch,
-    metrics: calculateChannelMetrics(ch, conversionRates, averageTicket),
+    metrics: calculateChannelMetrics(ch, conversionRates, averageTicket, objectives),
   }));
 
   const stageCount = (conversionRates || []).length + 1; // leads + N stages
   const totalStageValues = Array(stageCount).fill(0);
+  let brandingImpressions = 0, brandingClicks = 0, brandingReach = 0, brandingInvestment = 0;
 
   const totals = channelResults.reduce((acc, ch) => {
     ch.metrics.stageValues?.forEach((v, i) => { totalStageValues[i] = (totalStageValues[i] || 0) + v; });
     const taxRate = (ch.tax_percent || 0) / 100;
     const net = (ch.budget_value || 0) * (1 - taxRate);
+    if (ch.metrics.branding) {
+      brandingImpressions += ch.metrics.branding.impressions || 0;
+      brandingClicks += ch.metrics.branding.clicks || 0;
+      brandingReach += ch.metrics.branding.reach || 0;
+      brandingInvestment += ch.metrics.branding.investment || 0;
+    }
     return {
       total_budget: acc.total_budget + (ch.budget_value || 0),
       total_net_budget: acc.total_net_budget + net,
@@ -86,6 +117,12 @@ export function calculateConsolidated(channels, conversionRates, averageTicket) 
   }, { total_budget: 0, total_net_budget: 0, total_leads: 0, total_appointments: 0, total_showups: 0, total_sales: 0, total_revenue: 0 });
 
   totals.stageValues = totalStageValues;
+  totals.branding = {
+    impressions: Math.round(brandingImpressions),
+    clicks: Math.round(brandingClicks),
+    reach: Math.round(brandingReach),
+    investment: brandingInvestment,
+  };
 
   return {
     channelResults,
@@ -133,7 +170,7 @@ export function calculateReversePlan(targetRevenue, averageTicket, conversionRat
   };
 }
 
-export function calculateScenarios(channels, conversionRates, averageTicket, adjustments) {
+export function calculateScenarios(channels, conversionRates, averageTicket, adjustments, objectives = []) {
   const optCplAdj = adjustments?.optimistic_cpl_adj ?? -0.20;
   const conCplAdj = adjustments?.conservative_cpl_adj ?? 0.25;
   const optConvAdj = adjustments?.optimistic_conv_adj ?? 0.05;
@@ -151,7 +188,7 @@ export function calculateScenarios(channels, conversionRates, averageTicket, adj
       expected_cpl: (ch.expected_cpl || 0) * (1 + cplMult),
     }));
     const adjRates = (conversionRates || []).map(r => Math.min(1, Math.max(0, r + convAdj)));
-    return { label, ...calculateConsolidated(adjChannels, adjRates, averageTicket) };
+    return { label, ...calculateConsolidated(adjChannels, adjRates, averageTicket, objectives) };
   };
 
   return {
