@@ -5,7 +5,7 @@ import { useAuth } from './components/hooks/useAuth';
 import { 
   LayoutDashboard, Building2, BarChart3, Target, 
   FlaskConical, CalendarDays, Settings, Menu, X, 
-  ChevronRight, LogOut, Activity, GitBranch
+  ChevronRight, LogOut, Activity, GitBranch, Megaphone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
@@ -19,6 +19,7 @@ const navItems = [
   { name: 'Acomp. Semanal', page: 'WeeklyTracking', icon: CalendarDays, roles: ['admin', 'consultant', 'user'] },
   { name: 'Benchmarks', page: 'Benchmarks', icon: Settings, roles: ['admin', 'user', 'consultant'] },
   { name: 'Tipos de Funil', page: 'FunnelTypes', icon: GitBranch, roles: ['admin', 'user', 'consultant'] },
+  { name: 'Config. Campanhas', page: 'CampaignSettings', icon: Megaphone, roles: ['admin', 'user', 'consultant'] },
 ];
 
 export default function Layout({ children, currentPageName }) {

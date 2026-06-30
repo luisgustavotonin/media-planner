@@ -1,0 +1,62 @@
+{
+  "name": "CampaignObjective",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do objetivo (ex: Lead, Tr\u00e1fego, Awareness)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do objetivo"
+    },
+    "metrics": {
+      "type": "array",
+      "description": "M\u00e9tricas/KPIs a acompanhar para este objetivo",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Chave interna (ex: leads, clicks, impressions)"
+          },
+          "label": {
+            "type": "string",
+            "description": "Nome exibido (ex: Leads, Cliques, Impress\u00f5es)"
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "numero",
+              "moeda",
+              "percentual"
+            ],
+            "description": "Tipo de unidade"
+          },
+          "is_primary": {
+            "type": "boolean",
+            "description": "Se \u00e9 a m\u00e9trica principal (KPI) deste objetivo"
+          }
+        }
+      }
+    },
+    "primary_kpi_label": {
+      "type": "string",
+      "description": "Nome do KPI principal calculado (ex: Custo por Lead, Custo por Clique)"
+    },
+    "channels": {
+      "type": "array",
+      "description": "Canais em que este objetivo pode ser usado",
+      "items": {
+        "type": "string"
+      }
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name"
+  ]
+}
