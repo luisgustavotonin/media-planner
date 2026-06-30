@@ -57,8 +57,10 @@ export default function MediaPlans() {
       const client = allClients.find(c => c.id === d.client_id);
       const ft = funnelTypes.find(f => f.id === d.funnel_type_id);
 
-      // Busca o benchmark pelo tipo de funil selecionado (o benchmark é vinculado ao funil)
-      const bm = benchmarks.find(b => b.funnel_type_id === d.funnel_type_id)
+      // Busca o benchmark direto da API para garantir dados atualizados
+      const bmList = await base44.entities.Benchmark.filter({ funnel_type_id: d.funnel_type_id });
+      const bm = bmList?.[0]
+        || benchmarks.find(b => b.funnel_type_id === d.funnel_type_id)
         || benchmarks.find(b => b.funnel_type_name === ft?.name);
 
       const ftStages = ft?.stages || [];
@@ -80,9 +82,9 @@ export default function MediaPlans() {
         segment: ft?.name || 'general',
         average_ticket: client?.average_ticket || 5000,
         conversion_rates,
-        lead_to_appointment_rate: conversion_rates[0] || 0.35,
-        appointment_to_show_rate: conversion_rates[1] || 0.7,
-        show_to_sale_rate: conversion_rates[2] || 0.35,
+        lead_to_appointment_rate: conversion_rates[0] ?? 0,
+        appointment_to_show_rate: conversion_rates[1] ?? 0,
+        show_to_sale_rate: conversion_rates[2] ?? 0,
         channels: [],
         total_investment: 0,
       });
