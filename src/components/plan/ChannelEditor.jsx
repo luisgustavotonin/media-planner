@@ -1,39 +1,126 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { base44 } from '@/api/base44Client';
+import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trash2, ChevronDown, ChevronUp, Plus, X } from 'lucide-react';
 import ChannelBadge from '../ui-custom/ChannelBadge';
 import CurrencyInput from '../ui-custom/CurrencyInput';
 import PercentInput from '../ui-custom/PercentInput';
 import ChannelStrategies from './ChannelStrategies';
 
-const CHANNELS = ['Meta', 'Google', 'TikTok', 'YouTube', 'Other'];
-const OBJECTIVES = ['Leads', 'Remarketing', 'Awareness', 'Traffic'];
+// Modal para adicionar canal com objetivo
+function AddChannelModal({ channels, objectives, onAdd, onClose }) {
+  const [channelName, setChannelName] = useState(channels[0]?.name || '');
+  const [objectiveName, setObjectiveName] = useState(objectives[0]?.name || '');
+
+  const selectedObjective = objectives.find(o => o.name === objectiveName);
+
+  const handleAdd = () => {
+    if (!channelName) return;
+    onAdd({
+      channel_name: channelName,
+      channel_objective: objectiveName || '',
+      objective_id: selectedObjective?.id || '',
+      budget_value: 0,
+      budget_percent: 0,
+      expected_cpl: 0,
+      use_custom_funnel: false,
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-sm font-semibold text-gray-900">Adicionar Canal</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X className="w-4 h-4 text-gray-400" /></button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider block mb-1.5">Canal *</label>
+            {channels.length > 0 ? (
+              <Select value={channelName} onValueChange={setChannelName}>
+                <SelectTrigger><SelectValue placeholder="Selecione o canal..." /></SelectTrigger>
+                <SelectContent>
+                  {channels.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="text-xs text-gray-400 p-2 border border-dashed border-gray-200 rounded-lg text-center">
+                Nenhum canal cadastrado. Vá em <strong>Config. Campanhas → Canais</strong>.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider block mb-1.5">Objetivo da Campanha</label>
+            {objectives.length > 0 ? (
+              <Select value={objectiveName} onValueChange={setObjectiveName}>
+                <SelectTrigger><SelectValue placeholder="Selecione o objetivo..." /></SelectTrigger>
+                <SelectContent>
+                  {objectives.map(o => <SelectItem key={o.id} value={o.name}>{o.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="text-xs text-gray-400 p-2 border border-dashed border-gray-200 rounded-lg text-center">
+                Nenhum objetivo cadastrado. Vá em <strong>Config. Campanhas → Objetivos</strong>.
+              </p>
+            )}
+          </div>
+
+          {selectedObjective?.primary_kpi_label && (
+            <div className="px-3 py-2.5 bg-secondary/40 rounded-lg border border-border">
+              <p className="text-[11px] text-muted-foreground">KPI principal que será acompanhado:</p>
+              <p className="text-xs font-semibold text-primary mt-0.5">{selectedObjective.primary_kpi_label}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2 mt-6">
+          <Button onClick={handleAdd} disabled={!channelName} className="flex-1 bg-primary hover:bg-primary/90">
+            <Plus className="w-4 h-4 mr-1.5" /> Adicionar
+          </Button>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ChannelEditor({ channels, onChange, totalInvestment, readOnly, days = 30, funnelStages = [] }) {
-  const [expandedIdx, setExpandedIdx] = React.useState(null);
+  const [expandedIdx, setExpandedIdx] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+
+  const { data: dbChannels = [] } = useQuery({
+    queryKey: ['channels'],
+    queryFn: () => base44.entities.Channel.filter({ is_active: true }),
+  });
+
+  const { data: dbObjectives = [] } = useQuery({
+    queryKey: ['campaign-objectives'],
+    queryFn: () => base44.entities.CampaignObjective.filter({ is_active: true }),
+  });
 
   const updateChannel = (idx, field, value) => {
     if (readOnly) return;
-    const updated = channels.map((ch, i) => {
-      if (i !== idx) return ch;
-      const newCh = { ...ch, [field]: value };
-      if (field === 'budget_value') {
-        const newTotal = channels.reduce((s, c, j) => s + (j === idx ? Number(value) : (c.budget_value || 0)), 0);
-        newCh.budget_percent = newTotal > 0 ? (Number(value) / newTotal) * 100 : 0;
-      }
-      return newCh;
-    });
-    // Recalculate all percents
+    const updated = channels.map((ch, i) => i !== idx ? ch : { ...ch, [field]: value });
     const total = updated.reduce((s, c) => s + (c.budget_value || 0), 0);
-    const withPercents = updated.map(ch => ({ ...ch, budget_percent: total > 0 ? (ch.budget_value / total) * 100 : 0 }));
-    onChange(withPercents);
+    onChange(updated.map(ch => ({ ...ch, budget_percent: total > 0 ? (ch.budget_value / total) * 100 : 0 })));
   };
 
-  const addChannel = () => {
+  const handleBudgetChange = (idx, value) => {
     if (readOnly) return;
-    onChange([...channels, { channel_name: 'Meta', channel_objective: 'Leads', budget_value: 0, budget_percent: 0, expected_cpl: 40, use_custom_funnel: false }]);
+    const updated = channels.map((ch, i) => i !== idx ? ch : { ...ch, budget_value: value });
+    const total = updated.reduce((s, c) => s + (c.budget_value || 0), 0);
+    onChange(updated.map(ch => ({ ...ch, budget_percent: total > 0 ? (ch.budget_value / total) * 100 : 0 })));
+  };
+
+  const handleAdd = (newChannel) => {
+    onChange([...channels, newChannel]);
   };
 
   const removeChannel = (idx) => {
@@ -45,38 +132,60 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
 
   return (
     <div className="space-y-3">
+      {showModal && (
+        <AddChannelModal
+          channels={dbChannels}
+          objectives={dbObjectives}
+          onAdd={handleAdd}
+          onClose={() => setShowModal(false)}
+        />
+      )}
+
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900">Alocação de Canais</h3>
         {!readOnly && (
-          <Button variant="outline" size="sm" onClick={addChannel} className="text-xs">
-            + Adicionar Canal
+          <Button variant="outline" size="sm" onClick={() => setShowModal(true)} className="text-xs gap-1.5">
+            <Plus className="w-3.5 h-3.5" /> Adicionar Canal
           </Button>
         )}
+      </div>
+
+      {/* Labels */}
+      <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_60px_1fr_80px_36px] gap-3 px-4 text-[10px] text-gray-400 uppercase tracking-wider">
+        <span>Canal</span><span>Objetivo</span><span>Budget (R$)</span><span className="text-center">%</span><span>CPL (R$)</span><span>Imposto</span><span></span>
       </div>
 
       <div className="space-y-2">
         {channels.map((ch, idx) => (
           <div key={idx} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
             <div className="flex items-center gap-3 p-4">
-              <div className="flex-1 grid grid-cols-2 sm:grid-cols-6 gap-3 items-center">
+              <div className="flex-1 grid grid-cols-2 sm:grid-cols-[1fr_1fr_1fr_60px_1fr_80px] gap-3 items-center">
                 <div>
                   {readOnly ? <ChannelBadge channel={ch.channel_name} /> : (
-                    <Select value={ch.channel_name} onValueChange={v => updateChannel(idx, 'channel_name', v)}>
-                      <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>{CHANNELS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                    </Select>
+                    dbChannels.length > 0 ? (
+                      <Select value={ch.channel_name} onValueChange={v => updateChannel(idx, 'channel_name', v)}>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>{dbChannels.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="text-xs font-medium text-gray-700">{ch.channel_name}</span>
+                    )
                   )}
                 </div>
                 <div>
                   {readOnly ? <span className="text-xs text-gray-500">{ch.channel_objective}</span> : (
-                    <Select value={ch.channel_objective} onValueChange={v => updateChannel(idx, 'channel_objective', v)}>
-                      <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>{OBJECTIVES.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
-                    </Select>
+                    dbObjectives.length > 0 ? (
+                      <Select value={ch.channel_objective} onValueChange={v => updateChannel(idx, 'channel_objective', v)}>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>{dbObjectives.map(o => <SelectItem key={o.id} value={o.name}>{o.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="text-xs text-gray-500">{ch.channel_objective}</span>
+                    )
                   )}
                 </div>
                 <div>
-                  <CurrencyInput value={ch.budget_value || 0} onChange={v => updateChannel(idx, 'budget_value', v)}
+                  <CurrencyInput value={ch.budget_value || 0} onChange={v => handleBudgetChange(idx, v)}
                     placeholder="Budget R$" prefix="R$" className="text-xs" disabled={readOnly} />
                 </div>
                 <div className="text-center">
@@ -87,17 +196,9 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                     placeholder="CPL R$" prefix="R$" className="text-xs" disabled={readOnly} />
                 </div>
                 <div className="relative">
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    value={ch.tax_percent || ''}
-                    onChange={e => updateChannel(idx, 'tax_percent', parseFloat(e.target.value) || 0)}
-                    placeholder="0"
-                    disabled={readOnly}
-                    className="w-full h-9 border border-gray-200 rounded-md text-xs px-2 pr-6 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50"
-                  />
+                  <input type="number" min="0" max="100" step="0.1" value={ch.tax_percent || ''} placeholder="0"
+                    onChange={e => updateChannel(idx, 'tax_percent', parseFloat(e.target.value) || 0)} disabled={readOnly}
+                    className="w-full h-9 border border-gray-200 rounded-md text-xs px-2 pr-6 focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
                   <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
                 </div>
               </div>
@@ -125,7 +226,6 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {funnelStages.slice(0, -1).map((stage, si) => {
                           const nextStage = funnelStages[si + 1];
-                          const key = `conversion_rate_override_${si}`;
                           const overrides = ch.conversion_rate_overrides || [];
                           return (
                             <div key={si}>
@@ -137,8 +237,7 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                                   updated[si] = v;
                                   updateChannel(idx, 'conversion_rate_overrides', updated);
                                 }}
-                                className="h-8 text-xs"
-                                disabled={readOnly}
+                                className="h-8 text-xs" disabled={readOnly}
                               />
                             </div>
                           );
@@ -176,11 +275,6 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
             )}
           </div>
         ))}
-      </div>
-
-      {/* Column Labels */}
-      <div className="hidden sm:grid grid-cols-6 gap-3 px-4 text-[10px] text-gray-400 uppercase tracking-wider">
-        <span>Canal</span><span>Objetivo</span><span>Budget (R$)</span><span className="text-center">%</span><span>CPL (R$)</span><span>Imposto</span>
       </div>
     </div>
   );
