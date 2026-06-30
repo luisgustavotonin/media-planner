@@ -210,15 +210,17 @@ export default function PlanDetail() {
         />
       </div>
 
-      <div className={`grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6 ${hasAnyTax ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
-        <StatCard label="Investimento Bruto" value={`R$${totalInvestment.toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" />
-        {hasAnyTax && (
-          <StatCard label="Investimento Líquido" value={`R$${Math.round(netInvestment).toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" sublabel="após impostos" />
-        )}
-        <StatCard label="Leads Esperados" value={consolidated.totals.total_leads.toLocaleString()} icon={Users} color="purple" />
-        <StatCard label="Vendas Esperadas" value={Math.round(consolidated.totals.total_sales).toLocaleString()} icon={Target} color="orange" />
-        <StatCard label="Receita Projetada" value={`R$${Math.round(consolidated.totals.total_revenue).toLocaleString('pt-BR')}`} icon={TrendingUp} color="green" />
-      </div>
+      {channels.length > 0 && (
+        <div className={`grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6 ${hasAnyTax ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
+          <StatCard label="Investimento Bruto" value={`R$${totalInvestment.toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" />
+          {hasAnyTax && (
+            <StatCard label="Investimento Líquido" value={`R$${Math.round(netInvestment).toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" sublabel="após impostos" />
+          )}
+          <StatCard label="Leads Esperados" value={consolidated.totals.total_leads.toLocaleString()} icon={Users} color="purple" />
+          <StatCard label="Vendas Esperadas" value={Math.round(consolidated.totals.total_sales).toLocaleString()} icon={Target} color="orange" />
+          <StatCard label="Receita Projetada" value={`R$${Math.round(consolidated.totals.total_revenue).toLocaleString('pt-BR')}`} icon={TrendingUp} color="green" />
+        </div>
+      )}
 
       {consolidated.totals.branding && consolidated.totals.branding.investment > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6 lg:grid-cols-4">
@@ -254,39 +256,26 @@ export default function PlanDetail() {
       )}
 
       {!readOnly && (
-        <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-gray-900">Premissas do Funil</h3>
-            {funnelType && (
-              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-secondary/60 text-secondary-foreground border border-border">
-                {funnelType.name}
-              </span>
-            )}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            {conversionPairs.map((pair, i) => (
-              <div key={pair.field}>
-                <Label className="text-xs">{pair.label} (%)</Label>
-                <PercentInput value={getRate(i)} onChange={v => updateRate(i, v)} className="mt-1" />
-              </div>
-            ))}
-            <div>
-              <Label className="text-xs">Ticket Médio (R$)</Label>
-              <CurrencyInput value={localPlan.average_ticket || 0} onChange={v => updateField('average_ticket', v)} prefix="R$" className="mt-1" />
-            </div>
-          </div>
+        <div className="bg-white rounded-xl border border-gray-100 p-4 mb-6 flex items-center gap-3 flex-wrap">
+          <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Ticket Médio</Label>
+          <CurrencyInput value={localPlan.average_ticket || 0} onChange={v => updateField('average_ticket', v)} prefix="R$" className="max-w-xs" />
+          <span className="text-[10px] text-gray-400">As taxas de conversão do funil agora são configuradas por campanha — selecione o funil dentro de cada campanha abaixo.</span>
         </div>
       )}
 
       <div className="mb-6">
-        <ChannelEditor channels={channels} onChange={handleChannelsChange} totalInvestment={totalInvestment} readOnly={readOnly} days={daysInMonth} funnelStages={funnelStages} />
+        <ChannelEditor channels={channels} onChange={handleChannelsChange} totalInvestment={totalInvestment} readOnly={readOnly} days={daysInMonth} funnelStages={funnelStages} funnelTypes={funnelTypes} benchmarks={benchmarks} segment={localPlan.segment} />
       </div>
 
-      <div className="mb-6">
-        <FunnelChart data={consolidated.totals} title="Funil Consolidado" funnelStages={funnelStages} benchmark={benchmark} />
-      </div>
+      {channels.length > 0 && (
+        <>
+          <div className="mb-6">
+            <FunnelChart data={consolidated.totals} title="Funil Consolidado" funnelStages={funnelStages} benchmark={benchmark} />
+          </div>
 
-      <ResultsTable channelResults={consolidated.channelResults} totals={consolidated.totals} blended={consolidated} funnelStages={funnelStages} />
+          <ResultsTable channelResults={consolidated.channelResults} totals={consolidated.totals} blended={consolidated} funnelStages={funnelStages} />
+        </>
+      )}
     </div>
   );
 }

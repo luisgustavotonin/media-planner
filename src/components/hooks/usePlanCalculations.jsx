@@ -2,7 +2,6 @@
 // Cada campanha tem: objective, kpi_value (custo por unidade na 1ª etapa do funil), budget_value
 // Retorna também stageValues: array com o volume em cada etapa [leads, stage1, stage2, ..., sales]
 export function calculateChannelMetrics(channel, conversionRates, averageTicket, objectives = []) {
-  // Se o canal tem taxas personalizadas ativas, usa os overrides do canal
   let rates = Array.isArray(conversionRates) ? conversionRates : [];
   if (channel.use_custom_funnel) {
     const overrides = channel.conversion_rate_overrides || [];
@@ -16,8 +15,12 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket,
   const netBudget = budget * (1 - taxRate);
 
   let leads = 0;
+  let sales = 0;
+  let revenue = 0;
+  const totalStageValues = [];
   let branding = { impressions: 0, clicks: 0, reach: 0, investment: 0 };
   const campaigns = channel.strategies || [];
+
   for (const camp of campaigns) {
     const campBudget = camp.budget_value
       || (camp.adsets || []).reduce((s, a) => s + (a.budget_value || 0), 0);
@@ -25,10 +28,8 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket,
     const obj = objectives.find(o => o.name === camp.objective);
     const objType = obj?.type || 'performance';
 
-    // Encontra o KPI de custo (unit=moeda, value>0) no formato kpi_values
     const costKpi = (camp.kpi_values || []).find(kv => kv.unit === 'moeda' && kv.value > 0);
     const costKpiLabel = (costKpi?.label || '').toLowerCase();
-    // Retrocompatibilidade: se não há kpi_values, usa kpi_value legado
     const kpiValue = costKpi?.value || camp.kpi_value || 0;
 
     if (objType === 'branding') {
@@ -42,7 +43,20 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket,
       }
     } else {
       if (kpiValue > 0) {
-        leads += campNetBudget / kpiValue;
+        const campLeads = campNetBudget / kpiValue;
+        leads += campLeads;
+        // Usa taxas do funil da campanha se disponível, senão usa as do plano (legacy)
+        const campRates = camp.funnel_rates?.length ? camp.funnel_rates : (rates.length > 0 ? rates : null);
+        if (campRates && campRates.length > 0) {
+          const campStages = [campLeads];
+          for (let i = 0; i < campRates.length; i++) {
+            campStages.push(campStages[i] * (campRates[i] || 0));
+          }
+          const campSales = campStages[campStages.length - 1];
+          sales += campSales;
+          revenue += campSales * averageTicket;
+          campStages.forEach((v, i) => { totalStageValues[i] = (totalStageValues[i] || 0) + v; });
+        }
       }
     }
   }
@@ -50,28 +64,28 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket,
   // Retrocompatibilidade: se não há campanhas com KPI, usa expected_cpl do canal
   if (leads === 0 && channel.expected_cpl) {
     leads = netBudget / channel.expected_cpl;
+    if (rates.length > 0) {
+      const stageValues = [leads];
+      for (let i = 0; i < rates.length; i++) {
+        stageValues.push(stageValues[i] * (rates[i] || 0));
+      }
+      sales = stageValues[stageValues.length - 1];
+      revenue = Math.round(sales) * averageTicket;
+      stageValues.forEach((v, i) => { totalStageValues[i] = (totalStageValues[i] || 0) + v; });
+    }
   }
 
-  // Calcula volume de cada etapa intermediária dinamicamente
-  const stageValues = [leads];
-  for (let i = 0; i < rates.length; i++) {
-    stageValues.push(stageValues[i] * (rates[i] || 0));
-  }
-  const salesRaw = stageValues[stageValues.length - 1];
-  const salesRounded = Math.round(salesRaw);
-  const revenue = salesRounded * averageTicket;
-
-  // Retrocompatibilidade
-  const appointments = stageValues[1] || 0;
-  const showups = stageValues[2] || 0;
+  const salesRounded = Math.round(sales);
+  const appointments = totalStageValues[1] || 0;
+  const showups = totalStageValues[2] || 0;
 
   return {
     leads: Math.round(leads),
     appointments: Math.round(appointments),
     showups: Math.round(showups),
-    stageValues: stageValues.map(v => Math.round(v)),
+    stageValues: totalStageValues.map(v => Math.round(v)),
     sales: salesRounded,
-    revenue,
+    revenue: Math.round(revenue),
     cost_per_lead: leads > 0 ? budget / leads : 0,
     cost_per_appointment: appointments > 0 ? budget / appointments : 0,
     cost_per_showup: showups > 0 ? budget / showups : 0,
@@ -92,7 +106,14 @@ export function calculateConsolidated(channels, conversionRates, averageTicket, 
     metrics: calculateChannelMetrics(ch, conversionRates, averageTicket, objectives),
   }));
 
-  const stageCount = (conversionRates || []).length + 1; // leads + N stages
+  let stageCount = (conversionRates || []).length + 1;
+  for (const ch of channels) {
+    for (const camp of (ch.strategies || [])) {
+      if (camp.funnel_rates?.length) {
+        stageCount = Math.max(stageCount, camp.funnel_rates.length + 1);
+      }
+    }
+  }
   const totalStageValues = Array(stageCount).fill(0);
   let brandingImpressions = 0, brandingClicks = 0, brandingReach = 0, brandingInvestment = 0;
 

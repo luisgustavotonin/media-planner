@@ -85,6 +85,65 @@ function CampaignKpis({ campaign, objectives, onChange, readOnly }) {
   );
 }
 
+// Componente que renderiza o seletor de funil e as taxas de conversão da campanha
+function CampaignFunnel({ campaign, funnelTypes, benchmarks, segment, onChange, readOnly }) {
+  const funnelType = funnelTypes.find(ft => ft.id === campaign.funnel_type_id);
+  const stages = funnelType?.stages || [];
+
+  const handleFunnelChange = (funnelId) => {
+    if (funnelId === 'none') {
+      onChange({ ...campaign, funnel_type_id: '', funnel_rates: [] });
+      return;
+    }
+    const ft = funnelTypes.find(f => f.id === funnelId);
+    const st = ft?.stages || [];
+    const bm = benchmarks.find(b => b.funnel_type_id === funnelId && b.segment === segment)
+      || benchmarks.find(b => b.funnel_type_id === funnelId);
+    const rates = bm?.conversion_rates?.length
+      ? bm.conversion_rates
+      : st.slice(0, -1).map(s => s.default_rate || 0);
+    onChange({ ...campaign, funnel_type_id: funnelId, funnel_rates: rates });
+  };
+
+  const updateRate = (i, value) => {
+    const rates = [...(campaign.funnel_rates || [])];
+    while (rates.length < stages.length - 1) rates.push(0);
+    rates[i] = value;
+    onChange({ ...campaign, funnel_rates: rates });
+  };
+
+  return (
+    <div className="flex flex-wrap items-end gap-2 px-3 pb-2 pt-1 bg-secondary/20 border-t border-gray-50">
+      <div className="w-40 shrink-0">
+        <label className="text-[10px] text-gray-400 block mb-0.5">Funil</label>
+        {readOnly ? (
+          <span className="text-[10px] font-medium px-2 py-1 rounded-full border bg-secondary/60 text-secondary-foreground border-border whitespace-nowrap">
+            {funnelType?.name || '—'}
+          </span>
+        ) : (
+          <Select value={campaign.funnel_type_id || 'none'} onValueChange={handleFunnelChange}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sem funil</SelectItem>
+              {funnelTypes.map(ft => <SelectItem key={ft.id} value={ft.id}>{ft.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+      {stages.length >= 2 && stages.slice(0, -1).map((stage, i) => (
+        <div key={i} className="w-28 shrink-0">
+          <label className="text-[10px] text-gray-400 block mb-0.5">{stage.label} → {stages[i + 1].label}</label>
+          {readOnly ? (
+            <span className="text-xs font-semibold text-gray-700">{(((campaign.funnel_rates || [])[i] || 0) * 100).toFixed(0)}%</span>
+          ) : (
+            <PercentInput value={(campaign.funnel_rates || [])[i] || 0} onChange={v => updateRate(i, v)} className="h-8 text-xs" />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Ad Set (Conjunto de Anúncios) ───────────────────────────────────────────
 function AdSet({ adset, days, onChange, onRemove, readOnly, maxBudget }) {
   const [open, setOpen] = useState(false);
@@ -144,7 +203,7 @@ function ParamField({ label, value, onChange, placeholder, readOnly }) {
 }
 
 // ─── Campaign (Meta) ─────────────────────────────────────────────────────────
-function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives, availableObjectives }) {
+function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives, availableObjectives, funnelTypes = [], benchmarks = [], segment = '' }) {
   const [open, setOpen] = useState(true);
 
   const updateField = (field, val) => onChange({ ...campaign, [field]: val });
@@ -214,6 +273,9 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
       {/* KPI inputs */}
       <CampaignKpis campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
 
+      {/* Funil da campanha */}
+      <CampaignFunnel campaign={campaign} funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} onChange={onChange} readOnly={readOnly} />
+
       {/* Ad sets */}
       {open && (
         <div className="p-3 pt-2 bg-gray-50/70 space-y-2 border-t border-gray-100">
@@ -254,7 +316,7 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
 }
 
 // ─── Google Campaign ──────────────────────────────────────────────────────────
-function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives, availableObjectives }) {
+function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives, availableObjectives, funnelTypes = [], benchmarks = [], segment = '' }) {
   const [open, setOpen] = useState(true);
   const updateField = (field, val) => onChange({ ...campaign, [field]: val });
   const updateParam = (field, val) => onChange({ ...campaign, params: { ...(campaign.params || {}), [field]: val } });
@@ -311,6 +373,9 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
       {/* KPI inputs */}
       <CampaignKpis campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
 
+      {/* Funil da campanha */}
+      <CampaignFunnel campaign={campaign} funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} onChange={onChange} readOnly={readOnly} />
+
       {open && (
         <div className="px-4 pb-4 pt-2 border-t border-gray-100 bg-gray-50/50">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -329,7 +394,7 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
   );
 }
 
-function GoogleStrategies({ strategies = [], channelBudget = 0, days = 30, onChange, readOnly, objectives, availableObjectives }) {
+function GoogleStrategies({ strategies = [], channelBudget = 0, days = 30, onChange, readOnly, objectives, availableObjectives, funnelTypes = [], benchmarks = [], segment = '' }) {
   const totalAllocated = strategies.reduce((s, c) => s + (c.budget_value || 0), 0);
   const remaining = channelBudget - totalAllocated;
 
@@ -374,7 +439,8 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, days = 30, onCha
           return (
             <GoogleCampaign key={idx} campaign={camp} days={days}
               onChange={updated => updateCampaign(idx, updated)} onRemove={() => removeCampaign(idx)}
-              readOnly={readOnly} maxCampaignBudget={maxForCampaign} objectives={objectives} availableObjectives={availableObjectives} />
+              readOnly={readOnly} maxCampaignBudget={maxForCampaign} objectives={objectives} availableObjectives={availableObjectives}
+              funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} />
           );
         })}
       </div>
@@ -383,7 +449,7 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, days = 30, onCha
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function ChannelStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, days = 30, onChange, readOnly, channelName = 'Meta', objectives = [] }) {
+export default function ChannelStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, days = 30, onChange, readOnly, channelName = 'Meta', objectives = [], funnelTypes = [], benchmarks = [], segment = '' }) {
   // Filtra objetivos aplicáveis a este canal (sem channels = disponível para todos)
   const availableObjectives = objectives.filter(o => !o.channels || o.channels.length === 0 || o.channels.includes(channelName));
 
@@ -406,7 +472,8 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
   if (channelName === 'Google') {
     return (
       <GoogleStrategies strategies={strategies} channelBudget={channelBudget} days={days}
-        onChange={onChange} readOnly={readOnly} objectives={objectives} availableObjectives={availableObjectives} />
+        onChange={onChange} readOnly={readOnly} objectives={objectives} availableObjectives={availableObjectives}
+        funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} />
     );
   }
 
@@ -438,7 +505,8 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
           return (
             <Campaign key={idx} campaign={camp} days={days}
               onChange={updated => updateCampaign(idx, updated)} onRemove={() => removeCampaign(idx)}
-              readOnly={readOnly} maxCampaignBudget={maxForCampaign} objectives={objectives} availableObjectives={availableObjectives} />
+              readOnly={readOnly} maxCampaignBudget={maxForCampaign} objectives={objectives} availableObjectives={availableObjectives}
+              funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} />
           );
         })}
       </div>

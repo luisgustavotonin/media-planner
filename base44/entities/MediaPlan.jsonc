@@ -41,7 +41,7 @@
     },
     "conversion_rates": {
       "type": "array",
-      "description": "Dynamic conversion rates for each funnel stage pair",
+      "description": "Legacy: plan-level conversion rates. Per-campaign funnel_rates take precedence.",
       "items": {
         "type": "number"
       }
@@ -62,12 +62,10 @@
       "type": "number"
     },
     "duration_days": {
-      "type": "number",
-      "description": "Dias do m\u00eas para c\u00e1lculo de budget di\u00e1rio"
+      "type": "number"
     },
     "channels": {
       "type": "array",
-      "description": "Channel allocation array",
       "items": {
         "type": "object",
         "properties": {
@@ -81,8 +79,7 @@
             "type": "number"
           },
           "tax_percent": {
-            "type": "number",
-            "description": "Percentual de imposto sobre o budget"
+            "type": "number"
           },
           "use_custom_funnel": {
             "type": "boolean"
@@ -95,7 +92,7 @@
           },
           "strategies": {
             "type": "array",
-            "description": "Campanhas do canal, cada uma com seu objetivo e KPIs",
+            "description": "Campanhas do canal",
             "items": {
               "type": "object",
               "properties": {
@@ -103,20 +100,30 @@
                   "type": "string"
                 },
                 "objective": {
+                  "type": "string"
+                },
+                "funnel_type_id": {
                   "type": "string",
-                  "description": "Objetivo da campanha (ex: Lead, Tr\u00e1fego, Awareness)"
+                  "description": "Funil selecionado para esta campanha"
+                },
+                "funnel_rates": {
+                  "type": "array",
+                  "description": "Taxas de convers\u00e3o do funil desta campanha",
+                  "items": {
+                    "type": "number"
+                  }
                 },
                 "kpi_label": {
                   "type": "string",
-                  "description": "R\u00f3tulo do KPI (legado)"
+                  "description": "Legado"
                 },
                 "kpi_value": {
                   "type": "number",
-                  "description": "Valor do KPI de custo (legado)"
+                  "description": "Legado"
                 },
                 "kpi_values": {
                   "type": "array",
-                  "description": "Valores dos KPIs preenchidos no plano. S\u00f3 KPIs com value > 0 aparecem no acompanhamento semanal.",
+                  "description": "Valores dos KPIs preenchidos no plano",
                   "items": {
                     "type": "object",
                     "properties": {
@@ -141,16 +148,13 @@
                   "type": "number"
                 },
                 "funnel_stage": {
-                  "type": "string",
-                  "description": "Campo legado (topo/meio/fundo/remarketing)"
+                  "type": "string"
                 },
                 "type": {
-                  "type": "string",
-                  "description": "Tipo de campanha Google (pesquisa/remarketing)"
+                  "type": "string"
                 },
                 "adsets": {
                   "type": "array",
-                  "description": "Conjuntos de an\u00fancios da campanha",
                   "items": {
                     "type": "object",
                     "properties": {
