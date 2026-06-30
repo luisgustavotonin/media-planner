@@ -272,6 +272,7 @@ function ObjectivesTab() {
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState(null);
   const [expanded, setExpanded] = useState({});
+  const [selectedChannel, setSelectedChannel] = useState('');
 
   const { data: objectives = [], isLoading } = useQuery({
     queryKey: ['campaign-objectives'],
@@ -282,6 +283,12 @@ function ObjectivesTab() {
     queryKey: ['channels'],
     queryFn: () => base44.entities.Channel.list(),
   });
+
+  const activeChannels = channels.filter(c => c.is_active);
+  const activeChannelNames = activeChannels.map(c => c.name);
+  const filteredObjectives = selectedChannel
+    ? objectives.filter(o => !o.channels?.length || o.channels.includes(selectedChannel))
+    : objectives;
 
   const createMut = useMutation({
     mutationFn: (d) => base44.entities.CampaignObjective.create(d),
@@ -334,6 +341,20 @@ function ObjectivesTab() {
 
   return (
     <div>
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider mr-1">Filtrar por canal:</span>
+        <button onClick={() => setSelectedChannel('')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${!selectedChannel ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+          Todos
+        </button>
+        {activeChannels.map(ch => (
+          <button key={ch.id} onClick={() => setSelectedChannel(ch.name)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selectedChannel === ch.name ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+            {ch.name}
+          </button>
+        ))}
+      </div>
+
       <div className="flex justify-end mb-4 gap-2">
         {objectives.length === 0 && <Button variant="outline" onClick={addPresets} className="gap-1.5"><Plus className="w-4 h-4" /> Adicionar Padrões</Button>}
         <Button onClick={() => setEditingId('new')} className="gap-1.5 bg-primary hover:bg-primary/90"><Plus className="w-4 h-4" /> Novo Objetivo</Button>
@@ -347,7 +368,7 @@ function ObjectivesTab() {
           </div>
           <ObjectiveForm
             initial={editingId === 'new'
-              ? { name: '', description: '', type: 'performance', kpis: [], channels: [], is_active: true }
+              ? { name: '', description: '', type: 'performance', kpis: [], channels: selectedChannel ? [selectedChannel] : [], is_active: true }
               : getInitialForEdit()}
             onSave={handleSave} onCancel={() => setEditingId(null)} saving={createMut.isPending || updateMut.isPending}
             channels={channels}
@@ -355,15 +376,17 @@ function ObjectivesTab() {
         </div>
       )}
 
-      {objectives.length === 0 && !editingId ? (
+      {filteredObjectives.length === 0 && !editingId ? (
         <div className="border-2 border-dashed border-gray-200 rounded-xl p-10 text-center">
-          <p className="text-gray-500 font-medium mb-1">Nenhum objetivo configurado</p>
-          <p className="text-gray-400 text-sm mb-4">Clique em "Adicionar Padrões" para começar com Lead, Tráfego e Awareness.</p>
-          <Button onClick={addPresets} className="gap-2 bg-primary hover:bg-primary/90"><Plus className="w-4 h-4" /> Adicionar Padrões</Button>
+          <p className="text-gray-500 font-medium mb-1">{selectedChannel ? `Nenhum objetivo para ${selectedChannel}` : 'Nenhum objetivo configurado'}</p>
+          <p className="text-gray-400 text-sm mb-4">{selectedChannel ? `Crie um novo objetivo para o canal ${selectedChannel}.` : 'Clique em "Adicionar Padrões" para começar com Lead, Tráfego e Awareness.'}</p>
+          {objectives.length === 0
+            ? <Button onClick={addPresets} className="gap-2 bg-primary hover:bg-primary/90"><Plus className="w-4 h-4" /> Adicionar Padrões</Button>
+            : <Button onClick={() => setEditingId('new')} className="gap-2 bg-primary hover:bg-primary/90"><Plus className="w-4 h-4" /> Novo Objetivo</Button>}
         </div>
       ) : (
         <div className="space-y-3">
-          {objectives.map(obj => {
+          {filteredObjectives.map(obj => {
             const isExpanded = expanded[obj.id];
             const kpis = obj.kpis || [];
             return (
@@ -387,9 +410,9 @@ function ObjectivesTab() {
                         ))}
                       </div>
                     )}
-                    {obj.channels?.length > 0 && (
+                    {obj.channels?.filter(ch => activeChannelNames.includes(ch)).length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1.5">
-                        {obj.channels.map(ch => (
+                        {obj.channels.filter(ch => activeChannelNames.includes(ch)).map(ch => (
                           <span key={ch} className="text-[10px] px-1.5 py-0.5 rounded border border-gray-200 bg-gray-50 text-gray-500">{ch}</span>
                         ))}
                       </div>

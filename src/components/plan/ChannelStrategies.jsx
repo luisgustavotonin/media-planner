@@ -13,7 +13,11 @@ function getObjectiveInfo(objectiveName, objectives) {
   const obj = objectives.find(o => o.name === objectiveName);
   if (!obj) return { type: 'performance', kpis: [] };
   let kpis = obj.kpis || [];
-  // Retrocompatibilidade: se não tem kpis mas tem primary_kpi_label
+  // Retrocompatibilidade: se não tem kpis mas tem metrics (formato antigo)
+  if (kpis.length === 0 && obj.metrics?.length) {
+    kpis = obj.metrics.map(m => ({ label: m.label, unit: m.unit || 'moeda' }));
+  }
+  // Retrocompatibilidade: se não tem kpis nem metrics mas tem primary_kpi_label
   if (kpis.length === 0 && obj.primary_kpi_label) {
     kpis = [{ label: obj.primary_kpi_label, unit: obj.kpi_unit || 'moeda' }];
   }
