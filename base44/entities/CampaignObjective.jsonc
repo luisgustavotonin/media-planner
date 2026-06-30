@@ -19,6 +19,10 @@
       "default": "performance",
       "description": "Tipo do objetivo: performance (funil de vendas) ou branding (awareness/alcance)"
     },
+    "funnel_type_id": {
+      "type": "string",
+      "description": "Funil associado a este objetivo. Ao selecionar este objetivo numa campanha, o funil e suas taxas v\u00eam automaticamente do benchmark."
+    },
     "kpis": {
       "type": "array",
       "description": "KPIs deste objetivo. Cada KPI aparece no plano de m\u00eddia para preenchimento. S\u00f3 KPIs com valor preenchido aparecem no acompanhamento semanal.",

@@ -5,6 +5,7 @@ import PageHeader from '@/components/ui-custom/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Plus, Trash2, Pencil, X, Check, ToggleLeft, ToggleRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 
 const UNIT_LABELS = { numero: 'Número', moeda: 'Moeda (R$)', percentual: 'Percentual (%)' };
@@ -159,7 +160,7 @@ function ChannelsTab() {
 }
 
 // ── Formulário de Objetivo ──
-function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [] }) {
+function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [], funnelTypes = [] }) {
   const [form, setForm] = useState(initial);
 
   const toggleChannel = (ch) => setForm(f => {
@@ -199,6 +200,20 @@ function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [] }) {
           </p>
         </div>
       </div>
+      {form.type === 'performance' && (
+        <div>
+          <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Funil Associado</Label>
+          <p className="text-[10px] text-gray-400 mb-2">Selecione o funil que este objetivo usa. Ao escolher este objetivo numa campanha, o funil e suas taxas vêm automaticamente do benchmark.</p>
+          <Select value={form.funnel_type_id || 'none'} onValueChange={v => setField('funnel_type_id', v === 'none' ? '' : v)}>
+            <SelectTrigger className="w-full h-10 text-sm"><SelectValue placeholder="Selecione um funil..." /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Nenhum</SelectItem>
+              {funnelTypes.map(ft => <SelectItem key={ft.id} value={ft.id}>{ft.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       <div>
         <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Descrição</Label>
         <input className="mt-1.5 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -282,6 +297,11 @@ function ObjectivesTab() {
   const { data: channels = [] } = useQuery({
     queryKey: ['channels'],
     queryFn: () => base44.entities.Channel.list(),
+  });
+
+  const { data: funnelTypes = [] } = useQuery({
+    queryKey: ['funnelTypes'],
+    queryFn: () => base44.entities.FunnelType.list(),
   });
 
   const activeChannels = channels.filter(c => c.is_active);
@@ -371,7 +391,7 @@ function ObjectivesTab() {
               ? { name: '', description: '', type: 'performance', kpis: [], channels: selectedChannel ? [selectedChannel] : [], is_active: true }
               : getInitialForEdit()}
             onSave={handleSave} onCancel={() => setEditingId(null)} saving={createMut.isPending || updateMut.isPending}
-            channels={channels}
+            channels={channels} funnelTypes={funnelTypes}
           />
         </div>
       )}
