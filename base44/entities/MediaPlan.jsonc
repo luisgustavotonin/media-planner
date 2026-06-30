@@ -74,16 +74,10 @@
           "channel_name": {
             "type": "string"
           },
-          "channel_objective": {
-            "type": "string"
-          },
           "budget_value": {
             "type": "number"
           },
           "budget_percent": {
-            "type": "number"
-          },
-          "expected_cpl": {
             "type": "number"
           },
           "tax_percent": {
@@ -93,35 +87,43 @@
           "use_custom_funnel": {
             "type": "boolean"
           },
-          "lead_to_appointment_rate_override": {
-            "type": "number"
-          },
-          "appointment_to_show_rate_override": {
-            "type": "number"
-          },
-          "show_to_sale_rate_override": {
-            "type": "number"
+          "conversion_rate_overrides": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
           },
           "strategies": {
             "type": "array",
-            "description": "Campanhas do canal divididas por etapa do funil",
+            "description": "Campanhas do canal, cada uma com seu objetivo e KPI",
             "items": {
               "type": "object",
               "properties": {
                 "name": {
                   "type": "string"
                 },
-                "funnel_stage": {
+                "objective": {
                   "type": "string",
-                  "enum": [
-                    "topo",
-                    "meio",
-                    "fundo",
-                    "remarketing"
-                  ]
+                  "description": "Objetivo da campanha (ex: Lead, Tr\u00e1fego, Awareness)"
+                },
+                "kpi_label": {
+                  "type": "string",
+                  "description": "R\u00f3tulo do KPI (ex: CPL, CPC, CPM)"
+                },
+                "kpi_value": {
+                  "type": "number",
+                  "description": "Valor do KPI de custo (ex: R$ 40 por lead)"
                 },
                 "budget_value": {
                   "type": "number"
+                },
+                "funnel_stage": {
+                  "type": "string",
+                  "description": "Campo legado (topo/meio/fundo/remarketing)"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Tipo de campanha Google (pesquisa/remarketing)"
                 },
                 "adsets": {
                   "type": "array",

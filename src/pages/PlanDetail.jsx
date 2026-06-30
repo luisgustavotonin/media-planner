@@ -165,7 +165,6 @@ export default function PlanDetail() {
     { value: 'completed', label: 'Concluído' },
   ];
   const statusLabel = STATUS_PT[localPlan.status] || 'Rascunho';
-  const segmentoLabel = SEGMENTOS[localPlan.segment] || localPlan.segment || 'Geral';
 
   return (
     <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
@@ -175,7 +174,7 @@ export default function PlanDetail() {
         </Link>
         <PageHeader
           title={`${localPlan.client_name || 'Sem nome'} — ${MESES[(localPlan.period_month || 1) - 1]} ${localPlan.period_year}`}
-          description={`Segmento: ${segmentoLabel} · Status: ${statusLabel}`}
+          description={`Funil: ${funnelType?.name || '—'} · Status: ${statusLabel}`}
           actions={
             <div className="flex flex-wrap gap-2">
               <Button

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { calculateReversePlan } from '../components/hooks/usePlanCalculations';
+import { calculateReversePlan, getChannelBlendedKpi } from '../components/hooks/usePlanCalculations';
 import PageHeader from '../components/ui-custom/PageHeader';
 import StatCard from '../components/ui-custom/StatCard';
 import ChannelBadge from '../components/ui-custom/ChannelBadge';
@@ -265,7 +265,7 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
                     <tr className="bg-gray-50/50 border-b border-gray-100">
                       <th className="text-left py-2.5 px-4 font-medium text-gray-500">Canal</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Distribuição</th>
-                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">CPL</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">KPI</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Leads Nec.</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Budget Nec.</th>
                     </tr>
@@ -355,7 +355,7 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
       setDistribution(selectedPlan.channels.map(ch => ({
         channel_name: ch.channel_name,
         percent: totalBudget > 0 ? Math.round((ch.budget_value / totalBudget) * 100) : 0,
-        expected_cpl: ch.expected_cpl || 0,
+        expected_cpl: getChannelBlendedKpi(ch),
       })));
     } else {
       setDistribution([]);
@@ -511,7 +511,7 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
               {distribution.length > 0 && (
                 <div className="space-y-2 mb-3">
                   <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_32px] gap-3 text-[10px] text-gray-400 font-medium uppercase tracking-wider px-1">
-                    <span>Canal</span><span>% do Budget</span><span>CPL (R$)</span><span></span>
+                    <span>Canal</span><span>% do Budget</span><span>KPI (R$)</span><span></span>
                   </div>
                   {distribution.map((ch, idx) => (
                     <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_32px] gap-2 sm:gap-3 items-center">
@@ -574,7 +574,7 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
                     <tr className="bg-gray-50/50 border-b border-gray-100">
                       <th className="text-left py-2.5 px-4 font-medium text-gray-500">Canal</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Distribuição</th>
-                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">CPL</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">KPI</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Leads Nec.</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Budget Nec.</th>
                     </tr>

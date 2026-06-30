@@ -1,15 +1,11 @@
-// Calcula métricas de um canal aplicando todas as taxas do funil em cascata
+// Calcula métricas de um canal agregando os KPIs das campanhas (strategies)
+// Cada campanha tem: objective, kpi_value (custo por unidade na 1ª etapa do funil), budget_value
 // Retorna também stageValues: array com o volume em cada etapa [leads, stage1, stage2, ..., sales]
 export function calculateChannelMetrics(channel, conversionRates, averageTicket) {
   // Se o canal tem taxas personalizadas ativas, usa os overrides do canal
   let rates = Array.isArray(conversionRates) ? conversionRates : [];
   if (channel.use_custom_funnel) {
-    const overrides = [
-      channel.lead_to_appointment_rate_override,
-      channel.appointment_to_show_rate_override,
-      channel.show_to_sale_rate_override,
-    ];
-    // PercentInput devolve 0-1, assim como conversionRates — usa diretamente
+    const overrides = channel.conversion_rate_overrides || [];
     rates = rates.map((r, i) => {
       const ov = overrides[i];
       return (ov !== undefined && ov !== null) ? ov : r;
@@ -18,9 +14,24 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket)
   const budget = channel.budget_value || 0;
   const taxRate = (channel.tax_percent || 0) / 100;
   const netBudget = budget * (1 - taxRate);
-  const cpl = channel.expected_cpl || 1;
 
-  const leads = netBudget / cpl;
+  // Soma as unidades da 1ª etapa do funil a partir das campanhas
+  let leads = 0;
+  const campaigns = channel.strategies || [];
+  for (const camp of campaigns) {
+    const campBudget = camp.budget_value
+      || (camp.adsets || []).reduce((s, a) => s + (a.budget_value || 0), 0);
+    const campNetBudget = campBudget * (1 - taxRate);
+    const kpiValue = camp.kpi_value || 0;
+    if (kpiValue > 0) {
+      leads += campNetBudget / kpiValue;
+    }
+  }
+
+  // Retrocompatibilidade: se não há campanhas com KPI, usa expected_cpl do canal
+  if (leads === 0 && channel.expected_cpl) {
+    leads = netBudget / channel.expected_cpl;
+  }
 
   // Calcula volume de cada etapa intermediária dinamicamente
   const stageValues = [leads];
@@ -104,7 +115,7 @@ export function calculateReversePlan(targetRevenue, averageTicket, conversionRat
 
   const channelBudgets = channelDistribution.map(ch => {
     const chLeads = requiredLeads * (ch.percent / 100);
-    const chBudget = chLeads * ch.expected_cpl;
+    const chBudget = chLeads * (ch.expected_cpl || 0);
     return { ...ch, required_leads: Math.round(chLeads), required_budget: Math.round(chBudget) };
   });
 
@@ -129,8 +140,14 @@ export function calculateScenarios(channels, conversionRates, averageTicket, adj
   const conConvAdj = adjustments?.conservative_conv_adj ?? -0.05;
 
   const makeScenario = (cplMult, convAdj, label) => {
+    // Ajusta o kpi_value de cada campanha dentro de cada canal
     const adjChannels = channels.map(ch => ({
       ...ch,
+      strategies: (ch.strategies || []).map(camp => ({
+        ...camp,
+        kpi_value: (camp.kpi_value || 0) * (1 + cplMult),
+      })),
+      // Retrocompatibilidade: ajusta expected_cpl também
       expected_cpl: (ch.expected_cpl || 0) * (1 + cplMult),
     }));
     const adjRates = (conversionRates || []).map(r => Math.min(1, Math.max(0, r + convAdj)));
@@ -189,4 +206,19 @@ export function generateRecommendations(channelResults, weeklyActuals, weeklyTar
   }
 
   return recommendations;
+}
+
+// Calcula um KPI blended (custo por unidade na 1ª etapa) para um canal a partir de suas campanhas
+export function getChannelBlendedKpi(channel) {
+  const campaigns = channel.strategies || [];
+  let totalBudget = 0;
+  let totalUnits = 0;
+  for (const camp of campaigns) {
+    const campBudget = camp.budget_value
+      || (camp.adsets || []).reduce((s, a) => s + (a.budget_value || 0), 0);
+    const kpiValue = camp.kpi_value || 0;
+    totalBudget += campBudget;
+    if (kpiValue > 0) totalUnits += campBudget / kpiValue;
+  }
+  return totalUnits > 0 ? totalBudget / totalUnits : (channel.expected_cpl || 0);
 }

@@ -170,7 +170,7 @@ export default function MediaPlans() {
               <div>
                 <p className="text-sm font-semibold text-gray-900">{selectedPlan.client_name || 'Sem nome'}</p>
                 <p className="text-xs text-gray-400">
-                  {MESES_SHORT[(selectedPlan.period_month || 1) - 1]}/{selectedPlan.period_year} · {ESPECIALIDADES.find(e => e.value === selectedPlan.segment)?.label || 'Geral'} · {selectedPlan.channels?.length || 0} canais
+                  {MESES_SHORT[(selectedPlan.period_month || 1) - 1]}/{selectedPlan.period_year} · {selectedPlan.funnel_type_name || 'Sem funil'} · {selectedPlan.channels?.length || 0} canais
                 </p>
               </div>
             </div>

@@ -177,9 +177,9 @@ export default function Scenarios() {
               <span className="text-sm font-semibold text-gray-900">Configurações dos Cenários</span>
               {!showAdj && (
                 <span className="text-xs text-gray-400 ml-1">
-                  Otimista: CPL {adjForm.optimistic_cpl_adj > 0 ? '+' : ''}{adjForm.optimistic_cpl_adj.toFixed(0)}% / Conv. +{adjForm.optimistic_conv_adj.toFixed(0)}p.p.
+                  Otimista: KPI {adjForm.optimistic_cpl_adj > 0 ? '+' : ''}{adjForm.optimistic_cpl_adj.toFixed(0)}% / Conv. +{adjForm.optimistic_conv_adj.toFixed(0)}p.p.
                   &nbsp;·&nbsp;
-                  Conservador: CPL +{adjForm.conservative_cpl_adj.toFixed(0)}% / Conv. {adjForm.conservative_conv_adj.toFixed(0)}p.p.
+                  Conservador: KPI +{adjForm.conservative_cpl_adj.toFixed(0)}% / Conv. {adjForm.conservative_conv_adj.toFixed(0)}p.p.
                 </span>
               )}
             </div>
@@ -191,7 +191,7 @@ export default function Scenarios() {
               <div className="mt-4 mb-5 p-3 bg-secondary/40 rounded-lg border border-border text-xs text-secondary-foreground space-y-1">
                 <p><strong>Como funcionam os cenários:</strong></p>
                 <p>• <strong>Realista</strong>: plano atual sem nenhuma alteração.</p>
-                <p>• <strong>CPL (%)</strong>: ajuste no Custo por Lead de cada canal. Negativo = leads mais baratos (mais leads pelo mesmo budget). Positivo = leads mais caros.</p>
+                <p>• <strong>KPI (%)</strong>: ajuste no custo por unidade (KPI) de cada campanha. Negativo = unidades mais baratas. Positivo = unidades mais caras.</p>
                 <p>• <strong>Conversões (p.p.)</strong>: ajuste em pontos percentuais aplicado a <em>todas</em> as taxas de conversão do funil (ex: Lead→Agendamento, Agendamento→Comparecimento, etc.). Positivo = melhor conversão; negativo = pior.</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
@@ -199,7 +199,7 @@ export default function Scenarios() {
                 <div className="space-y-3">
                   <h5 className="text-xs font-semibold text-secondary-foreground uppercase tracking-wider">Otimista</h5>
                   <div>
-                    <Label className="text-xs text-gray-500">Variação do CPL (%)</Label>
+                    <Label className="text-xs text-gray-500">Variação do KPI (%)</Label>
                     <div className="flex items-center gap-2 mt-1">
                       <Input
                         type="number"
@@ -207,7 +207,7 @@ export default function Scenarios() {
                         onChange={e => setAdjForm(f => ({ ...f, optimistic_cpl_adj: parseFloat(e.target.value) || 0 }))}
                         className="h-8 text-sm w-28"
                       />
-                      <span className="text-xs text-gray-400">% no CPL (negativo = mais barato)</span>
+                      <span className="text-xs text-gray-400">% no KPI (negativo = mais barato)</span>
                     </div>
                   </div>
                   <div>
@@ -227,7 +227,7 @@ export default function Scenarios() {
                 <div className="space-y-3">
                   <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Conservador</h5>
                   <div>
-                    <Label className="text-xs text-gray-500">Variação do CPL (%)</Label>
+                    <Label className="text-xs text-gray-500">Variação do KPI (%)</Label>
                     <div className="flex items-center gap-2 mt-1">
                       <Input
                         type="number"
@@ -235,7 +235,7 @@ export default function Scenarios() {
                         onChange={e => setAdjForm(f => ({ ...f, conservative_cpl_adj: parseFloat(e.target.value) || 0 }))}
                         className="h-8 text-sm w-28"
                       />
-                      <span className="text-xs text-gray-400">% no CPL (positivo = mais caro)</span>
+                      <span className="text-xs text-gray-400">% no KPI (positivo = mais caro)</span>
                     </div>
                   </div>
                   <div>
@@ -311,7 +311,7 @@ export default function Scenarios() {
                     <div className="pt-3 border-t border-gray-50">
                       <div className="flex justify-between"><span className="text-xs text-gray-500">Receita</span><span className="text-sm font-bold text-primary">{fmt(s.totals.total_revenue)}</span></div>
                       <div className="flex justify-between mt-1"><span className="text-xs text-gray-500">ROAS</span><span className="text-sm font-semibold">{calcRoas(s.totals.total_revenue, s.totals.total_budget).toFixed(2)}x</span></div>
-                      <div className="flex justify-between mt-1"><span className="text-xs text-gray-500">CPL Médio</span><span className="text-sm font-semibold">{fmt(s.blended_cpl)}</span></div>
+                      <div className="flex justify-between mt-1"><span className="text-xs text-gray-500">Custo/Lead Médio</span><span className="text-sm font-semibold">{fmt(s.blended_cpl)}</span></div>
                       <div className="flex justify-between mt-1"><span className="text-xs text-gray-500">ROI</span><span className="text-sm font-semibold">{s.overall_roi.toFixed(0)}%</span></div>
                     </div>
                   </div>
@@ -335,7 +335,7 @@ export default function Scenarios() {
                         <th className="text-right py-2 px-3 font-medium text-gray-500">Leads</th>
                         <th className="text-right py-2 px-3 font-medium text-gray-500">Vendas</th>
                         <th className="text-right py-2 px-3 font-medium text-gray-500">Receita</th>
-                        <th className="text-right py-2 px-3 font-medium text-gray-500">CPL</th>
+                        <th className="text-right py-2 px-3 font-medium text-gray-500">Custo/Lead</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
