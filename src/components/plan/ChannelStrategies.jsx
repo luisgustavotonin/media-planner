@@ -11,48 +11,33 @@ const fmtDaily = (budget, days) => days > 0 ? fmtBRL(budget / days) : fmtBRL(0);
 function getKpiLabel(objectiveName, objectives) {
   const obj = objectives.find(o => o.name === objectiveName);
   if (!obj) return 'Custo por unidade';
-  // Procura a métrica marcada como primária
   const primaryMetric = (obj.metrics || []).find(m => m.is_primary);
-  if (primaryMetric?.key === 'leads') return 'CPL (R$)';
-  if (primaryMetric?.key === 'clicks') return 'CPC (R$)';
-  if (primaryMetric?.key === 'impressions') return 'CPM (R$)';
-  // Fallback genérico baseado no primary_kpi_label
-  return obj.primary_kpi_label || 'Custo (R$)';
+  if (primaryMetric?.key === 'leads') return 'CPL';
+  if (primaryMetric?.key === 'clicks') return 'CPC';
+  if (primaryMetric?.key === 'impressions') return 'CPM';
+  return obj.primary_kpi_label || 'Custo';
 }
 
 // ─── Ad Set (Conjunto de Anúncios) ───────────────────────────────────────────
 function AdSet({ adset, days, onChange, onRemove, readOnly, maxBudget }) {
   const [open, setOpen] = useState(false);
-
   const updateField = (field, val) => onChange({ ...adset, [field]: val });
   const updateParam = (field, val) => onChange({ ...adset, params: { ...(adset.params || {}), [field]: val } });
+  const isOver = maxBudget !== undefined && (adset.budget_value || 0) > maxBudget + 0.01;
 
   return (
     <div className="border border-gray-100 rounded-lg bg-gray-50/50 overflow-hidden">
-      {/* Header row */}
       <div className="flex items-center gap-2 p-2">
         <button onClick={() => setOpen(o => !o)} className="p-0.5 text-gray-400 hover:text-gray-600">
           {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
         </button>
-        <input
-          type="text"
-          value={adset.name || ''}
-          onChange={e => updateField('name', e.target.value)}
-          placeholder="Nome do conjunto de anúncios"
-          disabled={readOnly}
-          className="flex-1 h-7 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50"
-        />
+        <input type="text" value={adset.name || ''} onChange={e => updateField('name', e.target.value)}
+          placeholder="Nome do conjunto de anúncios" disabled={readOnly}
+          className="flex-1 h-7 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
         <div className="w-36">
-          <CurrencyInput
-            value={adset.budget_value || 0}
-            onChange={v => {
-              const capped = maxBudget !== undefined ? Math.min(Number(v), maxBudget) : Number(v);
-              updateField('budget_value', capped);
-            }}
-            prefix="R$"
-            className={`text-xs h-7 ${maxBudget !== undefined && (adset.budget_value || 0) > maxBudget ? 'border-red-400' : ''}`}
-            disabled={readOnly}
-          />
+          <CurrencyInput value={adset.budget_value || 0}
+            onChange={v => updateField('budget_value', Number(v))}
+            prefix="R$" className={`text-xs h-7 ${isOver ? 'border-red-400 ring-1 ring-red-300' : ''}`} disabled={readOnly} />
         </div>
         <div className="text-right w-24 shrink-0">
           <span className="text-[10px] text-gray-400">por dia</span>
@@ -64,8 +49,6 @@ function AdSet({ adset, days, onChange, onRemove, readOnly, maxBudget }) {
           </button>
         )}
       </div>
-
-      {/* Parametrizações expandidas */}
       {open && (
         <div className="px-3 pb-3 pt-1 grid grid-cols-1 sm:grid-cols-2 gap-2 border-t border-gray-100 mt-1">
           <ParamField label="Objetivo do conjunto" value={adset.params?.objetivo || ''} onChange={v => updateParam('objetivo', v)} placeholder="Ex: Leads, Tráfego, Conversão" readOnly={readOnly} />
@@ -87,20 +70,14 @@ function ParamField({ label, value, onChange, placeholder, readOnly }) {
   return (
     <div>
       <p className="text-[10px] text-gray-400 mb-0.5">{label}</p>
-      <input
-        type="text"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        disabled={readOnly}
-        className="w-full h-7 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50"
-      />
+      <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={readOnly}
+        className="w-full h-7 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
     </div>
   );
 }
 
 // ─── Campaign (Meta) ─────────────────────────────────────────────────────────
-function Campaign({ campaign, days, onChange, onRemove, readOnly, channelRemaining = 0, objectives }) {
+function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives }) {
   const [open, setOpen] = useState(true);
 
   const updateField = (field, val) => onChange({ ...campaign, [field]: val });
@@ -115,31 +92,35 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, channelRemaini
     onChange({ ...campaign, adsets: [...(campaign.adsets || []), { name: '', budget_value: 0, params: {} }] });
   };
 
-  // O budget da campanha = soma dos adsets (ou budget_value direto)
-  const totalBudget = (campaign.adsets || []).reduce((s, a) => s + (a.budget_value || 0), 0);
+  const campaignBudget = campaign.budget_value || 0;
+  const adsetTotal = (campaign.adsets || []).reduce((s, a) => s + (a.budget_value || 0), 0);
+  const campaignRemaining = campaignBudget - adsetTotal;
   const kpiLabel = getKpiLabel(campaign.objective, objectives);
+  const isCampaignOver = maxCampaignBudget !== undefined && campaignBudget > maxCampaignBudget + 0.01;
+  const isAdsetOver = adsetTotal > campaignBudget + 0.01;
 
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden">
+    <div className={`border rounded-xl overflow-hidden ${isCampaignOver ? 'border-red-300' : 'border-gray-200'}`}>
       {/* Campaign header */}
-      <div className="flex items-center gap-2 p-3 bg-white">
+      <div className="flex items-center gap-2 p-3 bg-white flex-wrap">
         <button onClick={() => setOpen(o => !o)} className="p-0.5 text-gray-400 hover:text-gray-600">
           {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
-        <input
-          type="text"
-          value={campaign.name || ''}
-          onChange={e => updateField('name', e.target.value)}
-          placeholder="Nome da campanha"
-          disabled={readOnly}
-          className="flex-1 min-w-0 h-8 border border-gray-200 rounded-md text-xs px-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50"
-        />
+        <input type="text" value={campaign.name || ''} onChange={e => updateField('name', e.target.value)}
+          placeholder="Nome da campanha" disabled={readOnly}
+          className="flex-1 min-w-[120px] h-8 border border-gray-200 rounded-md text-xs px-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
+        {/* Budget da campanha */}
+        <div className="w-32 shrink-0">
+          <CurrencyInput value={campaignBudget} onChange={v => updateField('budget_value', Number(v))}
+            prefix="R$" className={`text-xs h-8 ${isCampaignOver ? 'border-red-400 ring-1 ring-red-300' : ''}`}
+            disabled={readOnly} placeholder="Budget" />
+        </div>
         {readOnly ? (
           <span className="text-[10px] font-medium px-2 py-1 rounded-full border bg-secondary/60 text-secondary-foreground border-border whitespace-nowrap">
             {campaign.objective || '—'}
           </span>
         ) : (
-          <div className="w-32 shrink-0">
+          <div className="w-28 shrink-0">
             <Select value={campaign.objective || ''} onValueChange={v => updateField('objective', v)}>
               <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Objetivo" /></SelectTrigger>
               <SelectContent>
@@ -148,22 +129,16 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, channelRemaini
             </Select>
           </div>
         )}
-        <div className="w-28 shrink-0">
+        <div className="w-24 shrink-0">
           {readOnly ? (
             <span className="text-xs font-semibold text-gray-700">{fmtBRL(campaign.kpi_value || 0)}</span>
           ) : (
-            <CurrencyInput
-              value={campaign.kpi_value || 0}
-              onChange={v => updateField('kpi_value', v)}
-              prefix="R$"
-              className="text-xs h-8"
-              placeholder="KPI"
-            />
+            <CurrencyInput value={campaign.kpi_value || 0} onChange={v => updateField('kpi_value', v)}
+              prefix="R$" className="text-xs h-8" placeholder="KPI" />
           )}
         </div>
-        <div className="text-right w-20 shrink-0">
-          <span className="text-[10px] text-gray-400">{kpiLabel}</span>
-          <p className="text-xs font-semibold text-gray-700">{fmtBRL(totalBudget)}</p>
+        <div className="text-right w-16 shrink-0">
+          <span className="text-[10px] text-gray-400 block">{kpiLabel}</span>
         </div>
         {!readOnly && (
           <button onClick={onRemove} className="p-1.5 rounded hover:bg-red-50 ml-1">
@@ -174,32 +149,36 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, channelRemaini
 
       {/* Ad sets */}
       {open && (
-        <div className="p-3 pt-0 bg-gray-50/70 space-y-2 border-t border-gray-100">
-          <div className="flex items-center justify-between pt-2 pb-1">
+        <div className="p-3 pt-2 bg-gray-50/70 space-y-2 border-t border-gray-100">
+          <div className="flex items-center justify-between pt-1 pb-1">
             <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1">
               <Layers className="w-3 h-3" /> Conjuntos de anúncios
             </span>
-            {!readOnly && (
-              <Button variant="outline" size="sm" onClick={addAdSet} className="h-6 text-[10px] gap-1 px-2">
-                <Plus className="w-3 h-3" /> Conjunto
-              </Button>
-            )}
+            <div className="flex items-center gap-3">
+              <span className={`text-[11px] font-medium ${isAdsetOver ? 'text-red-500' : 'text-gray-400'}`}>
+                Alocado {fmtBRL(adsetTotal)} de {fmtBRL(campaignBudget)} · Restante {fmtBRL(campaignRemaining)}
+              </span>
+              {!readOnly && (
+                <Button variant="outline" size="sm" onClick={addAdSet} className="h-6 text-[10px] gap-1 px-2">
+                  <Plus className="w-3 h-3" /> Conjunto
+                </Button>
+              )}
+            </div>
           </div>
+          {isAdsetOver && (
+            <p className="text-[11px] text-red-500 font-medium">⚠ A soma dos conjuntos excede o budget da campanha.</p>
+          )}
           {(campaign.adsets || []).length === 0 && (
             <p className="text-[11px] text-gray-400">Nenhum conjunto adicionado.</p>
           )}
           {(campaign.adsets || []).map((adset, idx) => {
-            const maxForAdset = (adset.budget_value || 0) + Math.max(0, channelRemaining);
+            // O máximo que este adset pode ter = budget da campanha - soma dos outros adsets
+            const otherAdsetsTotal = adsetTotal - (adset.budget_value || 0);
+            const maxForAdset = campaignBudget - otherAdsetsTotal;
             return (
-              <AdSet
-                key={idx}
-                adset={adset}
-                days={days}
-                onChange={updated => updateAdSet(idx, updated)}
-                onRemove={() => removeAdSet(idx)}
-                readOnly={readOnly}
-                maxBudget={maxForAdset}
-              />
+              <AdSet key={idx} adset={adset} days={days}
+                onChange={updated => updateAdSet(idx, updated)} onRemove={() => removeAdSet(idx)}
+                readOnly={readOnly} maxBudget={maxForAdset} />
             );
           })}
         </div>
@@ -209,33 +188,28 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, channelRemaini
 }
 
 // ─── Google Campaign ──────────────────────────────────────────────────────────
-function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, objectives }) {
+function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives }) {
   const [open, setOpen] = useState(true);
   const updateField = (field, val) => onChange({ ...campaign, [field]: val });
   const updateParam = (field, val) => onChange({ ...campaign, params: { ...(campaign.params || {}), [field]: val } });
-
   const kpiLabel = getKpiLabel(campaign.objective, objectives);
+  const isOver = maxCampaignBudget !== undefined && (campaign.budget_value || 0) > maxCampaignBudget + 0.01;
 
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden">
-      <div className="flex items-center gap-2 p-3 bg-white">
+    <div className={`border rounded-xl overflow-hidden ${isOver ? 'border-red-300' : 'border-gray-200'}`}>
+      <div className="flex items-center gap-2 p-3 bg-white flex-wrap">
         <button onClick={() => setOpen(o => !o)} className="p-0.5 text-gray-400 hover:text-gray-600">
           {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
-        <input
-          type="text"
-          value={campaign.name || ''}
-          onChange={e => updateField('name', e.target.value)}
-          placeholder="Nome da campanha"
-          disabled={readOnly}
-          className="flex-1 min-w-0 h-8 border border-gray-200 rounded-md text-xs px-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50"
-        />
+        <input type="text" value={campaign.name || ''} onChange={e => updateField('name', e.target.value)}
+          placeholder="Nome da campanha" disabled={readOnly}
+          className="flex-1 min-w-[120px] h-8 border border-gray-200 rounded-md text-xs px-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
         {readOnly ? (
           <span className="text-[10px] font-medium px-2 py-1 rounded-full border bg-secondary/60 text-secondary-foreground border-border whitespace-nowrap">
             {campaign.objective || '—'}
           </span>
         ) : (
-          <div className="w-32 shrink-0">
+          <div className="w-28 shrink-0">
             <Select value={campaign.objective || ''} onValueChange={v => updateField('objective', v)}>
               <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Objetivo" /></SelectTrigger>
               <SelectContent>
@@ -244,24 +218,20 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, objectiv
             </Select>
           </div>
         )}
-        <div className="w-28 shrink-0">
+        <div className="w-24 shrink-0">
           {readOnly ? (
             <span className="text-xs font-semibold text-gray-700">{fmtBRL(campaign.kpi_value || 0)}</span>
           ) : (
-            <CurrencyInput
-              value={campaign.kpi_value || 0}
-              onChange={v => updateField('kpi_value', v)}
-              prefix="R$"
-              className="text-xs h-8"
-              placeholder="KPI"
-            />
+            <CurrencyInput value={campaign.kpi_value || 0} onChange={v => updateField('kpi_value', v)}
+              prefix="R$" className="text-xs h-8" placeholder="KPI" />
           )}
         </div>
-        <div className="text-right w-16 shrink-0">
-          <span className="text-[10px] text-gray-400">{kpiLabel}</span>
+        <div className="text-right w-12 shrink-0">
+          <span className="text-[10px] text-gray-400 block">{kpiLabel}</span>
         </div>
         <div className="w-28 shrink-0">
-          <CurrencyInput value={campaign.budget_value || 0} onChange={v => updateField('budget_value', Number(v))} prefix="R$" className="text-xs h-8" disabled={readOnly} />
+          <CurrencyInput value={campaign.budget_value || 0} onChange={v => updateField('budget_value', Number(v))}
+            prefix="R$" className={`text-xs h-8 ${isOver ? 'border-red-400 ring-1 ring-red-300' : ''}`} disabled={readOnly} />
         </div>
         <div className="text-right w-16 shrink-0">
           <span className="text-[10px] text-gray-400">por dia</span>
@@ -273,7 +243,6 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, objectiv
           </button>
         )}
       </div>
-
       {open && (
         <div className="px-4 pb-4 pt-2 border-t border-gray-100 bg-gray-50/50">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -300,12 +269,10 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, days = 30, onCha
     if (readOnly) return;
     onChange([...strategies, { name: '', objective: '', kpi_value: 0, budget_value: 0, params: {} }]);
   };
-
   const updateCampaign = (idx, updated) => {
     if (readOnly) return;
     onChange(strategies.map((c, i) => i === idx ? updated : c));
   };
-
   const removeCampaign = (idx) => {
     if (readOnly) return;
     onChange(strategies.filter((_, i) => i !== idx));
@@ -326,21 +293,22 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, days = 30, onCha
           )}
         </div>
       </div>
+      {remaining < -0.01 && (
+        <p className="text-[11px] text-red-500 font-medium">⚠ A soma das campanhas excede o budget do canal.</p>
+      )}
       {strategies.length === 0 && (
         <p className="text-[11px] text-gray-400 py-1">Nenhuma campanha adicionada.</p>
       )}
       <div className="space-y-3">
-        {strategies.map((camp, idx) => (
-          <GoogleCampaign
-            key={idx}
-            campaign={camp}
-            days={days}
-            onChange={updated => updateCampaign(idx, updated)}
-            onRemove={() => removeCampaign(idx)}
-            readOnly={readOnly}
-            objectives={objectives}
-          />
-        ))}
+        {strategies.map((camp, idx) => {
+          const otherTotal = totalAllocated - (camp.budget_value || 0);
+          const maxForCampaign = channelBudget - otherTotal;
+          return (
+            <GoogleCampaign key={idx} campaign={camp} days={days}
+              onChange={updated => updateCampaign(idx, updated)} onRemove={() => removeCampaign(idx)}
+              readOnly={readOnly} maxCampaignBudget={maxForCampaign} objectives={objectives} />
+          );
+        })}
       </div>
     </div>
   );
@@ -348,23 +316,18 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, days = 30, onCha
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function ChannelStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, days = 30, onChange, readOnly, channelName = 'Meta', objectives = [] }) {
-  // Para Meta: o total alocado = soma dos budgets dos adsets de todas as campanhas
-  const totalAllocated = strategies.reduce((s, camp) => {
-    const campBudget = camp.budget_value || (camp.adsets || []).reduce((ss, a) => ss + (a.budget_value || 0), 0);
-    return s + campBudget;
-  }, 0);
+  // Total alocado = soma dos budgets das campanhas (cada campanha tem seu próprio budget)
+  const totalAllocated = strategies.reduce((s, camp) => s + (camp.budget_value || 0), 0);
   const remaining = (channelBudget || 0) - totalAllocated;
 
   const addCampaign = () => {
     if (readOnly) return;
-    onChange([...strategies, { name: '', objective: '', kpi_value: 0, adsets: [] }]);
+    onChange([...strategies, { name: '', objective: '', kpi_value: 0, budget_value: 0, adsets: [] }]);
   };
-
   const updateCampaign = (idx, updated) => {
     if (readOnly) return;
     onChange(strategies.map((c, i) => i === idx ? updated : c));
   };
-
   const removeCampaign = (idx) => {
     if (readOnly) return;
     onChange(strategies.filter((_, i) => i !== idx));
@@ -372,14 +335,8 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
 
   if (channelName === 'Google') {
     return (
-      <GoogleStrategies
-        strategies={strategies}
-        channelBudget={channelBudget}
-        days={days}
-        onChange={onChange}
-        readOnly={readOnly}
-        objectives={objectives}
-      />
+      <GoogleStrategies strategies={strategies} channelBudget={channelBudget} days={days}
+        onChange={onChange} readOnly={readOnly} objectives={objectives} />
     );
   }
 
@@ -398,24 +355,23 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
           )}
         </div>
       </div>
-
+      {remaining < -0.01 && (
+        <p className="text-[11px] text-red-500 font-medium">⚠ A soma das campanhas excede o budget do canal.</p>
+      )}
       {strategies.length === 0 && (
         <p className="text-[11px] text-gray-400 py-1">Nenhuma campanha adicionada. Cada campanha tem seu próprio objetivo e KPI de custo.</p>
       )}
-
       <div className="space-y-3">
-        {strategies.map((camp, idx) => (
-          <Campaign
-            key={idx}
-            campaign={camp}
-            days={days}
-            onChange={updated => updateCampaign(idx, updated)}
-            onRemove={() => removeCampaign(idx)}
-            readOnly={readOnly}
-            channelRemaining={remaining}
-            objectives={objectives}
-          />
-        ))}
+        {strategies.map((camp, idx) => {
+          // O máximo que esta campanha pode ter = budget do canal - soma das outras campanhas
+          const otherTotal = totalAllocated - (camp.budget_value || 0);
+          const maxForCampaign = channelBudget - otherTotal;
+          return (
+            <Campaign key={idx} campaign={camp} days={days}
+              onChange={updated => updateCampaign(idx, updated)} onRemove={() => removeCampaign(idx)}
+              readOnly={readOnly} maxCampaignBudget={maxForCampaign} objectives={objectives} />
+          );
+        })}
       </div>
     </div>
   );
