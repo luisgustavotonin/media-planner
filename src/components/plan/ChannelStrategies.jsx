@@ -80,7 +80,7 @@ function ParamField({ label, value, onChange, placeholder, readOnly }) {
 }
 
 // ─── Campaign (Meta) ─────────────────────────────────────────────────────────
-function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives }) {
+function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives, availableObjectives }) {
   const [open, setOpen] = useState(true);
 
   const updateField = (field, val) => onChange({ ...campaign, [field]: val });
@@ -174,7 +174,7 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
             <Select value={campaign.objective || ''} onValueChange={v => updateField('objective', v)}>
               <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Objetivo" /></SelectTrigger>
               <SelectContent>
-                {objectives.map(o => <SelectItem key={o.id} value={o.name}>{o.name}</SelectItem>)}
+                {(availableObjectives || objectives).map(o => <SelectItem key={o.id} value={o.name}>{o.name}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
@@ -228,7 +228,7 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
 }
 
 // ─── Google Campaign ──────────────────────────────────────────────────────────
-function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives }) {
+function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives, availableObjectives }) {
   const [open, setOpen] = useState(true);
   const updateField = (field, val) => onChange({ ...campaign, [field]: val });
   const updateParam = (field, val) => onChange({ ...campaign, params: { ...(campaign.params || {}), [field]: val } });
@@ -300,7 +300,7 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
             <Select value={campaign.objective || ''} onValueChange={v => updateField('objective', v)}>
               <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Objetivo" /></SelectTrigger>
               <SelectContent>
-                {objectives.map(o => <SelectItem key={o.id} value={o.name}>{o.name}</SelectItem>)}
+                {(availableObjectives || objectives).map(o => <SelectItem key={o.id} value={o.name}>{o.name}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
@@ -339,7 +339,7 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
   );
 }
 
-function GoogleStrategies({ strategies = [], channelBudget = 0, days = 30, onChange, readOnly, objectives }) {
+function GoogleStrategies({ strategies = [], channelBudget = 0, days = 30, onChange, readOnly, objectives, availableObjectives }) {
   const totalAllocated = strategies.reduce((s, c) => s + (c.budget_value || 0), 0);
   const remaining = channelBudget - totalAllocated;
 
@@ -384,7 +384,7 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, days = 30, onCha
           return (
             <GoogleCampaign key={idx} campaign={camp} days={days}
               onChange={updated => updateCampaign(idx, updated)} onRemove={() => removeCampaign(idx)}
-              readOnly={readOnly} maxCampaignBudget={maxForCampaign} objectives={objectives} />
+              readOnly={readOnly} maxCampaignBudget={maxForCampaign} objectives={objectives} availableObjectives={availableObjectives} />
           );
         })}
       </div>
@@ -394,6 +394,9 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, days = 30, onCha
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function ChannelStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, days = 30, onChange, readOnly, channelName = 'Meta', objectives = [] }) {
+  // Filtra objetivos aplicáveis a este canal (sem channels = disponível para todos)
+  const availableObjectives = objectives.filter(o => !o.channels || o.channels.length === 0 || o.channels.includes(channelName));
+
   // Total alocado = soma dos budgets das campanhas (cada campanha tem seu próprio budget)
   const totalAllocated = strategies.reduce((s, camp) => s + (camp.budget_value || 0), 0);
   const remaining = (channelBudget || 0) - totalAllocated;
@@ -414,7 +417,7 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
   if (channelName === 'Google') {
     return (
       <GoogleStrategies strategies={strategies} channelBudget={channelBudget} days={days}
-        onChange={onChange} readOnly={readOnly} objectives={objectives} />
+        onChange={onChange} readOnly={readOnly} objectives={objectives} availableObjectives={availableObjectives} />
     );
   }
 
@@ -447,7 +450,7 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
           return (
             <Campaign key={idx} campaign={camp} days={days}
               onChange={updated => updateCampaign(idx, updated)} onRemove={() => removeCampaign(idx)}
-              readOnly={readOnly} maxCampaignBudget={maxForCampaign} objectives={objectives} />
+              readOnly={readOnly} maxCampaignBudget={maxForCampaign} objectives={objectives} availableObjectives={availableObjectives} />
           );
         })}
       </div>

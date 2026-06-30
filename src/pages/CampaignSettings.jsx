@@ -22,6 +22,7 @@ const PRESET_OBJECTIVES = [
       { key: 'cost', label: 'Investimento (R$)', unit: 'moeda', is_primary: false },
       { key: 'impressions', label: 'Impressões', unit: 'numero', is_primary: false },
     ],
+    channels: ['Meta', 'Google', 'TikTok', 'YouTube', 'LinkedIn'],
     is_active: true,
   },
   {
@@ -35,6 +36,7 @@ const PRESET_OBJECTIVES = [
       { key: 'sessions', label: 'Sessões', unit: 'numero', is_primary: false },
       { key: 'cost', label: 'Investimento (R$)', unit: 'moeda', is_primary: false },
     ],
+    channels: ['Meta', 'Google', 'TikTok', 'YouTube', 'LinkedIn'],
     is_active: true,
   },
   {
@@ -48,6 +50,7 @@ const PRESET_OBJECTIVES = [
       { key: 'reach', label: 'Alcance', unit: 'numero', is_primary: false },
       { key: 'cost', label: 'Investimento (R$)', unit: 'moeda', is_primary: false },
     ],
+    channels: ['Meta', 'Google', 'TikTok', 'YouTube', 'LinkedIn'],
     is_active: true,
   },
   {
@@ -61,6 +64,7 @@ const PRESET_OBJECTIVES = [
       { key: 'clicks', label: 'Cliques', unit: 'numero', is_primary: false },
       { key: 'cost', label: 'Investimento (R$)', unit: 'moeda', is_primary: false },
     ],
+    channels: ['Meta', 'Google', 'TikTok', 'YouTube', 'LinkedIn'],
     is_active: true,
   },
 ];
@@ -167,8 +171,12 @@ function ChannelsTab() {
 }
 
 // ── Formulário de Objetivo ──
-function ObjectiveForm({ initial, onSave, onCancel, saving }) {
+function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [] }) {
   const [form, setForm] = useState(initial);
+  const toggleChannel = (ch) => setForm(f => {
+    const list = f.channels || [];
+    return { ...f, channels: list.includes(ch) ? list.filter(c => c !== ch) : [...list, ch] };
+  });
   const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const addMetric = () => setForm(f => ({ ...f, metrics: [...(f.metrics || []), { key: '', label: '', unit: 'numero', is_primary: false }] }));
   const updateMetric = (i, k, v) => setForm(f => ({ ...f, metrics: f.metrics.map((m, j) => j === i ? { ...m, [k]: v } : m) }));
@@ -221,6 +229,21 @@ function ObjectiveForm({ initial, onSave, onCancel, saving }) {
           placeholder="Breve descrição..." value={form.description} onChange={e => setField('description', e.target.value)} />
       </div>
       <div>
+        <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Canais Aplicáveis</Label>
+        <p className="text-[10px] text-gray-400 mb-2">Selecione em quais canais este objetivo pode ser usado.</p>
+        <div className="flex flex-wrap gap-2">
+          {(channels.length ? channels.map(c => c.name) : PRESET_CHANNELS).map(ch => {
+            const selected = (form.channels || []).includes(ch);
+            return (
+              <button key={ch} type="button" onClick={() => toggleChannel(ch)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selected ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                {ch}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div>
         <div className="flex items-center justify-between mb-2">
           <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Métricas a Acompanhar no Semanal</Label>
           <button onClick={addMetric} type="button" className="flex items-center gap-1 text-xs text-primary hover:underline">
@@ -271,6 +294,11 @@ function ObjectivesTab() {
     queryFn: () => base44.entities.CampaignObjective.list(),
   });
 
+  const { data: channels = [] } = useQuery({
+    queryKey: ['channels'],
+    queryFn: () => base44.entities.Channel.list(),
+  });
+
   const createMut = useMutation({
     mutationFn: (d) => base44.entities.CampaignObjective.create(d),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['campaign-objectives'] }); setEditingId(null); toast({ title: 'Objetivo criado!' }); },
@@ -317,8 +345,9 @@ function ObjectivesTab() {
             <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg hover:bg-gray-100"><X className="w-4 h-4 text-gray-400" /></button>
           </div>
           <ObjectiveForm
-            initial={editingId === 'new' ? { name: '', description: '', type: 'performance', kpi_unit: 'moeda', primary_kpi_label: '', metrics: [{ key: '', label: '', unit: 'numero', is_primary: true }], is_active: true } : { type: 'performance', kpi_unit: 'moeda', ...editingObj }}
+            initial={editingId === 'new' ? { name: '', description: '', type: 'performance', kpi_unit: 'moeda', primary_kpi_label: '', metrics: [{ key: '', label: '', unit: 'numero', is_primary: true }], channels: [], is_active: true } : { type: 'performance', kpi_unit: 'moeda', ...editingObj }}
             onSave={handleSave} onCancel={() => setEditingId(null)} saving={createMut.isPending || updateMut.isPending}
+            channels={channels}
           />
         </div>
       )}
@@ -346,6 +375,13 @@ function ObjectivesTab() {
                     </div>
                     {obj.description && <p className="text-xs text-gray-400 mt-0.5">{obj.description}</p>}
                     {obj.primary_kpi_label && <p className="text-[11px] text-primary font-medium mt-1">KPI: {obj.primary_kpi_label}</p>}
+                    {obj.channels?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {obj.channels.map(ch => (
+                          <span key={ch} className="text-[10px] px-1.5 py-0.5 rounded border border-gray-200 bg-gray-50 text-gray-500">{ch}</span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
                     <button onClick={() => setExpanded(e => ({ ...e, [obj.id]: !e[obj.id] }))} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
