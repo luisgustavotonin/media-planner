@@ -74,19 +74,19 @@ function CampaignKpis({ campaign, objectives, onChange, readOnly }) {
   };
 
   return (
-    <div className="flex flex-wrap gap-2 px-3 pb-2 pt-1 bg-white border-t border-gray-50">
+    <>
       {displayKpis.map(kpi => (
         <div key={kpi.label} className="w-28 shrink-0">
-          <label className="text-[10px] text-gray-400 block mb-0.5">{kpi.label}</label>
+          <label className="text-[10px] text-gray-400 block mb-1">{kpi.label}</label>
           <KpiField kpi={kpi} value={kpi.value} onChange={v => updateKpiValue(kpi.label, v)} readOnly={readOnly} />
         </div>
       ))}
-    </div>
+    </>
   );
 }
 
 // Componente que renderiza o seletor de funil e as taxas de conversão da campanha
-function CampaignFunnel({ campaign, funnelTypes, benchmarks, segment, onChange, readOnly }) {
+function CampaignFunnel({ campaign, funnelTypes, benchmarks, segment, channelName, onChange, readOnly }) {
   const funnelType = funnelTypes.find(ft => ft.id === campaign.funnel_type_id);
   const stages = funnelType?.stages || [];
 
@@ -102,7 +102,13 @@ function CampaignFunnel({ campaign, funnelTypes, benchmarks, segment, onChange, 
     const rates = bm?.conversion_rates?.length
       ? bm.conversion_rates
       : st.slice(0, -1).map(s => s.default_rate || 0);
-    onChange({ ...campaign, funnel_type_id: funnelId, funnel_rates: rates });
+    // Puxa o CPL do benchmark com base no canal
+    const bmCpl = channelName === 'Google' ? bm?.google_default_cpl : bm?.meta_default_cpl;
+    const newKpiValues = (campaign.kpi_values || []).map(kv =>
+      kv.unit === 'moeda' && bmCpl ? { ...kv, value: bmCpl } : kv
+    );
+    const costKpi = newKpiValues.find(kv => kv.unit === 'moeda');
+    onChange({ ...campaign, funnel_type_id: funnelId, funnel_rates: rates, kpi_values: newKpiValues, kpi_value: costKpi?.value || campaign.kpi_value || 0 });
   };
 
   const updateRate = (i, value) => {
@@ -203,8 +209,9 @@ function ParamField({ label, value, onChange, placeholder, readOnly }) {
 }
 
 // ─── Campaign (Meta) ─────────────────────────────────────────────────────────
-function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives, availableObjectives, funnelTypes = [], benchmarks = [], segment = '' }) {
+function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives, availableObjectives, funnelTypes = [], benchmarks = [], segment = '', channelName = 'Meta' }) {
   const [open, setOpen] = useState(true);
+  const [showFunnel, setShowFunnel] = useState(false);
 
   const updateField = (field, val) => onChange({ ...campaign, [field]: val });
   const updateAdSet = (idx, updated) => {
@@ -236,12 +243,13 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
         <button onClick={() => setOpen(o => !o)} className="p-0.5 text-gray-400 hover:text-gray-600 mb-1.5">
           {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
-        <div className="flex-1 min-w-[120px]">
+        <div className="w-40 shrink-0">
           <label className="text-[10px] text-gray-400 block mb-1">Nome da campanha</label>
           <input type="text" value={campaign.name || ''} onChange={e => updateField('name', e.target.value)}
             placeholder="Ex: Topo de funil" disabled={readOnly}
             className="w-full h-8 border border-gray-200 rounded-md text-xs px-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
         </div>
+        <CampaignKpis campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
         <div className="w-32 shrink-0">
           <label className="text-[10px] text-gray-400 block mb-1">Valor da campanha</label>
           <CurrencyInput value={campaignBudget} onChange={v => updateField('budget_value', Number(v))}
@@ -270,11 +278,17 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
         )}
       </div>
 
-      {/* KPI inputs */}
-      <CampaignKpis campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
-
-      {/* Funil da campanha */}
-      <CampaignFunnel campaign={campaign} funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} onChange={onChange} readOnly={readOnly} />
+      {/* Funil da campanha — só aparece após adicionar */}
+      {(campaign.funnel_type_id || showFunnel) ? (
+        <CampaignFunnel campaign={campaign} funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} channelName={channelName}
+          onChange={(updated) => { onChange(updated); if (!updated.funnel_type_id) setShowFunnel(false); }} readOnly={readOnly} />
+      ) : !readOnly && (
+        <div className="px-3 pb-2 pt-1 bg-white border-t border-gray-50">
+          <button onClick={() => setShowFunnel(true)} className="text-[10px] text-primary font-medium hover:underline flex items-center gap-1">
+            <Plus className="w-3 h-3" /> Adicionar funil
+          </button>
+        </div>
+      )}
 
       {/* Ad sets */}
       {open && (
@@ -318,6 +332,7 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
 // ─── Google Campaign ──────────────────────────────────────────────────────────
 function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives, availableObjectives, funnelTypes = [], benchmarks = [], segment = '' }) {
   const [open, setOpen] = useState(true);
+  const [showFunnel, setShowFunnel] = useState(false);
   const updateField = (field, val) => onChange({ ...campaign, [field]: val });
   const updateParam = (field, val) => onChange({ ...campaign, params: { ...(campaign.params || {}), [field]: val } });
   const isOver = maxCampaignBudget !== undefined && (campaign.budget_value || 0) > maxCampaignBudget + 0.01;
@@ -333,12 +348,13 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
         <button onClick={() => setOpen(o => !o)} className="p-0.5 text-gray-400 hover:text-gray-600 mb-1.5">
           {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
-        <div className="flex-1 min-w-[120px]">
+        <div className="w-40 shrink-0">
           <label className="text-[10px] text-gray-400 block mb-1">Nome da campanha</label>
           <input type="text" value={campaign.name || ''} onChange={e => updateField('name', e.target.value)}
             placeholder="Ex: Topo de funil" disabled={readOnly}
             className="w-full h-8 border border-gray-200 rounded-md text-xs px-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
         </div>
+        <CampaignKpis campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
         <div className="w-28 shrink-0">
           <label className="text-[10px] text-gray-400 block mb-1">Objetivo</label>
           {readOnly ? (
@@ -370,11 +386,17 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
         )}
       </div>
 
-      {/* KPI inputs */}
-      <CampaignKpis campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
-
-      {/* Funil da campanha */}
-      <CampaignFunnel campaign={campaign} funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} onChange={onChange} readOnly={readOnly} />
+      {/* Funil da campanha — só aparece após adicionar */}
+      {(campaign.funnel_type_id || showFunnel) ? (
+        <CampaignFunnel campaign={campaign} funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} channelName="Google"
+          onChange={(updated) => { onChange(updated); if (!updated.funnel_type_id) setShowFunnel(false); }} readOnly={readOnly} />
+      ) : !readOnly && (
+        <div className="px-3 pb-2 pt-1 bg-white border-t border-gray-50">
+          <button onClick={() => setShowFunnel(true)} className="text-[10px] text-primary font-medium hover:underline flex items-center gap-1">
+            <Plus className="w-3 h-3" /> Adicionar funil
+          </button>
+        </div>
+      )}
 
       {open && (
         <div className="px-4 pb-4 pt-2 border-t border-gray-100 bg-gray-50/50">
@@ -506,7 +528,7 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
             <Campaign key={idx} campaign={camp} days={days}
               onChange={updated => updateCampaign(idx, updated)} onRemove={() => removeCampaign(idx)}
               readOnly={readOnly} maxCampaignBudget={maxForCampaign} objectives={objectives} availableObjectives={availableObjectives}
-              funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} />
+              funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} channelName={channelName} />
           );
         })}
       </div>

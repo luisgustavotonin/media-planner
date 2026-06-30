@@ -268,13 +268,13 @@ export default function PlanDetail() {
       </div>
 
       {channels.length > 0 && (
-        <>
-          <div className="mb-6">
-            <FunnelChart data={consolidated.totals} title="Funil Consolidado" funnelStages={funnelStages} benchmark={benchmark} />
-          </div>
+        <ResultsTable channelResults={consolidated.channelResults} totals={consolidated.totals} blended={consolidated} funnelStages={funnelStages} />
+      )}
 
-          <ResultsTable channelResults={consolidated.channelResults} totals={consolidated.totals} blended={consolidated} funnelStages={funnelStages} />
-        </>
+      {channels.some(ch => (ch.strategies || []).some(c => c.funnel_type_id)) && (
+        <div className="mb-6 mt-6">
+          <FunnelChart data={consolidated.totals} title="Funil Consolidado" funnelStages={funnelStages} benchmark={benchmark} />
+        </div>
       )}
     </div>
   );
