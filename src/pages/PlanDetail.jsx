@@ -222,37 +222,64 @@ export default function PlanDetail() {
         </div>
       )}
 
+      {/* Branding */}
       {consolidated.totals.branding && consolidated.totals.branding.investment > 0 && (
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6 lg:grid-cols-4">
-          <StatCard label="Investimento Brand" value={`R$${Math.round(consolidated.totals.branding.investment).toLocaleString('pt-BR')}`} icon={Megaphone} color="orange" sublabel="branding" />
-          {consolidated.totals.branding.impressions > 0 && (
-            <StatCard label="Impressões Esperadas" value={consolidated.totals.branding.impressions.toLocaleString('pt-BR')} icon={Eye} color="blue" sublabel="CPM" />
-          )}
-          {consolidated.totals.branding.clicks > 0 && (
-            <StatCard label="Cliques Esperados" value={consolidated.totals.branding.clicks.toLocaleString('pt-BR')} icon={MousePointer} color="purple" sublabel="CPC" />
-          )}
-          {consolidated.totals.branding.impressions > 0 && consolidated.totals.branding.clicks > 0 && (
-            <StatCard label="CTR Projetado" value={`${(consolidated.totals.branding.clicks / consolidated.totals.branding.impressions * 100).toFixed(2)}%`} icon={TrendingUp} color="green" sublabel="cliques/impressões" />
-          )}
-        </div>
+        <>
+          <div className="flex items-center gap-2 mb-2">
+            <Megaphone className="w-3.5 h-3.5 text-gray-400" />
+            <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Branding</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6 lg:grid-cols-4">
+            <StatCard label="Investimento Brand" value={`R$${Math.round(consolidated.totals.branding.investment).toLocaleString('pt-BR')}`} icon={Megaphone} color="orange" sublabel="branding" />
+            {consolidated.totals.branding.impressions > 0 && (
+              <StatCard label="Impressões Esperadas" value={consolidated.totals.branding.impressions.toLocaleString('pt-BR')} icon={Eye} color="blue" sublabel="CPM" />
+            )}
+            {consolidated.totals.branding.clicks > 0 && (
+              <StatCard label="Cliques Esperados" value={consolidated.totals.branding.clicks.toLocaleString('pt-BR')} icon={MousePointer} color="purple" sublabel="CPC" />
+            )}
+            {consolidated.totals.branding.impressions > 0 && consolidated.totals.branding.clicks > 0 && (
+              <StatCard label="CTR Projetado" value={`${(consolidated.totals.branding.clicks / consolidated.totals.branding.impressions * 100).toFixed(2)}%`} icon={TrendingUp} color="green" sublabel="cliques/impressões" />
+            )}
+            {consolidated.totals.kpi_totals_branding?.map((kpi, i) => (
+              <StatCard
+                key={`b-${i}`}
+                label={kpi.label}
+                value={
+                  kpi.unit === 'percentual' ? `${(kpi.value * 100).toFixed(1)}%` :
+                  kpi.unit === 'numero' ? Math.round(kpi.value).toLocaleString('pt-BR') :
+                  `R$${kpi.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                }
+                icon={kpi.unit === 'moeda' ? DollarSign : kpi.unit === 'percentual' ? TrendingUp : Target}
+                color={kpi.unit === 'moeda' ? 'blue' : kpi.unit === 'percentual' ? 'green' : 'purple'}
+              />
+            ))}
+          </div>
+        </>
       )}
 
-      {consolidated.totals.kpi_totals?.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6 lg:grid-cols-4">
-          {consolidated.totals.kpi_totals.map((kpi, i) => (
-            <StatCard
-              key={i}
-              label={kpi.label}
-              value={
-                kpi.unit === 'percentual' ? `${(kpi.value * 100).toFixed(1)}%` :
-                kpi.unit === 'numero' ? Math.round(kpi.value).toLocaleString('pt-BR') :
-                `R$${kpi.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-              }
-              icon={kpi.unit === 'moeda' ? DollarSign : kpi.unit === 'percentual' ? TrendingUp : Target}
-              color={kpi.unit === 'moeda' ? 'blue' : kpi.unit === 'percentual' ? 'green' : 'purple'}
-            />
-          ))}
-        </div>
+      {/* Performance */}
+      {consolidated.totals.kpi_totals_performance?.length > 0 && (
+        <>
+          <div className="flex items-center gap-2 mb-2">
+            <Target className="w-3.5 h-3.5 text-gray-400" />
+            <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Performance</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6 lg:grid-cols-4">
+            {consolidated.totals.kpi_totals_performance.map((kpi, i) => (
+              <StatCard
+                key={`p-${i}`}
+                label={kpi.label}
+                value={
+                  kpi.unit === 'percentual' ? `${(kpi.value * 100).toFixed(1)}%` :
+                  kpi.unit === 'numero' ? Math.round(kpi.value).toLocaleString('pt-BR') :
+                  `R$${kpi.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                }
+                icon={kpi.unit === 'moeda' ? DollarSign : kpi.unit === 'percentual' ? TrendingUp : Target}
+                color={kpi.unit === 'moeda' ? 'blue' : kpi.unit === 'percentual' ? 'green' : 'purple'}
+              />
+            ))}
+          </div>
+        </>
       )}
 
       {!readOnly && (

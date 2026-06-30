@@ -147,34 +147,41 @@ export function calculateConsolidated(channels, conversionRates, averageTicket, 
   };
 
   // Agrega todos os KPIs preenchidos nas campanhas (kpi_values com value > 0)
+  // Separa por tipo de objetivo (performance vs branding)
   const kpiMap = {};
   for (const ch of channels) {
     for (const camp of ch.strategies || []) {
+      const obj = objectives.find(o => o.name === camp.objective);
+      const objType = obj?.type || 'performance';
       const campBudget = camp.budget_value || 0;
       for (const kv of camp.kpi_values || []) {
         if (kv.value > 0) {
-          if (!kpiMap[kv.label]) {
-            kpiMap[kv.label] = { label: kv.label, unit: kv.unit, totalValue: 0, totalBudget: 0, count: 0 };
+          const key = `${kv.label}__${objType}`;
+          if (!kpiMap[key]) {
+            kpiMap[key] = { label: kv.label, unit: kv.unit, totalValue: 0, totalBudget: 0, count: 0, type: objType };
           }
           if (kv.unit === 'numero') {
-            kpiMap[kv.label].totalValue += kv.value;
+            kpiMap[key].totalValue += kv.value;
           } else {
-            // moeda/percentual: média ponderada por budget
-            kpiMap[kv.label].totalValue += kv.value * campBudget;
-            kpiMap[kv.label].totalBudget += campBudget;
+            kpiMap[key].totalValue += kv.value * campBudget;
+            kpiMap[key].totalBudget += campBudget;
           }
-          kpiMap[kv.label].count++;
+          kpiMap[key].count++;
         }
       }
     }
   }
-  totals.kpi_totals = Object.values(kpiMap).map(k => ({
+  const kpiList = Object.values(kpiMap).map(k => ({
     label: k.label,
     unit: k.unit,
+    type: k.type,
     value: k.unit === 'numero'
       ? k.totalValue
       : (k.totalBudget > 0 ? k.totalValue / k.totalBudget : (k.count > 0 ? k.totalValue / k.count : 0)),
   }));
+  totals.kpi_totals = kpiList;
+  totals.kpi_totals_performance = kpiList.filter(k => k.type === 'performance');
+  totals.kpi_totals_branding = kpiList.filter(k => k.type === 'branding');
 
   return {
     channelResults,

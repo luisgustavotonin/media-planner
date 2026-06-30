@@ -86,8 +86,8 @@ function CampaignKpis({ campaign, objectives, onChange, readOnly }) {
 }
 
 // Componente que renderiza o seletor de funil e as taxas de conversão da campanha
-function CampaignFunnel({ campaign, funnelTypes, onChange, readOnly }) {
-  const funnelType = funnelTypes.find(ft => ft.id === campaign.funnel_type_id);
+function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnly }) {
+  const funnelType = funnelTypes.find(ft => ft.id === funnelTypeId);
   const stages = funnelType?.stages || [];
   if (!funnelType || stages.length < 2) return null;
 
@@ -194,6 +194,8 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
   const campaignRemaining = campaignBudget - adsetTotal;
   const isCampaignOver = maxCampaignBudget !== undefined && campaignBudget > maxCampaignBudget + 0.01;
   const isAdsetOver = adsetTotal > campaignBudget + 0.01;
+  const currentObj = objectives.find(o => o.name === campaign.objective);
+  const effectiveFunnelTypeId = campaign.funnel_type_id || currentObj?.funnel_type_id || '';
 
   const handleObjectiveChange = (v) => {
     const newKpiValues = syncKpiValues(campaign, v, objectives);
@@ -217,13 +219,12 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
         <button onClick={() => setOpen(o => !o)} className="p-0.5 text-gray-400 hover:text-gray-600 mb-1.5">
           {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
-        <div className="w-40 shrink-0">
+        <div className="flex-1 min-w-[200px]">
           <label className="text-[10px] text-gray-400 block mb-1">Nome da campanha</label>
           <input type="text" value={campaign.name || ''} onChange={e => updateField('name', e.target.value)}
             placeholder="Ex: Topo de funil" disabled={readOnly}
             className="w-full h-8 border border-gray-200 rounded-md text-xs px-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
         </div>
-        <CampaignKpis campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
         <div className="w-32 shrink-0">
           <label className="text-[10px] text-gray-400 block mb-1">Valor da campanha</label>
           <CurrencyInput value={campaignBudget} onChange={v => updateField('budget_value', Number(v))}
@@ -245,6 +246,7 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
             </Select>
           )}
         </div>
+        <CampaignKpis campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
         {!readOnly && (
           <button onClick={onRemove} className="p-1.5 rounded hover:bg-red-50 ml-1 mb-1.5">
             <Trash2 className="w-3.5 h-3.5 text-red-400" />
@@ -289,8 +291,8 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
       )}
 
       {/* Funil da campanha — no rodapé do card, vem do objetivo */}
-      {campaign.funnel_type_id && (
-        <CampaignFunnel campaign={campaign} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} />
+      {effectiveFunnelTypeId && (
+        <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} />
       )}
     </div>
   );
@@ -302,6 +304,8 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
   const updateField = (field, val) => onChange({ ...campaign, [field]: val });
   const updateParam = (field, val) => onChange({ ...campaign, params: { ...(campaign.params || {}), [field]: val } });
   const isOver = maxCampaignBudget !== undefined && (campaign.budget_value || 0) > maxCampaignBudget + 0.01;
+  const currentObj = objectives.find(o => o.name === campaign.objective);
+  const effectiveFunnelTypeId = campaign.funnel_type_id || currentObj?.funnel_type_id || '';
 
   const handleObjectiveChange = (v) => {
     const newKpiValues = syncKpiValues(campaign, v, objectives);
@@ -324,13 +328,17 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
         <button onClick={() => setOpen(o => !o)} className="p-0.5 text-gray-400 hover:text-gray-600 mb-1.5">
           {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
-        <div className="w-40 shrink-0">
+        <div className="flex-1 min-w-[200px]">
           <label className="text-[10px] text-gray-400 block mb-1">Nome da campanha</label>
           <input type="text" value={campaign.name || ''} onChange={e => updateField('name', e.target.value)}
             placeholder="Ex: Topo de funil" disabled={readOnly}
             className="w-full h-8 border border-gray-200 rounded-md text-xs px-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
         </div>
-        <CampaignKpis campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
+        <div className="w-28 shrink-0">
+          <label className="text-[10px] text-gray-400 block mb-1">Valor da campanha</label>
+          <CurrencyInput value={campaign.budget_value || 0} onChange={v => updateField('budget_value', Number(v))}
+            prefix="R$" className={`text-xs h-8 ${isOver ? 'border-red-400 ring-1 ring-red-300' : ''}`} disabled={readOnly} />
+        </div>
         <div className="w-28 shrink-0">
           <label className="text-[10px] text-gray-400 block mb-1">Objetivo</label>
           {readOnly ? (
@@ -346,11 +354,7 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
             </Select>
           )}
         </div>
-        <div className="w-28 shrink-0">
-          <label className="text-[10px] text-gray-400 block mb-1">Valor da campanha</label>
-          <CurrencyInput value={campaign.budget_value || 0} onChange={v => updateField('budget_value', Number(v))}
-            prefix="R$" className={`text-xs h-8 ${isOver ? 'border-red-400 ring-1 ring-red-300' : ''}`} disabled={readOnly} />
-        </div>
+        <CampaignKpis campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
         <div className="text-right w-16 shrink-0">
           <span className="text-[10px] text-gray-400">por dia</span>
           <p className="text-[11px] font-medium text-gray-600">{fmtDaily(campaign.budget_value || 0, days)}</p>
@@ -378,8 +382,8 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
       )}
 
       {/* Funil da campanha — no rodapé do card, vem do objetivo */}
-      {campaign.funnel_type_id && (
-        <CampaignFunnel campaign={campaign} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} />
+      {effectiveFunnelTypeId && (
+        <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} />
       )}
     </div>
   );
