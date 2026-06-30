@@ -55,8 +55,11 @@ export default function MediaPlans() {
   const createMut = useMutation({
     mutationFn: async (d) => {
       const client = allClients.find(c => c.id === d.client_id);
-      const bm = benchmarks.find(b => b.segment === d.segment);
       const ft = funnelTypes.find(f => f.id === d.funnel_type_id);
+
+      // Busca o benchmark pelo tipo de funil selecionado (o benchmark é vinculado ao funil)
+      const bm = benchmarks.find(b => b.funnel_type_id === d.funnel_type_id)
+        || benchmarks.find(b => b.funnel_type_name === ft?.name);
 
       // Pega as taxas padrão do FunnelType: cada etapa (a partir da 2ª) tem default_rate = taxa de conversão da etapa anterior para ela
       const ftStages = ft?.stages || [];
@@ -73,6 +76,7 @@ export default function MediaPlans() {
         ...d,
         client_name: client?.clinic_name || '',
         funnel_type_name: ft?.name || '',
+        segment: ft?.name || 'general',
         average_ticket: client?.average_ticket || 5000,
         conversion_rates,
         lead_to_appointment_rate: conversion_rates[0] || 0.35,
@@ -211,15 +215,6 @@ export default function MediaPlans() {
                 <Label className="text-xs">Ano</Label>
                 <Input type="number" value={form.period_year} onChange={e => setForm({...form, period_year: Number(e.target.value)})} />
               </div>
-            </div>
-            <div>
-              <Label className="text-xs">Objetivo</Label>
-              <Select value={form.segment} onValueChange={v => setForm({...form, segment: v})}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {ESPECIALIDADES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
             </div>
             <div>
               <Label className="text-xs">Tipo de Funil</Label>

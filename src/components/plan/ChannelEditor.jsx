@@ -161,28 +161,12 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
             <div className="flex items-center gap-3 p-4">
               <div className="flex-1 grid grid-cols-2 sm:grid-cols-[1fr_1fr_1fr_60px_1fr_80px] gap-3 items-center">
                 <div>
-                  {readOnly ? <ChannelBadge channel={ch.channel_name} /> : (
-                    dbChannels.length > 0 ? (
-                      <Select value={ch.channel_name} onValueChange={v => updateChannel(idx, 'channel_name', v)}>
-                        <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>{dbChannels.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}</SelectContent>
-                      </Select>
-                    ) : (
-                      <span className="text-xs font-medium text-gray-700">{ch.channel_name}</span>
-                    )
-                  )}
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-secondary/40 border border-border text-xs font-medium text-secondary-foreground">
+                    {ch.channel_name}
+                  </span>
                 </div>
                 <div>
-                  {readOnly ? <span className="text-xs text-gray-500">{ch.channel_objective}</span> : (
-                    dbObjectives.length > 0 ? (
-                      <Select value={ch.channel_objective} onValueChange={v => updateChannel(idx, 'channel_objective', v)}>
-                        <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>{dbObjectives.map(o => <SelectItem key={o.id} value={o.name}>{o.name}</SelectItem>)}</SelectContent>
-                      </Select>
-                    ) : (
-                      <span className="text-xs text-gray-500">{ch.channel_objective}</span>
-                    )
-                  )}
+                  <span className="text-xs font-medium text-gray-600">{ch.channel_objective || '—'}</span>
                 </div>
                 <div>
                   <CurrencyInput value={ch.budget_value || 0} onChange={v => handleBudgetChange(idx, v)}
