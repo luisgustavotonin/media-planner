@@ -19,53 +19,32 @@
       "default": "performance",
       "description": "Tipo do objetivo: performance (funil de vendas) ou branding (awareness/alcance)"
     },
-    "kpi_unit": {
-      "type": "string",
-      "enum": [
-        "moeda",
-        "percentual",
-        "numero"
-      ],
-      "default": "moeda",
-      "description": "Unidade do valor do KPI: moeda (R$), percentual (0-1), ou n\u00famero"
-    },
-    "metrics": {
+    "kpis": {
       "type": "array",
-      "description": "M\u00e9tricas/KPIs a acompanhar para este objetivo",
+      "description": "KPIs deste objetivo. Cada KPI aparece no plano de m\u00eddia para preenchimento. S\u00f3 KPIs com valor preenchido aparecem no acompanhamento semanal.",
       "items": {
         "type": "object",
         "properties": {
-          "key": {
-            "type": "string",
-            "description": "Chave interna (ex: leads, clicks, impressions)"
-          },
           "label": {
             "type": "string",
-            "description": "Nome exibido (ex: Leads, Cliques, Impress\u00f5es)"
+            "description": "Nome do KPI (ex: CPL, CPC, CPM, CTR, Impress\u00f5es)"
           },
           "unit": {
             "type": "string",
             "enum": [
-              "numero",
               "moeda",
-              "percentual"
+              "percentual",
+              "numero"
             ],
-            "description": "Tipo de unidade"
-          },
-          "is_primary": {
-            "type": "boolean",
-            "description": "Se \u00e9 a m\u00e9trica principal (KPI) deste objetivo"
+            "default": "moeda",
+            "description": "Unidade do KPI"
           }
         }
       }
     },
-    "primary_kpi_label": {
-      "type": "string",
-      "description": "Nome do KPI principal calculado (ex: Custo por Lead, Custo por Clique)"
-    },
     "channels": {
       "type": "array",
-      "description": "Canais em que este objetivo pode ser usado",
+      "description": "Canais em que este objetivo pode ser usado. Vazio = dispon\u00edvel para todos.",
       "items": {
         "type": "string"
       }

@@ -8,17 +8,77 @@ import PercentInput from '../ui-custom/PercentInput';
 const fmtBRL = (n) => `R$ ${(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtDaily = (budget, days) => days > 0 ? fmtBRL(budget / days) : fmtBRL(0);
 
-// Retorna info do objetivo selecionado: tipo, unidade do KPI e rótulo
+// Retorna info do objetivo: tipo e lista de KPIs
 function getObjectiveInfo(objectiveName, objectives) {
   const obj = objectives.find(o => o.name === objectiveName);
-  if (!obj) return { type: 'performance', kpiUnit: 'moeda', kpiLabel: 'Custo' };
-  const primaryMetric = (obj.metrics || []).find(m => m.is_primary);
-  let kpiLabel = obj.primary_kpi_label || 'Custo';
-  if (primaryMetric?.key === 'leads') kpiLabel = 'CPL';
-  else if (primaryMetric?.key === 'clicks') kpiLabel = 'CPC';
-  else if (primaryMetric?.key === 'impressions') kpiLabel = 'CPM';
-  else if (primaryMetric?.key === 'ctr') kpiLabel = 'CTR';
-  return { type: obj.type || 'performance', kpiUnit: obj.kpi_unit || 'moeda', kpiLabel };
+  if (!obj) return { type: 'performance', kpis: [] };
+  let kpis = obj.kpis || [];
+  // Retrocompatibilidade: se não tem kpis mas tem primary_kpi_label
+  if (kpis.length === 0 && obj.primary_kpi_label) {
+    kpis = [{ label: obj.primary_kpi_label, unit: obj.kpi_unit || 'moeda' }];
+  }
+  return { type: obj.type || 'performance', kpis };
+}
+
+// Sincroniza kpi_values da campanha com os KPIs do novo objetivo
+function syncKpiValues(campaign, newObjectiveName, objectives) {
+  const obj = objectives.find(o => o.name === newObjectiveName);
+  const objKpis = obj?.kpis || [];
+  const existing = campaign.kpi_values || [];
+  return objKpis.map(k => {
+    const found = existing.find(e => e.label === k.label);
+    return { label: k.label, unit: k.unit, value: found?.value || 0 };
+  });
+}
+
+// Input de KPI baseado na unidade
+function KpiField({ kpi, value, onChange, readOnly }) {
+  if (readOnly) {
+    const display = kpi.unit === 'percentual'
+      ? `${((value || 0) * 100).toFixed(1)}%`
+      : kpi.unit === 'numero'
+        ? (value || 0).toLocaleString('pt-BR')
+        : fmtBRL(value || 0);
+    return <span className="text-xs font-semibold text-gray-700">{display}</span>;
+  }
+  if (kpi.unit === 'percentual') {
+    return <PercentInput value={value || 0} onChange={onChange} className="h-8 text-xs" />;
+  }
+  if (kpi.unit === 'numero') {
+    return <input type="number" min="0" value={value || ''} placeholder="0"
+      onChange={e => onChange(parseFloat(e.target.value) || 0)}
+      className="w-full h-8 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-primary" />;
+  }
+  return <CurrencyInput value={value || 0} onChange={onChange} prefix="R$" className="text-xs h-8" placeholder="0" />;
+}
+
+// Componente que renderiza todos os KPIs de uma campanha
+function CampaignKpis({ campaign, objectives, onChange, readOnly }) {
+  const objInfo = getObjectiveInfo(campaign.objective, objectives);
+  const displayKpis = objInfo.kpis.map(k => {
+    const existing = (campaign.kpi_values || []).find(kv => kv.label === k.label);
+    return { label: k.label, unit: k.unit, value: existing?.value || 0 };
+  });
+
+  if (displayKpis.length === 0) return null;
+
+  const updateKpiValue = (label, val) => {
+    const newKpiValues = displayKpis.map(k => k.label === label ? { ...k, value: val } : k);
+    // Mantém kpi_value legado sincronizado com o primeiro KPI de moeda
+    const costKpi = newKpiValues.find(kv => kv.unit === 'moeda');
+    onChange({ ...campaign, kpi_values: newKpiValues, kpi_value: costKpi?.value || campaign.kpi_value || 0 });
+  };
+
+  return (
+    <div className="flex flex-wrap gap-2 px-3 pb-2 pt-1 bg-white border-t border-gray-50">
+      {displayKpis.map(kpi => (
+        <div key={kpi.label} className="w-28 shrink-0">
+          <label className="text-[10px] text-gray-400 block mb-0.5">{kpi.label}</label>
+          <KpiField kpi={kpi} value={kpi.value} onChange={v => updateKpiValue(kpi.label, v)} readOnly={readOnly} />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // ─── Ad Set (Conjunto de Anúncios) ───────────────────────────────────────────
@@ -98,51 +158,12 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
   const campaignBudget = campaign.budget_value || 0;
   const adsetTotal = (campaign.adsets || []).reduce((s, a) => s + (a.budget_value || 0), 0);
   const campaignRemaining = campaignBudget - adsetTotal;
-  const objInfo = getObjectiveInfo(campaign.objective, objectives);
-  const isBranding = objInfo.type === 'branding';
   const isCampaignOver = maxCampaignBudget !== undefined && campaignBudget > maxCampaignBudget + 0.01;
   const isAdsetOver = adsetTotal > campaignBudget + 0.01;
 
-  const renderKpiInput = () => {
-    const label = isBranding ? `Meta (${objInfo.kpiLabel})` : `Valor do KPI (${objInfo.kpiLabel})`;
-    if (readOnly) {
-      const display = objInfo.kpiUnit === 'percentual'
-        ? `${((campaign.kpi_value || 0) * 100).toFixed(1)}%`
-        : objInfo.kpiUnit === 'numero'
-          ? (campaign.kpi_value || 0).toLocaleString('pt-BR')
-          : fmtBRL(campaign.kpi_value || 0);
-      return (
-        <div className="w-24 shrink-0">
-          <label className="text-[10px] text-gray-400 block mb-1">{label}</label>
-          <span className="text-xs font-semibold text-gray-700">{display}</span>
-        </div>
-      );
-    }
-    if (objInfo.kpiUnit === 'percentual') {
-      return (
-        <div className="w-24 shrink-0">
-          <label className="text-[10px] text-gray-400 block mb-1">{label}</label>
-          <PercentInput value={campaign.kpi_value || 0} onChange={v => updateField('kpi_value', v)} className="h-8 text-xs" />
-        </div>
-      );
-    }
-    if (objInfo.kpiUnit === 'numero') {
-      return (
-        <div className="w-24 shrink-0">
-          <label className="text-[10px] text-gray-400 block mb-1">{label}</label>
-          <input type="number" min="0" value={campaign.kpi_value || ''} placeholder="Meta"
-            onChange={e => updateField('kpi_value', parseFloat(e.target.value) || 0)}
-            className="w-full h-8 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-primary" />
-        </div>
-      );
-    }
-    return (
-      <div className="w-24 shrink-0">
-        <label className="text-[10px] text-gray-400 block mb-1">{label}</label>
-        <CurrencyInput value={campaign.kpi_value || 0} onChange={v => updateField('kpi_value', v)}
-          prefix="R$" className="text-xs h-8" placeholder="KPI" />
-      </div>
-    );
+  const handleObjectiveChange = (v) => {
+    const newKpiValues = syncKpiValues(campaign, v, objectives);
+    onChange({ ...campaign, objective: v, kpi_values: newKpiValues });
   };
 
   return (
@@ -171,7 +192,7 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
               {campaign.objective || '—'}
             </span>
           ) : (
-            <Select value={campaign.objective || ''} onValueChange={v => updateField('objective', v)}>
+            <Select value={campaign.objective || ''} onValueChange={handleObjectiveChange}>
               <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Objetivo" /></SelectTrigger>
               <SelectContent>
                 {(availableObjectives || objectives).map(o => <SelectItem key={o.id} value={o.name}>{o.name}</SelectItem>)}
@@ -179,13 +200,15 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
             </Select>
           )}
         </div>
-        {renderKpiInput()}
         {!readOnly && (
           <button onClick={onRemove} className="p-1.5 rounded hover:bg-red-50 ml-1 mb-1.5">
             <Trash2 className="w-3.5 h-3.5 text-red-400" />
           </button>
         )}
       </div>
+
+      {/* KPI inputs */}
+      <CampaignKpis campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
 
       {/* Ad sets */}
       {open && (
@@ -212,7 +235,6 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
             <p className="text-[11px] text-gray-400">Nenhum conjunto adicionado.</p>
           )}
           {(campaign.adsets || []).map((adset, idx) => {
-            // O máximo que este adset pode ter = budget da campanha - soma dos outros adsets
             const otherAdsetsTotal = adsetTotal - (adset.budget_value || 0);
             const maxForAdset = campaignBudget - otherAdsetsTotal;
             return (
@@ -232,50 +254,11 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
   const [open, setOpen] = useState(true);
   const updateField = (field, val) => onChange({ ...campaign, [field]: val });
   const updateParam = (field, val) => onChange({ ...campaign, params: { ...(campaign.params || {}), [field]: val } });
-  const objInfo = getObjectiveInfo(campaign.objective, objectives);
-  const isBranding = objInfo.type === 'branding';
   const isOver = maxCampaignBudget !== undefined && (campaign.budget_value || 0) > maxCampaignBudget + 0.01;
 
-  const renderKpiInput = () => {
-    const label = isBranding ? `Meta (${objInfo.kpiLabel})` : `Valor do KPI (${objInfo.kpiLabel})`;
-    if (readOnly) {
-      const display = objInfo.kpiUnit === 'percentual'
-        ? `${((campaign.kpi_value || 0) * 100).toFixed(1)}%`
-        : objInfo.kpiUnit === 'numero'
-          ? (campaign.kpi_value || 0).toLocaleString('pt-BR')
-          : fmtBRL(campaign.kpi_value || 0);
-      return (
-        <div className="w-24 shrink-0">
-          <label className="text-[10px] text-gray-400 block mb-1">{label}</label>
-          <span className="text-xs font-semibold text-gray-700">{display}</span>
-        </div>
-      );
-    }
-    if (objInfo.kpiUnit === 'percentual') {
-      return (
-        <div className="w-24 shrink-0">
-          <label className="text-[10px] text-gray-400 block mb-1">{label}</label>
-          <PercentInput value={campaign.kpi_value || 0} onChange={v => updateField('kpi_value', v)} className="h-8 text-xs" />
-        </div>
-      );
-    }
-    if (objInfo.kpiUnit === 'numero') {
-      return (
-        <div className="w-24 shrink-0">
-          <label className="text-[10px] text-gray-400 block mb-1">{label}</label>
-          <input type="number" min="0" value={campaign.kpi_value || ''} placeholder="Meta"
-            onChange={e => updateField('kpi_value', parseFloat(e.target.value) || 0)}
-            className="w-full h-8 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-primary" />
-        </div>
-      );
-    }
-    return (
-      <div className="w-24 shrink-0">
-        <label className="text-[10px] text-gray-400 block mb-1">{label}</label>
-        <CurrencyInput value={campaign.kpi_value || 0} onChange={v => updateField('kpi_value', v)}
-          prefix="R$" className="text-xs h-8" placeholder="KPI" />
-      </div>
-    );
+  const handleObjectiveChange = (v) => {
+    const newKpiValues = syncKpiValues(campaign, v, objectives);
+    onChange({ ...campaign, objective: v, kpi_values: newKpiValues });
   };
 
   return (
@@ -297,7 +280,7 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
               {campaign.objective || '—'}
             </span>
           ) : (
-            <Select value={campaign.objective || ''} onValueChange={v => updateField('objective', v)}>
+            <Select value={campaign.objective || ''} onValueChange={handleObjectiveChange}>
               <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Objetivo" /></SelectTrigger>
               <SelectContent>
                 {(availableObjectives || objectives).map(o => <SelectItem key={o.id} value={o.name}>{o.name}</SelectItem>)}
@@ -305,7 +288,6 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
             </Select>
           )}
         </div>
-        {renderKpiInput()}
         <div className="w-28 shrink-0">
           <label className="text-[10px] text-gray-400 block mb-1">Valor da campanha</label>
           <CurrencyInput value={campaign.budget_value || 0} onChange={v => updateField('budget_value', Number(v))}
@@ -321,6 +303,10 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
           </button>
         )}
       </div>
+
+      {/* KPI inputs */}
+      <CampaignKpis campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
+
       {open && (
         <div className="px-4 pb-4 pt-2 border-t border-gray-100 bg-gray-50/50">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -345,7 +331,7 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, days = 30, onCha
 
   const addCampaign = () => {
     if (readOnly) return;
-    onChange([...strategies, { name: '', objective: '', kpi_value: 0, budget_value: 0, params: {} }]);
+    onChange([...strategies, { name: '', objective: '', kpi_value: 0, kpi_values: [], budget_value: 0, params: {} }]);
   };
   const updateCampaign = (idx, updated) => {
     if (readOnly) return;
@@ -397,13 +383,12 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
   // Filtra objetivos aplicáveis a este canal (sem channels = disponível para todos)
   const availableObjectives = objectives.filter(o => !o.channels || o.channels.length === 0 || o.channels.includes(channelName));
 
-  // Total alocado = soma dos budgets das campanhas (cada campanha tem seu próprio budget)
   const totalAllocated = strategies.reduce((s, camp) => s + (camp.budget_value || 0), 0);
   const remaining = (channelBudget || 0) - totalAllocated;
 
   const addCampaign = () => {
     if (readOnly) return;
-    onChange([...strategies, { name: '', objective: '', kpi_value: 0, budget_value: 0, adsets: [] }]);
+    onChange([...strategies, { name: '', objective: '', kpi_value: 0, kpi_values: [], budget_value: 0, adsets: [] }]);
   };
   const updateCampaign = (idx, updated) => {
     if (readOnly) return;
@@ -440,11 +425,10 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
         <p className="text-[11px] text-red-500 font-medium">⚠ A soma das campanhas excede o budget do canal.</p>
       )}
       {strategies.length === 0 && (
-        <p className="text-[11px] text-gray-400 py-1">Nenhuma campanha adicionada. Cada campanha tem seu próprio objetivo e KPI de custo.</p>
+        <p className="text-[11px] text-gray-400 py-1">Nenhuma campanha adicionada. Selecione um objetivo para ver os KPIs disponíveis.</p>
       )}
       <div className="space-y-3">
         {strategies.map((camp, idx) => {
-          // O máximo que esta campanha pode ter = budget do canal - soma das outras campanhas
           const otherTotal = totalAllocated - (camp.budget_value || 0);
           const maxForCampaign = channelBudget - otherTotal;
           return (

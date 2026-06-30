@@ -8,6 +8,7 @@ import { Plus, Trash2, Pencil, X, Check, ToggleLeft, ToggleRight, ChevronDown, C
 import { useToast } from '@/components/ui/use-toast';
 
 const UNIT_LABELS = { numero: 'Número', moeda: 'Moeda (R$)', percentual: 'Percentual (%)' };
+const UNIT_SHORT = { numero: 'nº', moeda: 'R$', percentual: '%' };
 
 const PRESET_CHANNELS = ['Meta', 'Google', 'TikTok', 'YouTube', 'LinkedIn'];
 const PRESET_OBJECTIVES = [
@@ -15,56 +16,44 @@ const PRESET_OBJECTIVES = [
     name: 'Lead',
     description: 'Captação de leads via formulários ou landing pages.',
     type: 'performance',
-    kpi_unit: 'moeda',
-    primary_kpi_label: 'Custo por Lead (CPL)',
-    metrics: [
-      { key: 'leads', label: 'Leads', unit: 'numero', is_primary: true },
-      { key: 'cost', label: 'Investimento (R$)', unit: 'moeda', is_primary: false },
-      { key: 'impressions', label: 'Impressões', unit: 'numero', is_primary: false },
-    ],
-    channels: ['Meta', 'Google', 'TikTok', 'YouTube', 'LinkedIn'],
+    kpis: [{ label: 'CPL', unit: 'moeda' }],
+    channels: [],
     is_active: true,
   },
   {
     name: 'Tráfego',
     description: 'Direcionar usuários para uma página ou site.',
     type: 'branding',
-    kpi_unit: 'moeda',
-    primary_kpi_label: 'Custo por Clique (CPC)',
-    metrics: [
-      { key: 'clicks', label: 'Cliques', unit: 'numero', is_primary: true },
-      { key: 'sessions', label: 'Sessões', unit: 'numero', is_primary: false },
-      { key: 'cost', label: 'Investimento (R$)', unit: 'moeda', is_primary: false },
+    kpis: [
+      { label: 'CPC', unit: 'moeda' },
+      { label: 'Cliques', unit: 'numero' },
+      { label: 'CTR', unit: 'percentual' },
     ],
-    channels: ['Meta', 'Google', 'TikTok', 'YouTube', 'LinkedIn'],
+    channels: [],
     is_active: true,
   },
   {
     name: 'Awareness',
     description: 'Alcance e reconhecimento de marca.',
     type: 'branding',
-    kpi_unit: 'moeda',
-    primary_kpi_label: 'Custo por Mil Impressões (CPM)',
-    metrics: [
-      { key: 'impressions', label: 'Impressões', unit: 'numero', is_primary: true },
-      { key: 'reach', label: 'Alcance', unit: 'numero', is_primary: false },
-      { key: 'cost', label: 'Investimento (R$)', unit: 'moeda', is_primary: false },
+    kpis: [
+      { label: 'CPM', unit: 'moeda' },
+      { label: 'Impressões', unit: 'numero' },
+      { label: 'Alcance', unit: 'numero' },
     ],
-    channels: ['Meta', 'Google', 'TikTok', 'YouTube', 'LinkedIn'],
+    channels: [],
     is_active: true,
   },
   {
     name: 'Engajamento',
     description: 'Engajamento e taxa de cliques (CTR).',
     type: 'branding',
-    kpi_unit: 'percentual',
-    primary_kpi_label: 'CTR (Taxa de Cliques)',
-    metrics: [
-      { key: 'ctr', label: 'CTR', unit: 'percentual', is_primary: true },
-      { key: 'clicks', label: 'Cliques', unit: 'numero', is_primary: false },
-      { key: 'cost', label: 'Investimento (R$)', unit: 'moeda', is_primary: false },
+    kpis: [
+      { label: 'CTR', unit: 'percentual' },
+      { label: 'CPC', unit: 'moeda' },
+      { label: 'Cliques', unit: 'numero' },
     ],
-    channels: ['Meta', 'Google', 'TikTok', 'YouTube', 'LinkedIn'],
+    channels: [],
     is_active: true,
   },
 ];
@@ -119,7 +108,6 @@ function ChannelsTab() {
 
   return (
     <div>
-      {/* Adicionar canal */}
       <div className="bg-white rounded-xl border border-gray-100 p-5 mb-4">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Novo Canal</p>
         <div className="flex gap-2">
@@ -173,14 +161,18 @@ function ChannelsTab() {
 // ── Formulário de Objetivo ──
 function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [] }) {
   const [form, setForm] = useState(initial);
+
   const toggleChannel = (ch) => setForm(f => {
     const list = f.channels || [];
     return { ...f, channels: list.includes(ch) ? list.filter(c => c !== ch) : [...list, ch] };
   });
   const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const addMetric = () => setForm(f => ({ ...f, metrics: [...(f.metrics || []), { key: '', label: '', unit: 'numero', is_primary: false }] }));
-  const updateMetric = (i, k, v) => setForm(f => ({ ...f, metrics: f.metrics.map((m, j) => j === i ? { ...m, [k]: v } : m) }));
-  const removeMetric = (i) => setForm(f => ({ ...f, metrics: f.metrics.filter((_, j) => j !== i) }));
+
+  const addKpi = () => setForm(f => ({ ...f, kpis: [...(f.kpis || []), { label: '', unit: 'moeda' }] }));
+  const updateKpi = (i, k, v) => setForm(f => ({ ...f, kpis: f.kpis.map((kp, j) => j === i ? { ...kp, [k]: v } : kp) }));
+  const removeKpi = (i) => setForm(f => ({ ...f, kpis: f.kpis.filter((_, j) => j !== i) }));
+
+  const activeChannels = channels.filter(c => c.is_active);
 
   return (
     <div className="space-y-5">
@@ -190,13 +182,6 @@ function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [] }) {
           <input className="mt-1.5 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             placeholder="Ex: Lead, Tráfego, Awareness..." value={form.name} onChange={e => setField('name', e.target.value)} />
         </div>
-        <div>
-          <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">KPI Principal</Label>
-          <input className="mt-1.5 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="Ex: Custo por Lead (CPL)" value={form.primary_kpi_label} onChange={e => setField('primary_kpi_label', e.target.value)} />
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Tipo do Objetivo</Label>
           <div className="flex gap-2 mt-1.5">
@@ -213,65 +198,64 @@ function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [] }) {
             {form.type === 'branding' ? 'Não passa pelo funil de vendas — apenas métricas de eficiência (CPM, CTR, etc.).' : 'Passa pelo funil de vendas (leads → agendamento → venda).'}
           </p>
         </div>
-        <div>
-          <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Unidade do Valor do KPI</Label>
-          <select className="mt-1.5 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
-            value={form.kpi_unit || 'moeda'} onChange={e => setField('kpi_unit', e.target.value)}>
-            <option value="moeda">Moeda (R$) — ex: CPL, CPC, CPM</option>
-            <option value="percentual">Percentual (%) — ex: CTR</option>
-            <option value="numero">Número — ex: Alcance</option>
-          </select>
-        </div>
       </div>
       <div>
         <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Descrição</Label>
         <input className="mt-1.5 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-          placeholder="Breve descrição..." value={form.description} onChange={e => setField('description', e.target.value)} />
+          placeholder="Breve descrição..." value={form.description || ''} onChange={e => setField('description', e.target.value)} />
       </div>
-      <div>
-        <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Canais Aplicáveis</Label>
-        <p className="text-[10px] text-gray-400 mb-2">Selecione em quais canais este objetivo pode ser usado.</p>
-        <div className="flex flex-wrap gap-2">
-          {(channels.length ? channels.map(c => c.name) : PRESET_CHANNELS).map(ch => {
-            const selected = (form.channels || []).includes(ch);
-            return (
-              <button key={ch} type="button" onClick={() => toggleChannel(ch)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selected ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
-                {ch}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+
+      {/* KPIs */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Métricas a Acompanhar no Semanal</Label>
-          <button onClick={addMetric} type="button" className="flex items-center gap-1 text-xs text-primary hover:underline">
-            <Plus className="w-3.5 h-3.5" /> Adicionar
+          <div>
+            <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">KPIs</Label>
+            <p className="text-[10px] text-gray-400 mt-0.5">Cadastre os KPIs deste objetivo. Eles aparecem no plano de mídia para preenchimento. Só KPIs com valor preenchido aparecem no acompanhamento semanal.</p>
+          </div>
+          <button onClick={addKpi} type="button" className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0">
+            <Plus className="w-3.5 h-3.5" /> Adicionar KPI
           </button>
         </div>
         <div className="space-y-2">
-          <div className="hidden sm:grid grid-cols-[1fr_1fr_130px_80px_28px] gap-2 text-[10px] font-medium text-gray-400 uppercase tracking-wider px-1">
-            <span>Chave (interno)</span><span>Rótulo exibido</span><span>Unidade</span><span>Principal</span><span></span>
-          </div>
-          {(form.metrics || []).map((m, i) => (
-            <div key={i} className="grid grid-cols-[1fr_1fr_130px_80px_28px] gap-2 items-center">
-              <input className="border border-gray-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                placeholder="ex: leads" value={m.key} onChange={e => updateMetric(i, 'key', e.target.value.toLowerCase().replace(/\s/g, '_'))} />
-              <input className="border border-gray-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                placeholder="ex: Leads" value={m.label} onChange={e => updateMetric(i, 'label', e.target.value)} />
-              <select className="border border-gray-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary bg-white"
-                value={m.unit} onChange={e => updateMetric(i, 'unit', e.target.value)}>
+          {(form.kpis || []).length === 0 && (
+            <p className="text-xs text-gray-400 italic py-2">Nenhum KPI cadastrado. Clique em "Adicionar KPI".</p>
+          )}
+          {(form.kpis || []).map((kpi, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input className="flex-1 border border-gray-200 rounded-md px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder="Nome do KPI (ex: CPL, CPC, CPM, CTR...)" value={kpi.label}
+                onChange={e => updateKpi(i, 'label', e.target.value)} />
+              <select className="w-40 border border-gray-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary bg-white"
+                value={kpi.unit} onChange={e => updateKpi(i, 'unit', e.target.value)}>
                 {Object.entries(UNIT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
-              <div className="flex justify-center">
-                <input type="checkbox" className="w-4 h-4 accent-primary" checked={!!m.is_primary} onChange={e => updateMetric(i, 'is_primary', e.target.checked)} />
-              </div>
-              <button onClick={() => removeMetric(i)} className="p-1 rounded hover:bg-red-50 text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+              <button onClick={() => removeKpi(i)} className="p-1 rounded hover:bg-red-50 text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Canais */}
+      <div>
+        <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Canais Aplicáveis</Label>
+        <p className="text-[10px] text-gray-400 mb-2">Selecione em quais canais este objetivo pode ser usado. Deixe vazio para todos.</p>
+        {activeChannels.length === 0 ? (
+          <p className="text-xs text-gray-400 italic">Nenhum canal ativo. Cadastre canais na aba "Canais".</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {activeChannels.map(ch => {
+              const selected = (form.channels || []).includes(ch.name);
+              return (
+                <button key={ch.id} type="button" onClick={() => toggleChannel(ch.name)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selected ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                  {ch.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <div className="flex gap-3 pt-2 border-t border-gray-100">
         <Button onClick={() => onSave(form)} disabled={saving || !form.name} className="gap-2 bg-primary hover:bg-primary/90">
           <Check className="w-4 h-4" /> {saving ? 'Salvando...' : 'Salvar Objetivo'}
@@ -313,10 +297,14 @@ function ObjectivesTab() {
   });
 
   const toggleActive = (obj) => updateMut.mutate({ id: obj.id, data: { is_active: !obj.is_active } });
+
   const handleSave = (form) => {
-    if (editingId === 'new') createMut.mutate(form);
-    else updateMut.mutate({ id: editingId, data: form });
+    // Limpa campos legados
+    const { primary_kpi_label, kpi_unit, metrics, ...cleanForm } = form;
+    if (editingId === 'new') createMut.mutate(cleanForm);
+    else updateMut.mutate({ id: editingId, data: cleanForm });
   };
+
   const addPresets = async () => {
     for (const p of PRESET_OBJECTIVES) {
       if (!objectives.find(o => o.name.toLowerCase() === p.name.toLowerCase())) {
@@ -328,6 +316,19 @@ function ObjectivesTab() {
   };
 
   const editingObj = editingId && editingId !== 'new' ? objectives.find(o => o.id === editingId) : null;
+
+  // Converte formato legado para novo ao editar
+  const getInitialForEdit = () => {
+    if (!editingObj) return {};
+    const kpis = editingObj.kpis?.length
+      ? editingObj.kpis
+      : editingObj.metrics?.length
+        ? editingObj.metrics.map(m => ({ label: m.label, unit: m.unit }))
+        : editingObj.primary_kpi_label
+          ? [{ label: editingObj.primary_kpi_label, unit: editingObj.kpi_unit || 'moeda' }]
+          : [];
+    return { ...editingObj, kpis };
+  };
 
   if (isLoading) return <div className="flex justify-center py-12"><div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
 
@@ -345,7 +346,9 @@ function ObjectivesTab() {
             <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg hover:bg-gray-100"><X className="w-4 h-4 text-gray-400" /></button>
           </div>
           <ObjectiveForm
-            initial={editingId === 'new' ? { name: '', description: '', type: 'performance', kpi_unit: 'moeda', primary_kpi_label: '', metrics: [{ key: '', label: '', unit: 'numero', is_primary: true }], channels: [], is_active: true } : { type: 'performance', kpi_unit: 'moeda', ...editingObj }}
+            initial={editingId === 'new'
+              ? { name: '', description: '', type: 'performance', kpis: [], channels: [], is_active: true }
+              : getInitialForEdit()}
             onSave={handleSave} onCancel={() => setEditingId(null)} saving={createMut.isPending || updateMut.isPending}
             channels={channels}
           />
@@ -362,6 +365,7 @@ function ObjectivesTab() {
         <div className="space-y-3">
           {objectives.map(obj => {
             const isExpanded = expanded[obj.id];
+            const kpis = obj.kpis || [];
             return (
               <div key={obj.id} className={`bg-white rounded-xl border border-gray-100 ${!obj.is_active ? 'opacity-60' : ''}`}>
                 <div className="flex items-center gap-4 px-5 py-4">
@@ -374,7 +378,15 @@ function ObjectivesTab() {
                       {!obj.is_active && <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">Inativo</span>}
                     </div>
                     {obj.description && <p className="text-xs text-gray-400 mt-0.5">{obj.description}</p>}
-                    {obj.primary_kpi_label && <p className="text-[11px] text-primary font-medium mt-1">KPI: {obj.primary_kpi_label}</p>}
+                    {kpis.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {kpis.map((kpi, i) => (
+                          <span key={i} className="text-[10px] px-1.5 py-0.5 rounded border border-primary/20 bg-primary/5 text-primary font-medium">
+                            {kpi.label} · {UNIT_SHORT[kpi.unit]}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {obj.channels?.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1.5">
                         {obj.channels.map(ch => (
@@ -394,21 +406,6 @@ function ObjectivesTab() {
                     <button onClick={() => deleteMut.mutate(obj.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
-                {isExpanded && obj.metrics?.length > 0 && (
-                  <div className="px-5 pb-4 border-t border-gray-50 pt-3">
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Métricas do Acompanhamento Semanal</p>
-                    <div className="space-y-1">
-                      {obj.metrics.map((m, i) => (
-                        <div key={i} className="flex items-center gap-2 text-xs text-gray-600">
-                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${m.is_primary ? 'bg-primary' : 'bg-gray-300'}`} />
-                          <span className="font-medium">{m.label}</span>
-                          <span className="text-gray-400">({UNIT_LABELS[m.unit] || m.unit})</span>
-                          {m.is_primary && <span className="text-primary font-medium">— Principal</span>}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             );
           })}

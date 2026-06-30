@@ -95,7 +95,7 @@
           },
           "strategies": {
             "type": "array",
-            "description": "Campanhas do canal, cada uma com seu objetivo e KPI",
+            "description": "Campanhas do canal, cada uma com seu objetivo e KPIs",
             "items": {
               "type": "object",
               "properties": {
@@ -108,11 +108,34 @@
                 },
                 "kpi_label": {
                   "type": "string",
-                  "description": "R\u00f3tulo do KPI (ex: CPL, CPC, CPM)"
+                  "description": "R\u00f3tulo do KPI (legado)"
                 },
                 "kpi_value": {
                   "type": "number",
-                  "description": "Valor do KPI de custo (ex: R$ 40 por lead)"
+                  "description": "Valor do KPI de custo (legado)"
+                },
+                "kpi_values": {
+                  "type": "array",
+                  "description": "Valores dos KPIs preenchidos no plano. S\u00f3 KPIs com value > 0 aparecem no acompanhamento semanal.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "label": {
+                        "type": "string"
+                      },
+                      "unit": {
+                        "type": "string",
+                        "enum": [
+                          "moeda",
+                          "percentual",
+                          "numero"
+                        ]
+                      },
+                      "value": {
+                        "type": "number"
+                      }
+                    }
+                  }
                 },
                 "budget_value": {
                   "type": "number"

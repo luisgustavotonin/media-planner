@@ -22,20 +22,21 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket,
     const campBudget = camp.budget_value
       || (camp.adsets || []).reduce((s, a) => s + (a.budget_value || 0), 0);
     const campNetBudget = campBudget * (1 - taxRate);
-    const kpiValue = camp.kpi_value || 0;
-
     const obj = objectives.find(o => o.name === camp.objective);
     const objType = obj?.type || 'performance';
-    const kpiUnit = obj?.kpi_unit || 'moeda';
-    const primaryMetric = (obj?.metrics || []).find(m => m.is_primary);
-    const pmKey = (primaryMetric?.key || '').toLowerCase();
+
+    // Encontra o KPI de custo (unit=moeda, value>0) no formato kpi_values
+    const costKpi = (camp.kpi_values || []).find(kv => kv.unit === 'moeda' && kv.value > 0);
+    const costKpiLabel = (costKpi?.label || '').toLowerCase();
+    // Retrocompatibilidade: se não há kpi_values, usa kpi_value legado
+    const kpiValue = costKpi?.value || camp.kpi_value || 0;
 
     if (objType === 'branding') {
       branding.investment += campBudget;
-      if (kpiValue > 0 && kpiUnit === 'moeda') {
-        if (pmKey.includes('impress') || pmKey.includes('impress')) {
+      if (kpiValue > 0) {
+        if (costKpiLabel.includes('cpm') || costKpiLabel.includes('impress') || costKpiLabel.includes('mil')) {
           branding.impressions += (campNetBudget / kpiValue) * 1000;
-        } else if (pmKey.includes('click') || pmKey.includes('clique')) {
+        } else if (costKpiLabel.includes('cpc') || costKpiLabel.includes('click') || costKpiLabel.includes('clique')) {
           branding.clicks += campNetBudget / kpiValue;
         }
       }
@@ -183,6 +184,9 @@ export function calculateScenarios(channels, conversionRates, averageTicket, adj
       strategies: (ch.strategies || []).map(camp => ({
         ...camp,
         kpi_value: (camp.kpi_value || 0) * (1 + cplMult),
+        kpi_values: (camp.kpi_values || []).map(kv =>
+          kv.unit === 'moeda' ? { ...kv, value: (kv.value || 0) * (1 + cplMult) } : kv
+        ),
       })),
       // Retrocompatibilidade: ajusta expected_cpl também
       expected_cpl: (ch.expected_cpl || 0) * (1 + cplMult),
@@ -253,7 +257,8 @@ export function getChannelBlendedKpi(channel) {
   for (const camp of campaigns) {
     const campBudget = camp.budget_value
       || (camp.adsets || []).reduce((s, a) => s + (a.budget_value || 0), 0);
-    const kpiValue = camp.kpi_value || 0;
+    const costKpi = (camp.kpi_values || []).find(kv => kv.unit === 'moeda' && kv.value > 0);
+    const kpiValue = costKpi?.value || camp.kpi_value || 0;
     totalBudget += campBudget;
     if (kpiValue > 0) totalUnits += campBudget / kpiValue;
   }

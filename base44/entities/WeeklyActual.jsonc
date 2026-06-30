@@ -20,8 +20,26 @@
     "investment_actual": {
       "type": "number"
     },
+    "kpi_actuals": {
+      "type": "array",
+      "description": "Valores reais dos KPIs preenchidos semanalmente. S\u00f3 aparecem aqui os KPIs que tiveram valor preenchido no plano de m\u00eddia.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Nome do KPI"
+          },
+          "value": {
+            "type": "number",
+            "description": "Valor real informado"
+          }
+        }
+      }
+    },
     "leads_actual": {
-      "type": "number"
+      "type": "number",
+      "description": "Legacy: leads reais"
     },
     "appointments_actual": {
       "type": "number"

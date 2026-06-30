@@ -1,29 +1,52 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../components/hooks/useAuth';
-import { calculateConsolidated, generateRecommendations } from '../components/hooks/usePlanCalculations';
+import { calculateConsolidated } from '../components/hooks/usePlanCalculations';
 import PageHeader from '../components/ui-custom/PageHeader';
 import StatCard from '../components/ui-custom/StatCard';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Save, AlertTriangle, CheckCircle, Info, TrendingUp, Target, DollarSign, Users } from 'lucide-react';
+import { Save, DollarSign, TrendingUp, Target } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
-const SEVERITY_STYLES = {
-  high: { icon: AlertTriangle, bg: 'bg-primary/10', text: 'text-primary', border: 'border-primary/20' },
-  medium: { icon: Info, bg: 'bg-secondary/50', text: 'text-secondary-foreground', border: 'border-border' },
-  low: { icon: CheckCircle, bg: 'bg-muted', text: 'text-muted-foreground', border: 'border-border' },
-};
+const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+function fmtKpi(val, unit) {
+  if (unit === 'percentual') return `${((val || 0) * 100).toFixed(1)}%`;
+  if (unit === 'numero') return (val || 0).toLocaleString('pt-BR');
+  return `R$${(val || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+// Input para KPI dinâmico baseado na unidade
+function KpiInput({ kpi, value, onChange, className }) {
+  if (kpi.unit === 'percentual') {
+    return (
+      <div className="relative">
+        <input type="number" step="0.1" min="0" value={value ? (value * 100).toFixed(1) : ''} placeholder="0"
+          onChange={e => onChange((parseFloat(e.target.value) || 0) / 100)}
+          className={`w-full h-9 border border-gray-200 rounded-md text-sm px-3 pr-8 bg-white focus:outline-none focus:ring-1 focus:ring-primary ${className || ''}`} />
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+      </div>
+    );
+  }
+  if (kpi.unit === 'moeda') {
+    return <CurrencyInput value={value || 0} onChange={onChange} prefix="R$" className={className} />;
+  }
+  return (
+    <input type="number" min="0" value={value || ''} placeholder="0"
+      onChange={e => onChange(parseFloat(e.target.value) || 0)}
+      className={`w-full h-9 border border-gray-200 rounded-md text-sm px-3 bg-white focus:outline-none focus:ring-1 focus:ring-primary ${className || ''}`} />
+  );
+}
 
 export default function WeeklyTracking() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedPlanId, setSelectedPlanId] = useState('');
-  const [weekForm, setWeekForm] = useState({ week_number: 1, investment_actual: 0, leads_actual: 0, appointments_actual: 0, showups_actual: 0 });
-
+  const [weekForm, setWeekForm] = useState({ week_number: 1, investment_actual: 0, kpi_actuals: [] });
   const [filterClientId, setFilterClientId] = useState('');
 
   const { data: clients = [] } = useQuery({
@@ -46,9 +69,31 @@ export default function WeeklyTracking() {
 
   const myPlans = user?.role === 'admin' ? plans : plans.filter(p => p.created_by === user?.email);
   const clientPlans = myPlans.filter(p => !filterClientId || p.client_id === filterClientId);
-  const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const plan = myPlans.find(p => p.id === selectedPlanId);
   const actuals = allActuals.filter(a => a.plan_id === selectedPlanId);
+
+  // Coleta KPIs ativos do plano (kpi_values com value > 0)
+  const activeKpis = useMemo(() => {
+    if (!plan) return [];
+    const kpiMap = new Map();
+    for (const ch of plan.channels || []) {
+      for (const camp of ch.strategies || []) {
+        for (const kv of camp.kpi_values || []) {
+          if (kv.value > 0 && !kpiMap.has(kv.label)) {
+            kpiMap.set(kv.label, { label: kv.label, unit: kv.unit });
+          }
+        }
+        // Retrocompatibilidade: kpi_value legado
+        if (!(camp.kpi_values || []).length && camp.kpi_value > 0) {
+          const label = camp.kpi_label || 'KPI';
+          if (!kpiMap.has(label)) {
+            kpiMap.set(label, { label, unit: 'moeda' });
+          }
+        }
+      }
+    }
+    return Array.from(kpiMap.values());
+  }, [plan]);
 
   let consolidated = null;
   let weeklyTargets = [];
@@ -61,9 +106,6 @@ export default function WeeklyTracking() {
       weeklyTargets.push({
         week: w,
         investment: (consolidated.totals.total_budget || 0) / 4,
-        leads: Math.round(consolidated.totals.total_leads / 4),
-        appointments: Math.round(consolidated.totals.total_appointments / 4),
-        showups: Math.round(consolidated.totals.total_showups / 4),
       });
     }
   }
@@ -86,31 +128,43 @@ export default function WeeklyTracking() {
       setWeekForm({
         week_number: existing.week_number,
         investment_actual: existing.investment_actual || 0,
-        leads_actual: existing.leads_actual || 0,
-        appointments_actual: existing.appointments_actual || 0,
-        showups_actual: existing.showups_actual || 0,
+        kpi_actuals: activeKpis.map(k => {
+          const found = (existing.kpi_actuals || []).find(ka => ka.label === k.label);
+          return { label: k.label, value: found?.value || 0 };
+        }),
       });
     } else {
-      setWeekForm(f => ({ ...f, investment_actual: 0, leads_actual: 0, appointments_actual: 0, showups_actual: 0 }));
+      setWeekForm(f => ({
+        ...f,
+        investment_actual: 0,
+        kpi_actuals: activeKpis.map(k => ({ label: k.label, value: 0 })),
+      }));
     }
-  }, [weekForm.week_number, allActuals, selectedPlanId]);
+  }, [weekForm.week_number, allActuals, selectedPlanId, activeKpis]);
 
   const totalActualInvestment = actuals.reduce((s, a) => s + (a.investment_actual || 0), 0);
-  const totalActualLeads = actuals.reduce((s, a) => s + (a.leads_actual || 0), 0);
   const weeksElapsed = actuals.length;
-  const projectedLeads = weeksElapsed > 0 ? (totalActualLeads / weeksElapsed) * 4 : 0;
   const projectedInvestment = weeksElapsed > 0 ? (totalActualInvestment / weeksElapsed) * 4 : 0;
+
+  // Totais de KPIs
+  const kpiTotals = activeKpis.map(kpi => {
+    const totalActual = actuals.reduce((s, a) => {
+      const found = (a.kpi_actuals || []).find(ka => ka.label === kpi.label);
+      return s + (found?.value || 0);
+    }, 0);
+    const projected = weeksElapsed > 0 ? (totalActual / weeksElapsed) * 4 : 0;
+    return { ...kpi, totalActual, projected };
+  });
 
   const chartData = weeklyTargets.map((t) => {
     const actual = actuals.find(a => a.week_number === t.week);
     return {
       name: `Semana ${t.week}`,
-      'Meta Leads': t.leads,
-      'Real Leads': actual?.leads_actual || null,
+      'Meta Invest.': Math.round(t.investment),
+      'Real Invest.': actual?.investment_actual ? Math.round(actual.investment_actual) : null,
     };
   });
 
-  const recommendations = plan && consolidated ? generateRecommendations(consolidated.channelResults, actuals, weeklyTargets) : [];
   const pctOf = (actual, target) => target > 0 ? Math.round((actual / target) * 100) : 0;
 
   if (plansLoading || actualsLoading) {
@@ -185,16 +239,16 @@ export default function WeeklyTracking() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5 sm:mb-6">
             <StatCard label="Investimento Real" value={`R$${totalActualInvestment.toLocaleString('pt-BR')}`} icon={DollarSign} color="blue"
               trend={pctOf(totalActualInvestment, consolidated.totals.total_budget) - 100} />
-            <StatCard label="Leads Reais" value={totalActualLeads.toLocaleString()} icon={Users} color="purple"
-              trend={pctOf(totalActualLeads, consolidated.totals.total_leads) - 100} />
-            <StatCard label="Leads Projetados" value={Math.round(projectedLeads).toLocaleString()} icon={TrendingUp} color="orange"
-              sublabel={`Meta: ${consolidated.totals.total_leads}`} />
-            <StatCard label="Invest. Projetado" value={`R$${Math.round(projectedInvestment).toLocaleString('pt-BR')}`} icon={Target} color="green"
+            <StatCard label="Invest. Projetado" value={`R$${Math.round(projectedInvestment).toLocaleString('pt-BR')}`} icon={TrendingUp} color="orange"
               sublabel={`Meta: R$${Math.round(consolidated.totals.total_budget).toLocaleString('pt-BR')}`} />
+            {kpiTotals.slice(0, 2).map((kpi, i) => (
+              <StatCard key={i} label={`${kpi.label} Real`} value={fmtKpi(kpi.totalActual, kpi.unit)} icon={Target} color="purple"
+                sublabel={`Projetado: ${fmtKpi(Math.round(kpi.projected), kpi.unit)}`} />
+            ))}
           </div>
 
           <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Desempenho Semanal</h3>
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">Investimento Semanal — Meta vs Realizado</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
@@ -203,16 +257,25 @@ export default function WeeklyTracking() {
                   <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }} />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
-                  <Line type="monotone" dataKey="Meta Leads" stroke="#94a3b8" strokeDasharray="5 5" dot={false} />
-                  <Line type="monotone" dataKey="Real Leads" stroke="#F85D07" strokeWidth={2} />
+                  <Line type="monotone" dataKey="Meta Invest." stroke="#94a3b8" strokeDasharray="5 5" dot={false} />
+                  <Line type="monotone" dataKey="Real Invest." stroke="#F85D07" strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
 
+          {activeKpis.length > 0 && (
+            <div className="bg-secondary/30 rounded-xl border border-border p-4 mb-6">
+              <p className="text-xs text-secondary-foreground">
+                <strong>KPIs em acompanhamento:</strong> {activeKpis.map(k => k.label).join(', ')}.
+                Apenas KPIs com valor preenchido no plano de mídia aparecem aqui automaticamente.
+              </p>
+            </div>
+          )}
+
           <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
             <h3 className="text-sm font-semibold text-gray-900 mb-4">Lançar Dados Semanais</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <div>
                 <Label className="text-xs">Semana</Label>
                 <Select value={String(weekForm.week_number)} onValueChange={v => setWeekForm(f => ({ ...f, week_number: Number(v) }))}>
@@ -226,14 +289,18 @@ export default function WeeklyTracking() {
                 <Label className="text-xs">Investimento (R$)</Label>
                 <CurrencyInput value={weekForm.investment_actual} onChange={v => setWeekForm(f => ({...f, investment_actual: v || 0}))} prefix="R$" className="mt-1" />
               </div>
-              <div>
-                <Label className="text-xs">Leads</Label>
-                <CurrencyInput value={weekForm.leads_actual} onChange={v => setWeekForm(f => ({...f, leads_actual: v || 0}))} className="mt-1" />
-              </div>
-              <div>
-                <Label className="text-xs">Agendamentos</Label>
-                <CurrencyInput value={weekForm.appointments_actual} onChange={v => setWeekForm(f => ({...f, appointments_actual: v || 0}))} className="mt-1" />
-              </div>
+              {activeKpis.map(kpi => (
+                <div key={kpi.label}>
+                  <Label className="text-xs">{kpi.label} {kpi.unit === 'percentual' ? '(%)' : kpi.unit === 'moeda' ? '(R$)' : ''}</Label>
+                  <KpiInput kpi={kpi}
+                    value={(weekForm.kpi_actuals || []).find(ka => ka.label === kpi.label)?.value || 0}
+                    onChange={v => setWeekForm(f => ({
+                      ...f,
+                      kpi_actuals: (f.kpi_actuals || []).map(ka => ka.label === kpi.label ? { ...ka, value: v } : ka),
+                    }))}
+                    className="mt-1" />
+                </div>
+              ))}
               <div className="flex items-end">
                 <Button onClick={() => saveMut.mutate(weekForm)} className="w-full gap-2 bg-primary hover:bg-primary/90" disabled={saveMut.isPending}>
                   <Save className="w-4 h-4" /> {saveMut.isPending ? 'Salvando...' : 'Salvar'}
@@ -253,49 +320,32 @@ export default function WeeklyTracking() {
                     <th className="text-left py-2.5 px-4 font-medium text-gray-500">Semana</th>
                     <th className="text-right py-2.5 px-3 font-medium text-gray-500">Meta Invest.</th>
                     <th className="text-right py-2.5 px-3 font-medium text-gray-500">Real Invest.</th>
-                    <th className="text-right py-2.5 px-3 font-medium text-gray-500">Meta Leads</th>
-                    <th className="text-right py-2.5 px-3 font-medium text-gray-500">Real Leads</th>
-                    <th className="text-right py-2.5 px-3 font-medium text-gray-500">% da Meta</th>
+                    {activeKpis.map(kpi => (
+                      <th key={kpi.label} className="text-right py-2.5 px-3 font-medium text-gray-500">Real {kpi.label}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {weeklyTargets.map((t, i) => {
                     const actual = actuals.find(a => a.week_number === t.week);
-                    const pct = actual?.leads_actual && t.leads > 0 ? Math.round((actual.leads_actual / t.leads) * 100) : null;
                     return (
                       <tr key={i}>
                         <td className="py-2.5 px-4 font-medium">Semana {t.week}</td>
                         <td className="py-2.5 px-3 text-right">R${Math.round(t.investment).toLocaleString('pt-BR')}</td>
                         <td className="py-2.5 px-3 text-right">{actual ? `R$${(actual.investment_actual || 0).toLocaleString('pt-BR')}` : '—'}</td>
-                        <td className="py-2.5 px-3 text-right">{t.leads}</td>
-                        <td className="py-2.5 px-3 text-right">{actual?.leads_actual ?? '—'}</td>
-                        <td className="py-2.5 px-3 text-right">
-                          {pct !== null ? <span className={`font-semibold ${pct >= 80 ? 'text-primary' : 'text-destructive'}`}>{pct}%</span> : '—'}
-                        </td>
+                        {activeKpis.map(kpi => {
+                          const found = (actual?.kpi_actuals || []).find(ka => ka.label === kpi.label);
+                          return (
+                            <td key={kpi.label} className="py-2.5 px-3 text-right">
+                              {found ? fmtKpi(found.value, kpi.unit) : '—'}
+                            </td>
+                          );
+                        })}
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-100 p-6">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Recomendações de Ação</h3>
-            <div className="space-y-3">
-              {recommendations.map((rec, i) => {
-                const style = SEVERITY_STYLES[rec.severity] || SEVERITY_STYLES.low;
-                const Icon = style.icon;
-                return (
-                  <div key={i} className={`flex gap-3 p-4 rounded-lg border ${style.bg} ${style.border}`}>
-                    <Icon className={`w-4 h-4 mt-0.5 ${style.text} flex-shrink-0`} />
-                    <div>
-                      <p className={`text-sm ${style.text}`}>{rec.message}</p>
-                      <p className="text-xs text-gray-500 mt-1">{rec.suggested_action}</p>
-                    </div>
-                  </div>
-                );
-              })}
             </div>
           </div>
         </>
