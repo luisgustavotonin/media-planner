@@ -235,6 +235,24 @@ export default function PlanDetail() {
         </div>
       )}
 
+      {consolidated.totals.kpi_totals?.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6 lg:grid-cols-4">
+          {consolidated.totals.kpi_totals.map((kpi, i) => (
+            <StatCard
+              key={i}
+              label={kpi.label}
+              value={
+                kpi.unit === 'percentual' ? `${(kpi.value * 100).toFixed(1)}%` :
+                kpi.unit === 'numero' ? Math.round(kpi.value).toLocaleString('pt-BR') :
+                `R$${kpi.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              }
+              icon={kpi.unit === 'moeda' ? DollarSign : kpi.unit === 'percentual' ? TrendingUp : Target}
+              color={kpi.unit === 'moeda' ? 'blue' : kpi.unit === 'percentual' ? 'green' : 'purple'}
+            />
+          ))}
+        </div>
+      )}
+
       {!readOnly && (
         <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
           <div className="flex items-center justify-between mb-4">
