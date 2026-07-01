@@ -374,26 +374,9 @@ function PlanNew({ clients, plans, funnelTypes, objectives, onSave, onBack }) {
       return;
     }
 
-    // Calcula CPL médio por canal para as campanhas desse objetivo
-    const channelCpls = {};
-    (selectedPlan.channels || []).forEach(ch => {
-      const campaignsInChannel = (ch.strategies || []).filter(camp => {
-        const obj = objectives.find(o => o.name === camp.objective);
-        return obj?.id === selectedObjectiveId;
-      });
-      if (campaignsInChannel.length > 0) {
-        let totalBudget = 0;
-        let totalUnits = 0;
-        campaignsInChannel.forEach(camp => {
-          const campBudget = camp.budget_value || 0;
-          const costKpi = (camp.kpi_values || []).find(kv => kv.unit === 'moeda' && kv.value > 0);
-          const kpiValue = costKpi?.value || 0;
-          totalBudget += campBudget;
-          if (kpiValue > 0) totalUnits += campBudget / kpiValue;
-        });
-        channelCpls[ch.channel_name] = totalUnits > 0 ? totalBudget / totalUnits : 0;
-      }
-    });
+    // CPL vem do KPI do objetivo (procura um KPI com unit "moeda")
+    const cplKpi = (selectedObjective.kpis || []).find(k => k.unit === 'moeda' && k.value > 0);
+    const defaultCpl = cplKpi?.value || 0;
 
     // Distribui por canal que tem campanhas deste objetivo
     const channelsWithObjective = (selectedPlan.channels || []).filter(ch =>
@@ -408,20 +391,20 @@ function PlanNew({ clients, plans, funnelTypes, objectives, onSave, onBack }) {
       setDistribution(channelsWithObjective.map(ch => ({
         channel_name: ch.channel_name,
         percent: totalBudget > 0 ? Math.round((ch.budget_value / totalBudget) * 100) : 0,
-        expected_cpl: channelCpls[ch.channel_name] || 0,
+        expected_cpl: defaultCpl, // usa o CPL do objetivo
       })));
     } else {
       setDistribution([]);
     }
 
-    // Taxa de conversão do funil do objetivo
+    // Taxa de conversão do funil do objetivo (pega dos stages do funnel)
     const rates = selectedObjective?.funnel_type_id && funnelType?.stages
       ? funnelType.stages.slice(0, -1).map(s => s.default_rate || 0)
       : [0.3, 0.5, 0.5];
     setConversionRates(rates);
     setEditedTicket(selectedObjective?.average_ticket || 0);
     setResult(null);
-  }, [selectedObjectiveId]);
+  }, [selectedObjectiveId, selectedPlan, funnelType]);
 
   const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
   const fmtPct = v => `${(v * 100).toFixed(1)}%`;
