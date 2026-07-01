@@ -206,7 +206,8 @@ export default function PlanDetail() {
             g.kpis[kv.label].count++;
           }
         });
-        const costKpi = kpiValues.find(kv => kv.unit === 'moeda' && kv.value > 0);
+        const ticketKpi = kpiValues.find(kv => (kv.label || '').toLowerCase().includes('ticket') && kv.value > 0);
+        const costKpi = kpiValues.find(kv => kv.unit === 'moeda' && kv.value > 0 && !(kv.label || '').toLowerCase().includes('ticket'));
         const costKpiLabel = (costKpi?.label || '').toLowerCase();
         const kpiValue = costKpi?.value || 0;
         if (type === 'branding') {
@@ -236,7 +237,7 @@ export default function PlanDetail() {
               }
               const campSales = campStages[campStages.length - 1];
               g.sales += campSales;
-              g.revenue += campSales * (obj?.average_ticket || avgTicket);
+              g.revenue += campSales * (ticketKpi?.value || avgTicket);
             }
           }
         }
@@ -249,10 +250,9 @@ export default function PlanDetail() {
         const ctx = {
           investimento: g.investment,
           investimento_liquido: g.investment,
-          receita: g.revenue,
           vendas: g.sales,
           leads: g.leads,
-          ticket_medio: g.objective?.average_ticket || avgTicket || 0,
+          ticket_medio: avgTicket || 0,
         };
         Object.values(g.kpis).forEach(k => {
           const val = k.unit === 'numero' ? (k.count > 0 ? k.totalValue / k.count : 0) : (k.totalBudget > 0 ? k.totalValue / k.totalBudget : (k.count > 0 ? k.totalValue / k.count : 0));

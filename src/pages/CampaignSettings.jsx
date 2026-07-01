@@ -227,14 +227,7 @@ function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [], funne
           placeholder="Breve descrição..." value={form.description || ''} onChange={e => setField('description', e.target.value)} />
       </div>
 
-      {form.type === 'performance' && (
-        <div className="max-w-xs">
-          <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Ticket Médio (R$)</Label>
-          <p className="text-[10px] text-gray-400 mb-1.5">Usado no cálculo de receita do funil para este objetivo.</p>
-          <input type="number" step="0.01" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="Ex: 7500" value={form.average_ticket || ''} onChange={e => setField('average_ticket', e.target.value ? Number(e.target.value) : undefined)} />
-        </div>
-      )}
+
 
       {/* KPIs */}
       <div>
@@ -280,7 +273,7 @@ function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [], funne
         <div className="flex flex-wrap gap-1 mb-2">
           <span className="text-[10px] text-gray-400">Variáveis:</span>
           {['investimento', 'investimento_liquido',
-            ...(form.type === 'performance' ? ['receita', 'vendas', 'leads', 'ticket_medio'] : []),
+            ...(form.type === 'performance' ? ['vendas', 'leads', 'ticket_medio'] : []),
             ...(form.kpis || []).filter(k => k.label).map(k => sanitizeVar(k.label)),
             ...(form.calculated_metrics || []).filter(m => m.label).map(m => sanitizeVar(m.label))
           ].map((v, i) => (

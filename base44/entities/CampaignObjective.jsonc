@@ -23,19 +23,15 @@
       "type": "string",
       "description": "Funil associado a este objetivo. Ao selecionar este objetivo numa campanha, o funil e suas taxas v\u00eam automaticamente do benchmark."
     },
-    "average_ticket": {
-      "type": "number",
-      "description": "Ticket m\u00e9dio para este objetivo (R$). Usado no c\u00e1lculo de receita do funil."
-    },
     "kpis": {
       "type": "array",
-      "description": "KPIs deste objetivo. Cada KPI aparece no plano de m\u00eddia para preenchimento. S\u00f3 KPIs com valor preenchido aparecem no acompanhamento semanal.",
+      "description": "KPIs deste objetivo. Cada KPI aparece no plano de m\u00eddia para preenchimento. S\u00f3 KPIs com valor preenchido aparecem no acompanhamento semanal. Inclua 'Ticket M\u00e9dio' como KPI (unidade: moeda) para permitir ajuste por cliente.",
       "items": {
         "type": "object",
         "properties": {
           "label": {
             "type": "string",
-            "description": "Nome do KPI (ex: CPL, CPC, CPM, CTR, Impress\u00f5es)"
+            "description": "Nome do KPI (ex: CPL, CPC, CPM, CTR, Ticket M\u00e9dio)"
           },
           "unit": {
             "type": "string",
@@ -52,17 +48,17 @@
     },
     "calculated_metrics": {
       "type": "array",
-      "description": "M\u00e9tricas calculadas dinamicamente. Cada item gera um card no resumo do plano. As f\u00f3rmulas usam vari\u00e1veis: investimento, investimento_liquido, e os labels dos KPIs (sanitizados). M\u00e9tricas calculadas anteriores tamb\u00e9m podem ser referenciadas.",
+      "description": "M\u00e9tricas calculadas dinamicamente. Cada item gera um card no resumo do plano. As f\u00f3rmulas usam vari\u00e1veis: investimento, investimento_liquido, vendas, leads, ticket_medio e os labels dos KPIs (sanitizados). M\u00e9tricas calculadas anteriores tamb\u00e9m podem ser referenciadas.",
       "items": {
         "type": "object",
         "properties": {
           "label": {
             "type": "string",
-            "description": "Nome do card exibido no resumo (ex: Impress\u00f5es, Alcance, Seguidores)"
+            "description": "Nome do card exibido no resumo (ex: Impress\u00f5es, Alcance, Receita Prevista)"
           },
           "formula": {
             "type": "string",
-            "description": "F\u00f3rmula matem\u00e1tica (ex: investimento_liquido / cpm * 1000). Operadores: + - * / e par\u00eanteses."
+            "description": "F\u00f3rmula matem\u00e1tica (ex: vendas * ticket_medio). Operadores: + - * / e par\u00eanteses."
           },
           "unit": {
             "type": "string",

@@ -29,6 +29,9 @@ export function evaluateFormula(formula, context) {
     expr = expr.replace(regex, `(${context[v]})`);
   }
 
+  // Substitui variáveis desconhecidas por 0 (ex: receita que não está mais no contexto)
+  expr = expr.replace(/[a-z_][a-z0-9_]*/g, '0');
+
   // Validação: só permite números, operadores, parênteses e espaços
   if (!/^[\d+\-*/().\s]+$/.test(expr)) {
     return 0;

@@ -420,8 +420,9 @@ function PlanNew({ clients, plans, funnelTypes, objectives, onSave, onBack }) {
         : [0.3, 0.5, 0.5];
     }
 
+    const ticketKpi = campaignsOfObjective[0]?.kpi_values?.find(kv => (kv.label || '').toLowerCase().includes('ticket') && kv.value > 0);
     setConversionRates(rates);
-    setEditedTicket(selectedObjective?.average_ticket || 0);
+    setEditedTicket(ticketKpi?.value || selectedPlan?.average_ticket || 0);
     setResult(null);
   }, [selectedObjectiveId, selectedPlan, funnelType]);
 
