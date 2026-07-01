@@ -397,10 +397,29 @@ function PlanNew({ clients, plans, funnelTypes, objectives, onSave, onBack }) {
       setDistribution([]);
     }
 
-    // Taxa de conversão do funil do objetivo (pega dos stages do funnel)
-    const rates = selectedObjective?.funnel_type_id && funnelType?.stages
-      ? funnelType.stages.slice(0, -1).map(s => s.default_rate || 0)
-      : [0.3, 0.5, 0.5];
+    // Coleta as taxas de conversão a partir dos KPIs do plano (não do funnel padrão)
+    // Procura por KPIs percentuais nas campanhas do objetivo
+    const campaignsOfObjective = (selectedPlan.channels || []).flatMap(ch =>
+      (ch.strategies || []).filter(camp => {
+        const obj = objectives.find(o => o.name === camp.objective);
+        return obj?.id === selectedObjectiveId;
+      })
+    );
+
+    let rates = [];
+    if (campaignsOfObjective.length > 0 && campaignsOfObjective[0].kpi_values) {
+      // Pega os KPIs percentuais (que são as taxas de conversão)
+      const percentKpis = campaignsOfObjective[0].kpi_values.filter(k => k.unit === 'percentual');
+      rates = percentKpis.map(k => (k.value || 0) / 100); // converte % para decimal
+    }
+
+    // Se não encontrou KPIs percentuais, usa fallback do funnel
+    if (rates.length === 0) {
+      rates = selectedObjective?.funnel_type_id && funnelType?.stages
+        ? funnelType.stages.slice(0, -1).map(s => s.default_rate || 0)
+        : [0.3, 0.5, 0.5];
+    }
+
     setConversionRates(rates);
     setEditedTicket(selectedObjective?.average_ticket || 0);
     setResult(null);
