@@ -137,15 +137,20 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
 
   return (
     <div className="px-3 pb-3 pt-2 bg-secondary/20 border-t border-gray-50">
-      <div className="flex flex-wrap items-end gap-2 mb-2">
-        <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap mb-1.5">Funil: {funnelType.name}</span>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Funil: {funnelType.name}</span>
+        {benchmark && (
+          <span className="text-[9px] text-gray-400">Bench: {benchmark.segment_label || 'Segmento'}</span>
+        )}
+      </div>
+      <div className="flex gap-3 mb-3">
         {stages.slice(0, -1).map((stage, i) => (
-          <div key={i} className="w-28 shrink-0">
-            <label className="text-[10px] text-gray-400 block mb-0.5">{stage.label} → {stages[i + 1].label}</label>
+          <div key={i} className="flex-1 min-w-0">
+            <label className="text-[9px] text-gray-400 block mb-1 truncate">{stage.label} → {stages[i + 1].label}</label>
             {readOnly ? (
               <span className="text-xs font-semibold text-gray-700">{(((campaign.funnel_rates || [])[i] || 0) * 100).toFixed(0)}%</span>
             ) : (
-              <PercentInput value={(campaign.funnel_rates || [])[i] || 0} onChange={v => updateRate(i, v)} className="h-8 text-xs" />
+              <PercentInput value={(campaign.funnel_rates || [])[i] || 0} onChange={v => updateRate(i, v)} className="h-7 text-xs" />
             )}
             {benchmarkRates.length > 0 && (
               <span className="text-[9px] text-gray-400 block mt-0.5">Bench: {((benchmarkRates[i] || 0) * 100).toFixed(0)}%</span>
