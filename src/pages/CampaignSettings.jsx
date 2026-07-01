@@ -280,6 +280,7 @@ function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [], funne
         <div className="flex flex-wrap gap-1 mb-2">
           <span className="text-[10px] text-gray-400">Variáveis:</span>
           {['investimento', 'investimento_liquido',
+            ...(form.type === 'performance' ? ['receita', 'vendas', 'leads', 'ticket_medio'] : []),
             ...(form.kpis || []).filter(k => k.label).map(k => sanitizeVar(k.label)),
             ...(form.calculated_metrics || []).filter(m => m.label).map(m => sanitizeVar(m.label))
           ].map((v, i) => (

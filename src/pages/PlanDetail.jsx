@@ -223,6 +223,22 @@ export default function PlanDetail() {
           if (freqKpi && freqKpi.value > 0 && campImpressions > 0) {
             g.reach += campImpressions / freqKpi.value;
           }
+        } else {
+          // Performance: calcula leads, vendas e receita pelo funil
+          if (kpiValue > 0) {
+            const campLeads = netBudget / kpiValue;
+            g.leads += campLeads;
+            const campRates = camp.funnel_rates?.length ? camp.funnel_rates : (activeRates.length > 0 ? activeRates : null);
+            if (campRates && campRates.length > 0) {
+              const campStages = [campLeads];
+              for (let i = 0; i < campRates.length; i++) {
+                campStages.push(campStages[i] * (campRates[i] || 0));
+              }
+              const campSales = campStages[campStages.length - 1];
+              g.sales += campSales;
+              g.revenue += campSales * (obj?.average_ticket || avgTicket);
+            }
+          }
         }
       });
     });
@@ -230,7 +246,14 @@ export default function PlanDetail() {
     Object.values(groups).forEach(g => {
       const calcMetrics = g.objective?.calculated_metrics;
       if (calcMetrics?.length) {
-        const ctx = { investimento: g.investment, investimento_liquido: g.netInvestment };
+        const ctx = {
+          investimento: g.investment,
+          investimento_liquido: g.netInvestment,
+          receita: g.revenue,
+          vendas: g.sales,
+          leads: g.leads,
+          ticket_medio: g.objective?.average_ticket || avgTicket || 0,
+        };
         Object.values(g.kpis).forEach(k => {
           const val = k.unit === 'numero' ? (k.count > 0 ? k.totalValue / k.count : 0) : (k.totalBudget > 0 ? k.totalValue / k.totalBudget : (k.count > 0 ? k.totalValue / k.count : 0));
           ctx[sanitizeVar(k.label)] = val;
