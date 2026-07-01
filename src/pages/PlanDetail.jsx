@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import PercentInput from '../components/ui-custom/PercentInput';
-import { Save, Users, DollarSign, TrendingUp, Target, ArrowLeft, FileDown, Trash2, Eye, MousePointer, Megaphone } from 'lucide-react';
+import { Save, Users, DollarSign, TrendingUp, Target, ArrowLeft, FileDown, Trash2, Eye, MousePointer, Megaphone, Wallet } from 'lucide-react';
 import { exportPlanToPdf } from '../components/plan/PlanPdfExport';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -162,6 +162,13 @@ export default function PlanDetail() {
     const obj = objectives.find(o => o.name === camp.objective);
     return obj?.type === 'branding';
   }));
+  const valorAlocado = channels.reduce((s, ch) => s + (ch.strategies || []).reduce((cs, camp) => cs + (camp.budget_value || 0), 0), 0);
+  const saldoDisponivel = totalInvestment - valorAlocado;
+  const performanceInvestment = channels.reduce((s, ch) =>
+    s + (ch.strategies || []).filter(camp => {
+      const obj = objectives.find(o => o.name === camp.objective);
+      return obj?.type === 'performance';
+    }).reduce((cs, camp) => cs + (camp.budget_value || 0), 0), 0);
 
   const updateField = (field, value) => setLocalPlan(p => ({ ...p, [field]: value }));
   const handleSave = () => {
@@ -219,11 +226,13 @@ export default function PlanDetail() {
       </div>
 
       {channels.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6 lg:grid-cols-2">
+        <div className={`grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6 ${hasAnyTax ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
           <StatCard label="Investimento Total" value={`R$${totalInvestment.toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" />
           {hasAnyTax && (
             <StatCard label="Investimento Líquido" value={`R$${Math.round(netInvestment).toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" sublabel="após impostos" />
           )}
+          <StatCard label="Valor Alocado" value={`R$${Math.round(valorAlocado).toLocaleString('pt-BR')}`} icon={Wallet} color="orange" sublabel="em campanhas" />
+          <StatCard label="Saldo Disponível" value={`R$${Math.round(saldoDisponivel).toLocaleString('pt-BR')}`} icon={Wallet} color="green" sublabel="não alocado" />
         </div>
       )}
 
@@ -270,7 +279,7 @@ export default function PlanDetail() {
             <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Performance</span>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6 lg:grid-cols-4">
-            <StatCard label="Investimento Performance" value={`R$${Math.round(totalInvestment - (consolidated.totals.branding?.investment || 0)).toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" />
+            <StatCard label="Investimento Performance" value={`R$${Math.round(performanceInvestment).toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" />
             <StatCard label="Leads Esperados" value={consolidated.totals.total_leads.toLocaleString()} icon={Users} color="purple" />
             <StatCard label="Vendas Esperadas" value={Math.round(consolidated.totals.total_sales).toLocaleString()} icon={Target} color="orange" />
             <StatCard label="Receita Projetada" value={`R$${Math.round(consolidated.totals.total_revenue).toLocaleString('pt-BR')}`} icon={TrendingUp} color="green" />

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Trash2, Plus, ChevronDown, ChevronRight, Layers } from 'lucide-react';
 import CurrencyInput from '../ui-custom/CurrencyInput';
 import PercentInput from '../ui-custom/PercentInput';
+import FunnelVisual from '../ui-custom/FunnelVisual';
 
 const fmtBRL = (n) => `R$ ${(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtDaily = (budget, days) => days > 0 ? fmtBRL(budget / days) : fmtBRL(0);
@@ -98,19 +99,39 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
     onChange({ ...campaign, funnel_rates: rates });
   };
 
+  // Calcula valores das etapas para o gráfico de barras
+  const budget = campaign.budget_value || 0;
+  const costKpi = (campaign.kpi_values || []).find(kv => kv.unit === 'moeda');
+  const cpl = costKpi?.value || campaign.kpi_value || 0;
+  const rates = campaign.funnel_rates || [];
+  const stagesWithValues = [];
+  for (let i = 0; i < stages.length; i++) {
+    if (i === 0) {
+      const value = (cpl > 0 && budget > 0) ? budget / cpl : 0;
+      stagesWithValues.push({ label: stages[i].label, value });
+    } else {
+      const rate = rates[i - 1] || 0;
+      const prevValue = stagesWithValues[i - 1].value;
+      stagesWithValues.push({ label: stages[i].label, value: prevValue * rate });
+    }
+  }
+
   return (
-    <div className="flex flex-wrap items-end gap-2 px-3 pb-2 pt-2 bg-secondary/20 border-t border-gray-50">
-      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap mb-1.5">Funil: {funnelType.name}</span>
-      {stages.slice(0, -1).map((stage, i) => (
-        <div key={i} className="w-28 shrink-0">
-          <label className="text-[10px] text-gray-400 block mb-0.5">{stage.label} → {stages[i + 1].label}</label>
-          {readOnly ? (
-            <span className="text-xs font-semibold text-gray-700">{(((campaign.funnel_rates || [])[i] || 0) * 100).toFixed(0)}%</span>
-          ) : (
-            <PercentInput value={(campaign.funnel_rates || [])[i] || 0} onChange={v => updateRate(i, v)} className="h-8 text-xs" />
-          )}
-        </div>
-      ))}
+    <div className="px-3 pb-3 pt-2 bg-secondary/20 border-t border-gray-50">
+      <FunnelVisual stages={stagesWithValues} />
+      <div className="flex flex-wrap items-end gap-2 mt-2">
+        <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap mb-1.5">Funil: {funnelType.name}</span>
+        {stages.slice(0, -1).map((stage, i) => (
+          <div key={i} className="w-28 shrink-0">
+            <label className="text-[10px] text-gray-400 block mb-0.5">{stage.label} → {stages[i + 1].label}</label>
+            {readOnly ? (
+              <span className="text-xs font-semibold text-gray-700">{(((campaign.funnel_rates || [])[i] || 0) * 100).toFixed(0)}%</span>
+            ) : (
+              <PercentInput value={(campaign.funnel_rates || [])[i] || 0} onChange={v => updateRate(i, v)} className="h-8 text-xs" />
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -195,12 +216,12 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
   const isCampaignOver = maxCampaignBudget !== undefined && campaignBudget > maxCampaignBudget + 0.01;
   const isAdsetOver = adsetTotal > campaignBudget + 0.01;
   const currentObj = objectives.find(o => o.name === campaign.objective);
-  const effectiveFunnelTypeId = campaign.funnel_type_id || currentObj?.funnel_type_id || planFunnelTypeId || '';
+  const effectiveFunnelTypeId = campaign.funnel_type_id || currentObj?.funnel_type_id || '';
 
   const handleObjectiveChange = (v) => {
     const newKpiValues = syncKpiValues(campaign, v, objectives);
     const obj = objectives.find(o => o.name === v);
-    const funnelTypeId = obj?.funnel_type_id || planFunnelTypeId || '';
+    const funnelTypeId = obj?.funnel_type_id || '';
     const ft = funnelTypes.find(f => f.id === funnelTypeId);
     const st = ft?.stages || [];
     const bm = benchmarks.find(b => b.funnel_type_id === funnelTypeId && b.segment === segment)
@@ -305,12 +326,12 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
   const updateParam = (field, val) => onChange({ ...campaign, params: { ...(campaign.params || {}), [field]: val } });
   const isOver = maxCampaignBudget !== undefined && (campaign.budget_value || 0) > maxCampaignBudget + 0.01;
   const currentObj = objectives.find(o => o.name === campaign.objective);
-  const effectiveFunnelTypeId = campaign.funnel_type_id || currentObj?.funnel_type_id || planFunnelTypeId || '';
+  const effectiveFunnelTypeId = campaign.funnel_type_id || currentObj?.funnel_type_id || '';
 
   const handleObjectiveChange = (v) => {
     const newKpiValues = syncKpiValues(campaign, v, objectives);
     const obj = objectives.find(o => o.name === v);
-    const funnelTypeId = obj?.funnel_type_id || planFunnelTypeId || '';
+    const funnelTypeId = obj?.funnel_type_id || '';
     const ft = funnelTypes.find(f => f.id === funnelTypeId);
     const st = ft?.stages || [];
     const bm = benchmarks.find(b => b.funnel_type_id === funnelTypeId && b.segment === segment)
