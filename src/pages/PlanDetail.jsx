@@ -255,7 +255,15 @@ export default function PlanDetail() {
           ticket_medio: g.objective?.average_ticket || avgTicket || 0,
         };
         Object.values(g.kpis).forEach(k => {
-          const val = k.unit === 'numero' ? (k.count > 0 ? k.totalValue / k.count : 0) : (k.totalBudget > 0 ? k.totalValue / k.totalBudget : (k.count > 0 ? k.totalValue / k.count : 0));
+          // KPIs de custo (moeda) usam valor direto; outros são agregados/médias
+          let val = 0;
+          if (k.unit === 'moeda') {
+            val = k.count > 0 ? k.totalValue / k.count : 0; // Média de KPIs de custo
+          } else if (k.unit === 'numero') {
+            val = k.count > 0 ? k.totalValue / k.count : 0; // Média de quantidade
+          } else {
+            val = k.totalBudget > 0 ? k.totalValue / k.totalBudget : 0; // Média ponderada para percentual
+          }
           ctx[sanitizeVar(k.label)] = val;
         });
         g.calculatedCards = evaluateCalculatedMetrics(calcMetrics, ctx);
