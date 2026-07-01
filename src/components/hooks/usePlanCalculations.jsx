@@ -11,8 +11,6 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket,
     });
   }
   const budget = channel.budget_value || 0;
-  const taxRate = (channel.tax_percent || 0) / 100;
-  const netBudget = budget * (1 - taxRate);
 
   let leads = 0;
   let sales = 0;
@@ -24,7 +22,6 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket,
   for (const camp of campaigns) {
     const campBudget = camp.budget_value
       || (camp.adsets || []).reduce((s, a) => s + (a.budget_value || 0), 0);
-    const campNetBudget = campBudget * (1 - taxRate);
     const obj = objectives.find(o => o.name === camp.objective);
     const objType = obj?.type || 'performance';
     const ticketKpi = (camp.kpi_values || []).find(kv => (kv.label || '').toLowerCase().includes('ticket') && kv.value > 0);

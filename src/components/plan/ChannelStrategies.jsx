@@ -97,8 +97,8 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
   const benchmarkRates = benchmark?.conversion_rates || [];
 
   // Calcula valores das etapas — projeção usa KPIs da campanha; benchmark usa CPL de referência
+  // O budget da campanha já é o valor a ser distribuído (sem desconto de imposto)
   const budget = campaign.budget_value || 0;
-  const netBudget = budget * (1 - (taxPercent || 0) / 100);
   const costKpi = (campaign.kpi_values || []).find(kv => kv.unit === 'moeda' && kv.value > 0 && !(kv.label || '').toLowerCase().includes('ticket'));
   const cpl = costKpi?.value || campaign.kpi_value || 0;
   // KPIs percentuais (Tx de Agendamento, Tx de Comparecimento, etc.) são as taxas de conversão do funil
@@ -113,7 +113,7 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
   const stagesWithValues = [];
   for (let i = 0; i < stages.length; i++) {
     if (i === 0) {
-      const value = (cpl > 0 && netBudget > 0) ? netBudget / cpl : 0;
+      const value = (cpl > 0 && budget > 0) ? budget / cpl : 0;
       stagesWithValues.push({ label: stages[i].label, value });
     } else {
       const rate = rates[i - 1] || 0;
@@ -127,7 +127,7 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
   if (benchmarkRates.length > 0) {
     for (let i = 0; i < stages.length; i++) {
       if (i === 0) {
-        const value = (bmCpl > 0 && netBudget > 0) ? netBudget / bmCpl : (stagesWithValues[0]?.value || 0);
+        const value = (bmCpl > 0 && budget > 0) ? budget / bmCpl : (stagesWithValues[0]?.value || 0);
         benchmarkStages.push({ label: stages[i].label, value });
       } else {
         const bmRate = benchmarkRates[i - 1] || 0;
