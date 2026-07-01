@@ -255,16 +255,7 @@ export default function PlanDetail() {
           ticket_medio: g.objective?.average_ticket || avgTicket || 0,
         };
         Object.values(g.kpis).forEach(k => {
-          // Para moeda: usa o valor direto (custo unitário). Para número: soma. Para percentual: média ponderada.
-          let val = 0;
-          if (k.unit === 'moeda') {
-            val = k.count > 0 ? k.totalValue / k.count : 0; // média dos custos (se múltiplas campanhas)
-          } else if (k.unit === 'numero') {
-            val = k.totalValue; // soma dos números
-          } else {
-            // percentual: média ponderada
-            val = k.totalBudget > 0 ? k.totalValue / k.totalBudget : 0;
-          }
+          const val = k.unit === 'numero' ? (k.count > 0 ? k.totalValue / k.count : 0) : (k.totalBudget > 0 ? k.totalValue / k.totalBudget : (k.count > 0 ? k.totalValue / k.count : 0));
           ctx[sanitizeVar(k.label)] = val;
         });
         g.calculatedCards = evaluateCalculatedMetrics(calcMetrics, ctx);
