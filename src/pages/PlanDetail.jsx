@@ -319,25 +319,6 @@ export default function PlanDetail() {
           {Object.entries(brandingGroups).map(([objName, data]) => {
             const hasCalcMetrics = data.calculatedCards?.length > 0;
             const frequency = data.reach > 0 ? data.impressions / data.reach : 0;
-            const isCPM = (l) => { l = l.toLowerCase(); return l.includes('cpm') || l.includes('impress') || l.includes('mil'); };
-            const isCPC = (l) => { l = l.toLowerCase(); return l.includes('cpc') || l.includes('click') || l.includes('clique'); };
-            const isFreq = (l) => l.toLowerCase().includes('freq');
-            const usedVars = hasCalcMetrics ? new Set((data.objective?.calculated_metrics || []).flatMap(m => (m.formula || '').toLowerCase().match(/[a-z_]+/g) || [])) : null;
-            const kpiCards = Object.values(data.kpis || {})
-              .filter(k => {
-                if (usedVars?.has(sanitizeVar(k.label))) return false;
-                if (!hasCalcMetrics && ((isCPM(k.label) && data.impressions > 0) || (isCPC(k.label) && data.clicks > 0) || (isFreq(k.label) && data.reach > 0))) return false;
-                return true;
-              })
-              .map(k => {
-                const val = k.unit === 'numero' ? (k.count > 0 ? k.totalValue / k.count : 0) : (k.totalBudget > 0 ? k.totalValue / k.totalBudget : (k.count > 0 ? k.totalValue / k.count : 0));
-                return {
-                  label: k.label,
-                  value: formatCardValue(val, k.unit),
-                  icon: k.unit === 'moeda' ? DollarSign : k.unit === 'percentual' ? TrendingUp : Target,
-                  color: k.unit === 'moeda' ? 'blue' : k.unit === 'percentual' ? 'green' : 'purple',
-                };
-              });
             const calcCards = hasCalcMetrics ? data.calculatedCards.map(c => ({
               label: c.label,
               value: formatCardValue(c.value, c.unit),
@@ -354,7 +335,6 @@ export default function PlanDetail() {
               { label: 'Investimento', value: `R$${Math.round(data.investment).toLocaleString('pt-BR')}`, icon: Megaphone, color: 'orange' },
               ...calcCards,
               ...hardcodedCards,
-              ...kpiCards,
             ].filter(Boolean);
             return (
               <div key={objName} className="mb-4">
@@ -379,18 +359,6 @@ export default function PlanDetail() {
           </div>
           {Object.entries(performanceGroups).map(([objName, data]) => {
             const hasCalcMetrics = data.calculatedCards?.length > 0;
-            const usedVars = hasCalcMetrics ? new Set((data.objective?.calculated_metrics || []).flatMap(m => (m.formula || '').toLowerCase().match(/[a-z_]+/g) || [])) : null;
-            const kpiCards = Object.values(data.kpis || {})
-              .filter(k => !usedVars?.has(sanitizeVar(k.label)))
-              .map(k => {
-                const val = k.unit === 'numero' ? (k.count > 0 ? k.totalValue / k.count : 0) : (k.totalBudget > 0 ? k.totalValue / k.totalBudget : (k.count > 0 ? k.totalValue / k.count : 0));
-                return {
-                  label: k.label,
-                  value: formatCardValue(val, k.unit),
-                  icon: k.unit === 'moeda' ? DollarSign : k.unit === 'percentual' ? TrendingUp : Target,
-                  color: k.unit === 'moeda' ? 'blue' : k.unit === 'percentual' ? 'green' : 'purple',
-                };
-              });
             const calcCards = hasCalcMetrics ? data.calculatedCards.map(c => ({
               label: c.label,
               value: formatCardValue(c.value, c.unit),
@@ -400,7 +368,6 @@ export default function PlanDetail() {
             const cards = [
               { label: 'Investimento', value: `R$${Math.round(data.investment).toLocaleString('pt-BR')}`, icon: DollarSign, color: 'blue' },
               ...calcCards,
-              ...kpiCards,
             ].filter(Boolean);
             return (
               <div key={objName} className="mb-4">
