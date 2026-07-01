@@ -87,7 +87,7 @@ function CampaignKpis({ campaign, objectives, onChange, readOnly }) {
 }
 
 // Componente que renderiza o seletor de funil e as taxas de conversão da campanha
-function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnly, taxPercent = 0, benchmarks = [], segment = '' }) {
+function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnly, taxPercent = 0, benchmarks = [], segment = '', channelName = '' }) {
   const funnelType = funnelTypes.find(ft => ft.id === funnelTypeId);
   const stages = funnelType?.stages || [];
   if (!funnelType || stages.length < 2) return null;
@@ -96,19 +96,16 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
     || benchmarks.find(b => b.funnel_type_id === funnelTypeId);
   const benchmarkRates = benchmark?.conversion_rates || [];
 
-  const updateRate = (i, value) => {
-    const rates = [...(campaign.funnel_rates || [])];
-    while (rates.length < stages.length - 1) rates.push(0);
-    rates[i] = value;
-    onChange({ ...campaign, funnel_rates: rates });
-  };
-
-  // Calcula valores das etapas para o gráfico de barras
+  // Calcula valores das etapas — projeção usa KPIs da campanha; benchmark usa CPL de referência
   const budget = campaign.budget_value || 0;
   const netBudget = budget * (1 - (taxPercent || 0) / 100);
   const costKpi = (campaign.kpi_values || []).find(kv => kv.unit === 'moeda');
   const cpl = costKpi?.value || campaign.kpi_value || 0;
-  const rates = campaign.funnel_rates || [];
+  const rates = campaign.funnel_rates?.length ? campaign.funnel_rates : benchmarkRates;
+
+  // CPL de referência do benchmark (Meta ou Google)
+  const bmCpl = channelName === 'Google' ? benchmark?.google_default_cpl : benchmark?.meta_default_cpl;
+
   const stagesWithValues = [];
   for (let i = 0; i < stages.length; i++) {
     if (i === 0) {
@@ -121,12 +118,13 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
     }
   }
 
-  // Calcula valores das etapas com taxas de benchmark para comparação
+  // Benchmark: usa CPL de referência do benchmark e taxas de benchmark
   const benchmarkStages = [];
   if (benchmarkRates.length > 0) {
     for (let i = 0; i < stages.length; i++) {
       if (i === 0) {
-        benchmarkStages.push({ label: stages[i].label, value: stagesWithValues[0]?.value || 0 });
+        const value = (bmCpl > 0 && netBudget > 0) ? netBudget / bmCpl : (stagesWithValues[0]?.value || 0);
+        benchmarkStages.push({ label: stages[i].label, value });
       } else {
         const bmRate = benchmarkRates[i - 1] || 0;
         const prevValue = benchmarkStages[i - 1].value;
@@ -137,26 +135,11 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
 
   return (
     <div className="px-3 pb-3 pt-2 bg-secondary/20 border-t border-gray-50">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-2">
         <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Funil: {funnelType.name}</span>
         {benchmark && (
           <span className="text-[9px] text-gray-400">Bench: {benchmark.segment_label || 'Segmento'}</span>
         )}
-      </div>
-      <div className="flex gap-3 mb-3">
-        {stages.slice(0, -1).map((stage, i) => (
-          <div key={i} className="flex-1 min-w-0">
-            <label className="text-[9px] text-gray-400 block mb-1 truncate">{stage.label} → {stages[i + 1].label}</label>
-            {readOnly ? (
-              <span className="text-xs font-semibold text-gray-700">{(((campaign.funnel_rates || [])[i] || 0) * 100).toFixed(0)}%</span>
-            ) : (
-              <PercentInput value={(campaign.funnel_rates || [])[i] || 0} onChange={v => updateRate(i, v)} className="h-7 text-xs" />
-            )}
-            {benchmarkRates.length > 0 && (
-              <span className="text-[9px] text-gray-400 block mt-0.5">Bench: {((benchmarkRates[i] || 0) * 100).toFixed(0)}%</span>
-            )}
-          </div>
-        ))}
       </div>
       <FunnelVisual stages={stagesWithValues} benchmarkStages={benchmarkStages} />
     </div>
@@ -340,7 +323,7 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
 
       {/* Funil da campanha — no rodapé do card, vem do objetivo */}
       {effectiveFunnelTypeId && (
-        <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} taxPercent={taxPercent} benchmarks={benchmarks} segment={segment} />
+        <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} taxPercent={taxPercent} benchmarks={benchmarks} segment={segment} channelName={channelName} />
       )}
     </div>
   );
@@ -348,6 +331,7 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
 
 // ─── Google Campaign ──────────────────────────────────────────────────────────
 function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives, availableObjectives, funnelTypes = [], benchmarks = [], segment = '', planFunnelTypeId = '', taxPercent = 0 }) {
+  const channelName = 'Google';
   const [open, setOpen] = useState(true);
   const updateField = (field, val) => onChange({ ...campaign, [field]: val });
   const updateParam = (field, val) => onChange({ ...campaign, params: { ...(campaign.params || {}), [field]: val } });
@@ -431,7 +415,7 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
 
       {/* Funil da campanha — no rodapé do card, vem do objetivo */}
       {effectiveFunnelTypeId && (
-        <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} taxPercent={taxPercent} benchmarks={benchmarks} segment={segment} />
+        <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} taxPercent={taxPercent} benchmarks={benchmarks} segment={segment} channelName={channelName} />
       )}
     </div>
   );
