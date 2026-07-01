@@ -250,7 +250,6 @@ export default function PlanDetail() {
         const ctx = {
           investimento: g.investment,
           investimento_liquido: g.investment,
-          vendas: g.sales,
           leads: g.leads,
           ticket_medio: avgTicket || 0,
         };
