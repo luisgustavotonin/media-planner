@@ -23,6 +23,10 @@
       "type": "string",
       "description": "Funil associado a este objetivo. Ao selecionar este objetivo numa campanha, o funil e suas taxas v\u00eam automaticamente do benchmark."
     },
+    "average_ticket": {
+      "type": "number",
+      "description": "Ticket m\u00e9dio para este objetivo (R$). Usado no c\u00e1lculo de receita do funil."
+    },
     "kpis": {
       "type": "array",
       "description": "KPIs deste objetivo. Cada KPI aparece no plano de m\u00eddia para preenchimento. S\u00f3 KPIs com valor preenchido aparecem no acompanhamento semanal.",

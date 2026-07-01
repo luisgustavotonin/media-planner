@@ -87,10 +87,14 @@ function CampaignKpis({ campaign, objectives, onChange, readOnly }) {
 }
 
 // Componente que renderiza o seletor de funil e as taxas de conversão da campanha
-function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnly, taxPercent = 0 }) {
+function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnly, taxPercent = 0, benchmarks = [], segment = '' }) {
   const funnelType = funnelTypes.find(ft => ft.id === funnelTypeId);
   const stages = funnelType?.stages || [];
   if (!funnelType || stages.length < 2) return null;
+
+  const benchmark = benchmarks.find(b => b.funnel_type_id === funnelTypeId && b.segment === segment)
+    || benchmarks.find(b => b.funnel_type_id === funnelTypeId);
+  const benchmarkRates = benchmark?.conversion_rates || [];
 
   const updateRate = (i, value) => {
     const rates = [...(campaign.funnel_rates || [])];
@@ -117,6 +121,20 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
     }
   }
 
+  // Calcula valores das etapas com taxas de benchmark para comparação
+  const benchmarkStages = [];
+  if (benchmarkRates.length > 0) {
+    for (let i = 0; i < stages.length; i++) {
+      if (i === 0) {
+        benchmarkStages.push({ label: stages[i].label, value: stagesWithValues[0]?.value || 0 });
+      } else {
+        const bmRate = benchmarkRates[i - 1] || 0;
+        const prevValue = benchmarkStages[i - 1].value;
+        benchmarkStages.push({ label: stages[i].label, value: prevValue * bmRate });
+      }
+    }
+  }
+
   return (
     <div className="px-3 pb-3 pt-2 bg-secondary/20 border-t border-gray-50">
       <div className="flex flex-wrap items-end gap-2 mb-2">
@@ -129,10 +147,13 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
             ) : (
               <PercentInput value={(campaign.funnel_rates || [])[i] || 0} onChange={v => updateRate(i, v)} className="h-8 text-xs" />
             )}
+            {benchmarkRates.length > 0 && (
+              <span className="text-[9px] text-gray-400 block mt-0.5">Bench: {((benchmarkRates[i] || 0) * 100).toFixed(0)}%</span>
+            )}
           </div>
         ))}
       </div>
-      <FunnelVisual stages={stagesWithValues} />
+      <FunnelVisual stages={stagesWithValues} benchmarkStages={benchmarkStages} />
     </div>
   );
 }
@@ -314,7 +335,7 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
 
       {/* Funil da campanha — no rodapé do card, vem do objetivo */}
       {effectiveFunnelTypeId && (
-        <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} taxPercent={taxPercent} />
+        <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} taxPercent={taxPercent} benchmarks={benchmarks} segment={segment} />
       )}
     </div>
   );
@@ -405,7 +426,7 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
 
       {/* Funil da campanha — no rodapé do card, vem do objetivo */}
       {effectiveFunnelTypeId && (
-        <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} taxPercent={taxPercent} />
+        <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} taxPercent={taxPercent} benchmarks={benchmarks} segment={segment} />
       )}
     </div>
   );

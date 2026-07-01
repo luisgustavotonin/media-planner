@@ -27,6 +27,7 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket,
     const campNetBudget = campBudget * (1 - taxRate);
     const obj = objectives.find(o => o.name === camp.objective);
     const objType = obj?.type || 'performance';
+    const campAvgTicket = obj?.average_ticket || averageTicket;
 
     const costKpi = (camp.kpi_values || []).find(kv => kv.unit === 'moeda' && kv.value > 0);
     const costKpiLabel = (costKpi?.label || '').toLowerCase();
@@ -61,7 +62,7 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket,
           }
           const campSales = campStages[campStages.length - 1];
           sales += campSales;
-          revenue += campSales * averageTicket;
+          revenue += campSales * campAvgTicket;
           campStages.forEach((v, i) => { totalStageValues[i] = (totalStageValues[i] || 0) + v; });
         }
       }

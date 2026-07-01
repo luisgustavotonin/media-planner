@@ -383,14 +383,6 @@ export default function PlanDetail() {
         </>
       )}
 
-      {!readOnly && (
-        <div className="bg-white rounded-xl border border-gray-100 p-4 mb-6 flex items-center gap-3 flex-wrap">
-          <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Ticket Médio</Label>
-          <CurrencyInput value={localPlan.average_ticket || 0} onChange={v => updateField('average_ticket', v)} prefix="R$" className="max-w-xs" />
-          <span className="text-[10px] text-gray-400">As taxas de conversão do funil agora são configuradas por campanha — selecione o funil dentro de cada campanha abaixo.</span>
-        </div>
-      )}
-
       <div className="mb-6">
         <ChannelEditor channels={channels} onChange={handleChannelsChange} totalInvestment={totalInvestment} readOnly={readOnly} days={daysInMonth} funnelStages={funnelStages} funnelTypes={funnelTypes} benchmarks={benchmarks} segment={localPlan.segment} planFunnelTypeId={localPlan.funnel_type_id} />
       </div>
