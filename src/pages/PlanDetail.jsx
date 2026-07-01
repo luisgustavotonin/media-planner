@@ -296,28 +296,22 @@ export default function PlanDetail() {
             <Megaphone className="w-3.5 h-3.5 text-gray-400" />
             <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Branding</span>
           </div>
-          {Object.entries(brandingGroups).map(([objName, data]) => (
-            <div key={objName} className="mb-4">
-              <div className="flex items-center gap-2 mb-2 ml-1">
-                <span className="text-[10px] font-medium text-gray-400">{objName}</span>
+          {Object.entries(brandingGroups).map(([objName, data]) => {
+            const frequency = data.reach > 0 ? data.impressions / data.reach : 0;
+            return (
+              <div key={objName} className="mb-4">
+                <div className="flex items-center gap-2 mb-2 ml-1">
+                  <span className="text-[10px] font-medium text-gray-400">{objName}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+                  <StatCard label="Investimento" value={`R$${Math.round(data.investment).toLocaleString('pt-BR')}`} icon={Megaphone} color="orange" sublabel={objName} />
+                  <StatCard label="Impressões" value={data.impressions > 0 ? Math.round(data.impressions).toLocaleString('pt-BR') : '—'} icon={Eye} color="blue" />
+                  <StatCard label="Alcance" value={data.reach > 0 ? Math.round(data.reach).toLocaleString('pt-BR') : '—'} icon={Users} color="green" />
+                  <StatCard label="Frequência" value={frequency > 0 ? frequency.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) : '—'} icon={TrendingUp} color="purple" />
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-                <StatCard label="Investimento" value={`R$${Math.round(data.investment).toLocaleString('pt-BR')}`} icon={Megaphone} color="orange" sublabel={objName} />
-                {data.impressions > 0 && (
-                  <StatCard label="Impressões" value={Math.round(data.impressions).toLocaleString('pt-BR')} icon={Eye} color="blue" sublabel="CPM" />
-                )}
-                {data.reach > 0 && (
-                  <StatCard label="Alcance" value={Math.round(data.reach).toLocaleString('pt-BR')} icon={Users} color="green" sublabel="impr./freq." />
-                )}
-                {data.clicks > 0 && (
-                  <StatCard label="Cliques" value={Math.round(data.clicks).toLocaleString('pt-BR')} icon={MousePointer} color="purple" sublabel="CPC" />
-                )}
-                {data.impressions > 0 && data.clicks > 0 && (
-                  <StatCard label="CTR" value={`${(data.clicks / data.impressions * 100).toFixed(2)}%`} icon={TrendingUp} color="green" />
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </>
       )}
 
