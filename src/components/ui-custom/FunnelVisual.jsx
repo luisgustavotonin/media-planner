@@ -1,54 +1,68 @@
 import React from 'react';
 
-const COLORS = ['#312B1D', '#5C4531', '#7E6951', '#A68C6D', '#C4A882', '#E2CCAF'];
-
 export default function FunnelVisual({ stages, benchmarkStages }) {
   if (!stages || stages.length === 0) return null;
 
-  const n = stages.length;
-  const hasBenchmark = benchmarkStages && benchmarkStages.length === n;
-  const getWidth = (i) => Math.round(100 - (i * (80 / Math.max(n - 1, 1))));
+  const hasBenchmark = benchmarkStages && benchmarkStages.length === stages.length;
+  const fmt = (v) => Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+  const maxVal = Math.max(
+    ...stages.map(s => s.value || 0),
+    ...(hasBenchmark ? benchmarkStages.map(s => s.value || 0) : [0]),
+    1
+  );
 
   return (
-    <div className="flex flex-col items-center w-full py-4">
-      {stages.map((stage, i) => {
-        const topW = getWidth(i);
-        const step = Math.round(80 / Math.max(n - 1, 1));
-        const botW = i === n - 1 ? Math.max(10, topW - step) : getWidth(i + 1);
-        const isLast = i === stages.length - 1;
-        const bm = hasBenchmark ? benchmarkStages[i] : null;
-        const fmt = (v) => Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
-
-        return (
-          <div
-            key={i}
-            className="flex items-center justify-center relative"
-            style={{
-              width: '100%',
-              maxWidth: 480,
-              height: 80,
-              clipPath: `polygon(${(100 - topW) / 2}% 0%, ${(100 + topW) / 2}% 0%, ${(100 + botW) / 2}% 100%, ${(100 - botW) / 2}% 100%)`,
-              background: COLORS[i % COLORS.length],
-              marginBottom: isLast ? 0 : -1,
-            }}
-          >
-            <div className="flex flex-col items-center justify-center">
-              <span className="text-white text-xs font-medium opacity-90">{stage.label}</span>
-              <span className="text-white text-xl font-bold">{fmt(stage.value)}</span>
-              {bm && (
-                <span className="text-white/60 text-[10px] font-medium mt-0.5">
-                  Benchmark: {fmt(bm.value)}
-                </span>
-              )}
-            </div>
+    <div className="w-full py-2">
+      {/* Header */}
+      <div className="flex items-center gap-4 mb-2 px-1">
+        <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Funil</span>
+        <div className="flex items-center gap-3 ml-auto">
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-2.5 rounded-sm bg-primary"></span>
+            <span className="text-[9px] text-gray-500">Projeção</span>
           </div>
-        );
-      })}
-      {hasBenchmark && (
-        <p className="text-[10px] text-gray-400 mt-3 text-center">
-          Valores em branco = projeção da campanha · Benchmark = taxas de referência do segmento
-        </p>
-      )}
+          {hasBenchmark && (
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-2.5 rounded-sm bg-secondary"></span>
+              <span className="text-[9px] text-gray-500">Benchmark</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Bars */}
+      <div className="space-y-2">
+        {stages.map((stage, i) => {
+          const val = stage.value || 0;
+          const bm = hasBenchmark ? (benchmarkStages[i]?.value || 0) : 0;
+          const valW = Math.round((val / maxVal) * 100);
+          const bmW = Math.round((bm / maxVal) * 100);
+
+          return (
+            <div key={i} className="space-y-0.5">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[11px] font-medium text-gray-600">{stage.label}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] font-bold text-foreground tabular-nums">{fmt(val)}</span>
+                  {hasBenchmark && (
+                    <span className="text-[10px] text-gray-400 tabular-nums w-10 text-right">{fmt(bm)}</span>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-0.5 pl-1">
+                <div className="h-4 bg-gray-100 rounded-sm overflow-hidden">
+                  <div className="h-full bg-primary rounded-sm transition-all duration-300" style={{ width: `${valW}%` }} />
+                </div>
+                {hasBenchmark && (
+                  <div className="h-3 bg-gray-50 rounded-sm overflow-hidden">
+                    <div className="h-full bg-secondary rounded-sm transition-all duration-300" style={{ width: `${bmW}%` }} />
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
