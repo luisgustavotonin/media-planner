@@ -374,8 +374,36 @@ function ObjectivesTab() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['campaign-objectives'] }); setEditingId(null); toast({ title: 'Objetivo criado!' }); },
   });
   const updateMut = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.CampaignObjective.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['campaign-objectives'] }); setEditingId(null); toast({ title: 'Objetivo atualizado!' }); },
+    mutationFn: async ({ id, data, oldName, newName }) => {
+      await base44.entities.CampaignObjective.update(id, data);
+      // Se o nome mudou, propaga para todos os planos de mídia que referenciam o nome antigo
+      if (oldName && newName && oldName !== newName) {
+        const plans = await base44.entities.MediaPlan.list();
+        for (const plan of plans) {
+          let changed = false;
+          const updatedChannels = (plan.channels || []).map(ch => {
+            const strategies = (ch.strategies || []).map(camp => {
+              if (camp.objective === oldName) {
+                changed = true;
+                return { ...camp, objective: newName };
+              }
+              return camp;
+            });
+            return { ...ch, strategies };
+          });
+          if (changed) {
+            await base44.entities.MediaPlan.update(plan.id, { channels: updatedChannels });
+          }
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaign-objectives'] });
+      queryClient.invalidateQueries({ queryKey: ['plans'] });
+      queryClient.invalidateQueries({ queryKey: ['plan'] });
+      setEditingId(null);
+      toast({ title: 'Objetivo atualizado!' });
+    },
   });
   const deleteMut = useMutation({
     mutationFn: (id) => base44.entities.CampaignObjective.delete(id),
@@ -388,7 +416,7 @@ function ObjectivesTab() {
     // Limpa campos legados
     const { primary_kpi_label, kpi_unit, metrics, ...cleanForm } = form;
     if (editingId === 'new') createMut.mutate(cleanForm);
-    else updateMut.mutate({ id: editingId, data: cleanForm });
+    else updateMut.mutate({ id: editingId, data: cleanForm, oldName: editingObj?.name, newName: cleanForm.name });
   };
 
   const addPresets = async () => {
