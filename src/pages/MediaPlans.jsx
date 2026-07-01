@@ -219,23 +219,6 @@ export default function MediaPlans() {
                 <Input type="number" value={form.period_year} onChange={e => setForm({...form, period_year: Number(e.target.value)})} />
               </div>
             </div>
-            <div>
-              <Label className="text-xs">Tipo de Funil</Label>
-              <Select value={form.funnel_type_id} onValueChange={v => setForm({...form, funnel_type_id: v})}>
-                <SelectTrigger><SelectValue placeholder="Selecione o tipo de funil" /></SelectTrigger>
-                <SelectContent>
-                  {funnelTypes.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              {form.funnel_type_id && (() => {
-                const ft = funnelTypes.find(f => f.id === form.funnel_type_id);
-                return ft?.stages ? (
-                  <p className="text-[10px] text-gray-400 mt-1">
-                    {ft.stages.map(s => s.label).join(' → ')}
-                  </p>
-                ) : null;
-              })()}
-            </div>
             <Button onClick={() => createMut.mutate(form)} className="w-full bg-primary hover:bg-primary/90" disabled={!form.client_id || createMut.isPending}>
               Criar Plano
             </Button>
