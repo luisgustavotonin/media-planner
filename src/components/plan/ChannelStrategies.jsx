@@ -101,7 +101,11 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
   const netBudget = budget * (1 - (taxPercent || 0) / 100);
   const costKpi = (campaign.kpi_values || []).find(kv => kv.unit === 'moeda');
   const cpl = costKpi?.value || campaign.kpi_value || 0;
-  const rates = campaign.funnel_rates?.length ? campaign.funnel_rates : benchmarkRates;
+  // KPIs percentuais (Tx de Agendamento, Tx de Comparecimento, etc.) são as taxas de conversão do funil
+  const percentualKpis = (campaign.kpi_values || []).filter(kv => kv.unit === 'percentual');
+  const rates = percentualKpis.length >= stages.length - 1
+    ? percentualKpis.map(kv => kv.value)
+    : (campaign.funnel_rates?.length ? campaign.funnel_rates : benchmarkRates);
 
   // CPL de referência do benchmark (Meta ou Google)
   const bmCpl = channelName === 'Google' ? benchmark?.google_default_cpl : benchmark?.meta_default_cpl;
