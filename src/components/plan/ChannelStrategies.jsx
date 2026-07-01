@@ -50,7 +50,7 @@ function KpiField({ kpi, value, onChange, readOnly }) {
     return <PercentInput value={value || 0} onChange={onChange} className="h-8 text-xs" />;
   }
   if (kpi.unit === 'numero') {
-    return <input type="number" min="0" value={value || ''} placeholder="0"
+    return <input type="number" min="0" step="any" value={value || ''} placeholder="0"
       onChange={e => onChange(parseFloat(e.target.value) || 0)}
       className="w-full h-8 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-primary" />;
   }
@@ -118,8 +118,7 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
 
   return (
     <div className="px-3 pb-3 pt-2 bg-secondary/20 border-t border-gray-50">
-      <FunnelVisual stages={stagesWithValues} />
-      <div className="flex flex-wrap items-end gap-2 mt-2">
+      <div className="flex flex-wrap items-end gap-2 mb-2">
         <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap mb-1.5">Funil: {funnelType.name}</span>
         {stages.slice(0, -1).map((stage, i) => (
           <div key={i} className="w-28 shrink-0">
@@ -132,6 +131,45 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
           </div>
         ))}
       </div>
+      <FunnelVisual stages={stagesWithValues} />
+    </div>
+  );
+}
+
+// Funil de branding: calcula Impressões e Alcance a partir de CPM e Frequência
+function BrandingFunnel({ campaign, objectives, readOnly }) {
+  const obj = objectives.find(o => o.name === campaign.objective);
+  if (!obj || obj.type !== 'branding') return null;
+
+  const budget = campaign.budget_value || 0;
+  const kpiValues = campaign.kpi_values || [];
+  const cpmKpi = kpiValues.find(kv => kv.unit === 'moeda' && (kv.label || '').toLowerCase().match(/cpm|impress|mil/));
+  const cpcKpi = kpiValues.find(kv => kv.unit === 'moeda' && (kv.label || '').toLowerCase().match(/cpc|click|clique/));
+  const freqKpi = kpiValues.find(kv => kv.unit === 'numero' && (kv.label || '').toLowerCase().includes('freq'));
+
+  const cpm = cpmKpi?.value || 0;
+  const cpc = cpcKpi?.value || 0;
+  const frequency = freqKpi?.value || 0;
+
+  const impressions = (cpm > 0 && budget > 0) ? (budget / cpm) * 1000 : 0;
+  const clicks = (cpc > 0 && budget > 0) ? budget / cpc : 0;
+  const reach = (impressions > 0 && frequency > 0) ? impressions / frequency : 0;
+
+  const stages = [];
+  if (impressions > 0) stages.push({ label: 'Impressões', value: impressions });
+  if (reach > 0) stages.push({ label: 'Alcance', value: reach });
+  if (stages.length === 0 && clicks > 0) stages.push({ label: 'Cliques', value: clicks });
+
+  if (stages.length === 0) return null;
+
+  return (
+    <div className="px-3 pb-3 pt-2 bg-secondary/20 border-t border-gray-50">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+          Branding: {campaign.objective}
+        </span>
+      </div>
+      <FunnelVisual stages={stages} />
     </div>
   );
 }
@@ -311,10 +349,12 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
         </div>
       )}
 
-      {/* Funil da campanha — no rodapé do card, vem do objetivo */}
-      {effectiveFunnelTypeId && (
+      {/* Funil/Branding da campanha — no rodapé do card, vem do objetivo */}
+      {currentObj?.type === 'branding' ? (
+        <BrandingFunnel campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
+      ) : effectiveFunnelTypeId ? (
         <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} />
-      )}
+      ) : null}
     </div>
   );
 }
@@ -402,10 +442,12 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
         </div>
       )}
 
-      {/* Funil da campanha — no rodapé do card, vem do objetivo */}
-      {effectiveFunnelTypeId && (
+      {/* Funil/Branding da campanha — no rodapé do card, vem do objetivo */}
+      {currentObj?.type === 'branding' ? (
+        <BrandingFunnel campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
+      ) : effectiveFunnelTypeId ? (
         <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} />
-      )}
+      ) : null}
     </div>
   );
 }

@@ -34,12 +34,19 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket,
 
     if (objType === 'branding') {
       branding.investment += campBudget;
+      let campImpressions = 0;
       if (kpiValue > 0) {
         if (costKpiLabel.includes('cpm') || costKpiLabel.includes('impress') || costKpiLabel.includes('mil')) {
-          branding.impressions += (campNetBudget / kpiValue) * 1000;
+          campImpressions = (campNetBudget / kpiValue) * 1000;
+          branding.impressions += campImpressions;
         } else if (costKpiLabel.includes('cpc') || costKpiLabel.includes('click') || costKpiLabel.includes('clique')) {
           branding.clicks += campNetBudget / kpiValue;
         }
+      }
+      const freqKpi = (camp.kpi_values || []).find(kv =>
+        kv.unit === 'numero' && (kv.label || '').toLowerCase().includes('freq'));
+      if (freqKpi && freqKpi.value > 0 && campImpressions > 0) {
+        branding.reach += campImpressions / freqKpi.value;
       }
     } else {
       if (kpiValue > 0) {
