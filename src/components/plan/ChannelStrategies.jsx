@@ -99,7 +99,7 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
   // Calcula valores das etapas — projeção usa KPIs da campanha; benchmark usa CPL de referência
   const budget = campaign.budget_value || 0;
   const netBudget = budget * (1 - (taxPercent || 0) / 100);
-  const costKpi = (campaign.kpi_values || []).find(kv => kv.unit === 'moeda');
+  const costKpi = (campaign.kpi_values || []).find(kv => kv.unit === 'moeda' && kv.value > 0 && !(kv.label || '').toLowerCase().includes('ticket'));
   const cpl = costKpi?.value || campaign.kpi_value || 0;
   // KPIs percentuais (Tx de Agendamento, Tx de Comparecimento, etc.) são as taxas de conversão do funil
   const percentualKpis = (campaign.kpi_values || []).filter(kv => kv.unit === 'percentual');

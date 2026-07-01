@@ -64,28 +64,22 @@ export default function FunnelVisual({ stages, benchmarkStages, funnelName }) {
               <div className="flex items-center gap-2">
                 <div className="flex-1 space-y-0.5">
                   {/* Projeção bar */}
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[9px] font-bold text-primary tabular-nums">{fmt(val)}</span>
+                  </div>
                   <div className="relative h-4 bg-gray-100 rounded-sm overflow-hidden">
-                    <div className="h-full bg-primary rounded-sm transition-all duration-300 flex items-center justify-end pr-1" style={{ width: `${Math.max(valW, 8)}%` }}>
-                      {valW > 15 && (
-                        <span className="text-[9px] font-bold text-primary-foreground tabular-nums">{fmt(val)}</span>
-                      )}
-                    </div>
-                    {valW <= 15 && (
-                      <span className="absolute top-0 right-1 text-[9px] font-bold text-foreground tabular-nums leading-4">{fmt(val)}</span>
-                    )}
+                    <div className="h-full bg-primary rounded-sm transition-all duration-300" style={{ width: `${Math.max(valW, 8)}%` }}></div>
                   </div>
                   {/* Benchmark bar */}
                   {hasBenchmark && (
-                    <div className="relative h-3 bg-gray-50 rounded-sm overflow-hidden">
-                      <div className="h-full bg-secondary rounded-sm transition-all duration-300 flex items-center justify-end pr-1" style={{ width: `${Math.max(bmW, 8)}%` }}>
-                        {bmW > 15 && (
-                          <span className="text-[9px] font-semibold text-secondary-foreground tabular-nums">{fmt(bm)}</span>
-                        )}
+                    <>
+                      <div className="flex items-center justify-between mb-0.5 mt-0.5">
+                        <span className="text-[9px] font-semibold text-gray-400 tabular-nums">{fmt(bm)}</span>
                       </div>
-                      {bmW <= 15 && (
-                        <span className="absolute top-0 right-1 text-[9px] font-semibold text-gray-400 tabular-nums leading-3">{fmt(bm)}</span>
-                      )}
-                    </div>
+                      <div className="relative h-3 bg-gray-50 rounded-sm overflow-hidden">
+                        <div className="h-full bg-secondary rounded-sm transition-all duration-300" style={{ width: `${Math.max(bmW, 8)}%` }}></div>
+                      </div>
+                    </>
                   )}
                 </div>
                 <div className="w-16 flex-shrink-0"></div>
