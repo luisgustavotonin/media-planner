@@ -107,6 +107,14 @@ export default function MediaPlans() {
   const clientPlans = myPlans.filter(p => p.client_id === selectedClientId);
   const selectedPlan = myPlans.find(p => p.id === selectedPlanId);
 
+  // Bloqueia mais de um plano por mês/cliente
+  const existingPlanForPeriod = plans.find(p =>
+    p.client_id === form.client_id &&
+    p.period_month === form.period_month &&
+    p.period_year === form.period_year
+  );
+  const periodBlocked = !!form.client_id && !!existingPlanForPeriod;
+
   // Segmentos baseados nos benchmarks cadastrados
   const ESPECIALIDADES = benchmarks.map(b => ({
     value: b.segment,
@@ -219,7 +227,10 @@ export default function MediaPlans() {
                 <Input type="number" value={form.period_year} onChange={e => setForm({...form, period_year: Number(e.target.value)})} />
               </div>
             </div>
-            <Button onClick={() => createMut.mutate(form)} className="w-full bg-primary hover:bg-primary/90" disabled={!form.client_id || createMut.isPending}>
+            {periodBlocked && (
+              <p className="text-xs text-red-500 font-medium">Já existe um plano de mídia para {form.client_id && allClients.find(c => c.id === form.client_id)?.clinic_name} em {MESES[form.period_month - 1]}/{form.period_year}. Apenas um plano por mês é permitido.</p>
+            )}
+            <Button onClick={() => createMut.mutate(form)} className="w-full bg-primary hover:bg-primary/90" disabled={!form.client_id || periodBlocked || createMut.isPending}>
               Criar Plano
             </Button>
           </div>
