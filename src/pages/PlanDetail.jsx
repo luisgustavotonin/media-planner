@@ -154,6 +154,14 @@ export default function PlanDetail() {
     return s + (c.budget_value || 0) * (1 - tax);
   }, 0);
   const hasAnyTax = channels.some(c => (c.tax_percent || 0) > 0);
+  const hasPerformanceCampaigns = channels.some(ch => (ch.strategies || []).some(camp => {
+    const obj = objectives.find(o => o.name === camp.objective);
+    return obj?.type === 'performance';
+  }));
+  const hasBrandingCampaigns = channels.some(ch => (ch.strategies || []).some(camp => {
+    const obj = objectives.find(o => o.name === camp.objective);
+    return obj?.type === 'branding';
+  }));
 
   const updateField = (field, value) => setLocalPlan(p => ({ ...p, [field]: value }));
   const handleSave = () => {
@@ -220,7 +228,7 @@ export default function PlanDetail() {
       )}
 
       {/* Branding */}
-      {consolidated.totals.branding && consolidated.totals.branding.investment > 0 && (
+      {hasBrandingCampaigns && (
         <>
           <div className="flex items-center gap-2 mb-2">
             <Megaphone className="w-3.5 h-3.5 text-gray-400" />
@@ -255,7 +263,7 @@ export default function PlanDetail() {
       )}
 
       {/* Performance */}
-      {channels.length > 0 && (
+      {hasPerformanceCampaigns && (
         <>
           <div className="flex items-center gap-2 mb-2">
             <Target className="w-3.5 h-3.5 text-gray-400" />
