@@ -410,9 +410,10 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
   );
 }
 
-function GoogleStrategies({ strategies = [], channelBudget = 0, days = 30, onChange, readOnly, objectives, availableObjectives, funnelTypes = [], benchmarks = [], segment = '', planFunnelTypeId = '' }) {
+function GoogleStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, days = 30, onChange, readOnly, objectives, availableObjectives, funnelTypes = [], benchmarks = [], segment = '', planFunnelTypeId = '' }) {
+  const netBudget = (channelBudget || 0) * (1 - (taxPercent || 0) / 100);
   const totalAllocated = strategies.reduce((s, c) => s + (c.budget_value || 0), 0);
-  const remaining = channelBudget - totalAllocated;
+  const remaining = netBudget - totalAllocated;
 
   const addCampaign = () => {
     if (readOnly) return;
@@ -433,7 +434,7 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, days = 30, onCha
         <span className="text-xs font-semibold text-gray-700">Campanhas Google</span>
         <div className="flex items-center gap-3">
           <span className={`text-[11px] font-medium ${remaining < -0.01 ? 'text-red-500' : 'text-gray-400'}`}>
-            Alocado {fmtBRL(totalAllocated)} de {fmtBRL(channelBudget)} · Restante {fmtBRL(remaining)}
+            Alocado {fmtBRL(totalAllocated)} de {fmtBRL(netBudget)} · Restante {fmtBRL(remaining)}
           </span>
           {!readOnly && (
             <Button variant="outline" size="sm" onClick={addCampaign} className="h-7 text-[11px] gap-1">
@@ -443,7 +444,7 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, days = 30, onCha
         </div>
       </div>
       {remaining < -0.01 && (
-        <p className="text-[11px] text-red-500 font-medium">⚠ A soma das campanhas excede o budget do canal.</p>
+        <p className="text-[11px] text-red-500 font-medium">⚠ A soma das campanhas excede o budget líquido do canal.</p>
       )}
       {strategies.length === 0 && (
         <p className="text-[11px] text-gray-400 py-1">Nenhuma campanha adicionada.</p>
@@ -451,7 +452,7 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, days = 30, onCha
       <div className="space-y-3">
         {strategies.map((camp, idx) => {
           const otherTotal = totalAllocated - (camp.budget_value || 0);
-          const maxForCampaign = channelBudget - otherTotal;
+          const maxForCampaign = netBudget - otherTotal;
           return (
             <GoogleCampaign key={idx} campaign={camp} days={days}
               onChange={updated => updateCampaign(idx, updated)} onRemove={() => removeCampaign(idx)}
@@ -469,8 +470,9 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
   // Filtra objetivos aplicáveis a este canal (sem channels = disponível para todos)
   const availableObjectives = objectives.filter(o => !o.channels || o.channels.length === 0 || o.channels.includes(channelName));
 
+  const netBudget = (channelBudget || 0) * (1 - (taxPercent || 0) / 100);
   const totalAllocated = strategies.reduce((s, camp) => s + (camp.budget_value || 0), 0);
-  const remaining = (channelBudget || 0) - totalAllocated;
+  const remaining = netBudget - totalAllocated;
 
   const addCampaign = () => {
     if (readOnly) return;
@@ -487,7 +489,7 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
 
   if (channelName === 'Google') {
     return (
-      <GoogleStrategies strategies={strategies} channelBudget={channelBudget} days={days}
+      <GoogleStrategies strategies={strategies} channelBudget={channelBudget} taxPercent={taxPercent} days={days}
         onChange={onChange} readOnly={readOnly} objectives={objectives} availableObjectives={availableObjectives}
         funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} planFunnelTypeId={planFunnelTypeId} />
     );
@@ -499,7 +501,7 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
         <span className="text-xs font-semibold text-gray-700">Campanhas</span>
         <div className="flex items-center gap-3">
           <span className={`text-[11px] font-medium ${remaining < -0.01 ? 'text-red-500' : 'text-gray-400'}`}>
-            Alocado {fmtBRL(totalAllocated)} de {fmtBRL(channelBudget)} · Restante {fmtBRL(remaining)}
+            Alocado {fmtBRL(totalAllocated)} de {fmtBRL(netBudget)} · Restante {fmtBRL(remaining)}
           </span>
           {!readOnly && (
             <Button variant="outline" size="sm" onClick={addCampaign} className="h-7 text-[11px] gap-1">
@@ -509,7 +511,7 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
         </div>
       </div>
       {remaining < -0.01 && (
-        <p className="text-[11px] text-red-500 font-medium">⚠ A soma das campanhas excede o budget do canal.</p>
+        <p className="text-[11px] text-red-500 font-medium">⚠ A soma das campanhas excede o budget líquido do canal.</p>
       )}
       {strategies.length === 0 && (
         <p className="text-[11px] text-gray-400 py-1">Nenhuma campanha adicionada. Selecione um objetivo para ver os KPIs disponíveis.</p>
@@ -517,7 +519,7 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
       <div className="space-y-3">
         {strategies.map((camp, idx) => {
           const otherTotal = totalAllocated - (camp.budget_value || 0);
-          const maxForCampaign = channelBudget - otherTotal;
+          const maxForCampaign = netBudget - otherTotal;
           return (
             <Campaign key={idx} campaign={camp} days={days}
               onChange={updated => updateCampaign(idx, updated)} onRemove={() => removeCampaign(idx)}
