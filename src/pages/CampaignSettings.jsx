@@ -200,19 +200,21 @@ function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [], funne
           </p>
         </div>
       </div>
-      {form.type === 'performance' && (
-        <div>
-          <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Funil Associado</Label>
-          <p className="text-[10px] text-gray-400 mb-2">Selecione o funil que este objetivo usa. Ao escolher este objetivo numa campanha, o funil e suas taxas vêm automaticamente do benchmark.</p>
-          <Select value={form.funnel_type_id || 'none'} onValueChange={v => setField('funnel_type_id', v === 'none' ? '' : v)}>
-            <SelectTrigger className="w-full h-10 text-sm"><SelectValue placeholder="Selecione um funil..." /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Nenhum</SelectItem>
-              {funnelTypes.map(ft => <SelectItem key={ft.id} value={ft.id}>{ft.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+      <div>
+        <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Funil Associado</Label>
+        <p className="text-[10px] text-gray-400 mb-2">
+          {form.type === 'performance'
+            ? 'Selecione o funil que este objetivo usa. Ao escolher este objetivo numa campanha, o funil e suas taxas vêm automaticamente do benchmark.'
+            : 'Selecione o funil de etapas deste objetivo (ex: Impressões → Cliques → Engajamentos). Opcional para branding.'}
+        </p>
+        <Select value={form.funnel_type_id || 'none'} onValueChange={v => setField('funnel_type_id', v === 'none' ? '' : v)}>
+          <SelectTrigger className="w-full h-10 text-sm"><SelectValue placeholder="Selecione um funil..." /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Nenhum</SelectItem>
+            {funnelTypes.map(ft => <SelectItem key={ft.id} value={ft.id}>{ft.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
 
       <div>
         <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Descrição</Label>
