@@ -32,7 +32,7 @@ const STATUS_PT = { draft: 'Rascunho', active: 'Ativo', completed: 'Concluído' 
 const formatCardValue = (value, unit) => {
   if (unit === 'percentual') return `${(value * 100).toFixed(1)}%`;
   if (unit === 'moeda') return `R$${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  return value.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+  return Math.round(value).toLocaleString('pt-BR');
 };
 
 export default function PlanDetail() {
@@ -247,8 +247,8 @@ export default function PlanDetail() {
       const calcMetrics = g.objective?.calculated_metrics;
       if (calcMetrics?.length) {
         const ctx = {
-          investimento: g.investment,
-          investimento_liquido: g.investment,
+          investimento: g.netInvestment,
+          investimento_liquido: g.netInvestment,
           receita: g.revenue,
           vendas: g.sales,
           leads: g.leads,
