@@ -18,6 +18,7 @@ import { exportPlanToPdf } from '../components/plan/PlanPdfExport';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { toast } from 'sonner';
+import { sanitizeVar, evaluateCalculatedMetrics } from '@/lib/formulaEvaluator';
 
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
@@ -27,6 +28,12 @@ const SEGMENTOS = {
   pediatric: 'Odontopediatria', other: 'Outros',
 };
 const STATUS_PT = { draft: 'Rascunho', active: 'Ativo', completed: 'Concluído' };
+
+const formatCardValue = (value, unit) => {
+  if (unit === 'percentual') return `${(value * 100).toFixed(1)}%`;
+  if (unit === 'moeda') return `R$${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return value.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+};
 
 export default function PlanDetail() {
   const params = new URLSearchParams(window.location.search);
@@ -178,11 +185,12 @@ export default function PlanDetail() {
         const obj = objectives.find(o => o.name === camp.objective);
         if ((obj?.type || 'performance') !== type) return;
         const key = camp.objective || 'Sem objetivo';
-        if (!groups[key]) groups[key] = { investment: 0, impressions: 0, clicks: 0, reach: 0, leads: 0, sales: 0, revenue: 0, kpis: {} };
+        if (!groups[key]) groups[key] = { investment: 0, netInvestment: 0, impressions: 0, clicks: 0, reach: 0, leads: 0, sales: 0, revenue: 0, kpis: {}, objective: obj };
         const g = groups[key];
         const campBudget = camp.budget_value || 0;
         const netBudget = campBudget * (1 - taxRate);
         g.investment += campBudget;
+        g.netInvestment += netBudget;
         const kpiValues = camp.kpi_values || [];
         // Coleta todos os KPIs preenchidos dinamicamente
         kpiValues.forEach(kv => {
@@ -230,6 +238,18 @@ export default function PlanDetail() {
           }
         }
       });
+    });
+    // Avalia métricas calculadas dinamicamente (fórmulas configuradas no objetivo)
+    Object.values(groups).forEach(g => {
+      const calcMetrics = g.objective?.calculated_metrics;
+      if (calcMetrics?.length) {
+        const ctx = { investimento: g.investment, investimento_liquido: g.netInvestment };
+        Object.values(g.kpis).forEach(k => {
+          const val = k.unit === 'numero' ? (k.count > 0 ? k.totalValue / k.count : 0) : (k.totalBudget > 0 ? k.totalValue / k.totalBudget : (k.count > 0 ? k.totalValue / k.count : 0));
+          ctx[sanitizeVar(k.label)] = val;
+        });
+        g.calculatedCards = evaluateCalculatedMetrics(calcMetrics, ctx);
+      }
     });
     return groups;
   };
@@ -310,27 +330,43 @@ export default function PlanDetail() {
             <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Branding</span>
           </div>
           {Object.entries(brandingGroups).map(([objName, data]) => {
+            const hasCalcMetrics = data.calculatedCards?.length > 0;
             const frequency = data.reach > 0 ? data.impressions / data.reach : 0;
             const isCPM = (l) => { l = l.toLowerCase(); return l.includes('cpm') || l.includes('impress') || l.includes('mil'); };
             const isCPC = (l) => { l = l.toLowerCase(); return l.includes('cpc') || l.includes('click') || l.includes('clique'); };
             const isFreq = (l) => l.toLowerCase().includes('freq');
+            const usedVars = hasCalcMetrics ? new Set((data.objective?.calculated_metrics || []).flatMap(m => (m.formula || '').toLowerCase().match(/[a-z_]+/g) || [])) : null;
             const kpiCards = Object.values(data.kpis || {})
-              .filter(k => !((isCPM(k.label) && data.impressions > 0) || (isCPC(k.label) && data.clicks > 0) || (isFreq(k.label) && data.reach > 0)))
+              .filter(k => {
+                if (usedVars?.has(sanitizeVar(k.label))) return false;
+                if (!hasCalcMetrics && ((isCPM(k.label) && data.impressions > 0) || (isCPC(k.label) && data.clicks > 0) || (isFreq(k.label) && data.reach > 0))) return false;
+                return true;
+              })
               .map(k => {
                 const val = k.unit === 'numero' ? (k.count > 0 ? k.totalValue / k.count : 0) : (k.totalBudget > 0 ? k.totalValue / k.totalBudget : (k.count > 0 ? k.totalValue / k.count : 0));
                 return {
                   label: k.label,
-                  value: k.unit === 'percentual' ? `${(val * 100).toFixed(1)}%` : k.unit === 'moeda' ? `R$${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : val.toLocaleString('pt-BR', { maximumFractionDigits: 2 }),
+                  value: formatCardValue(val, k.unit),
                   icon: k.unit === 'moeda' ? DollarSign : k.unit === 'percentual' ? TrendingUp : Target,
                   color: k.unit === 'moeda' ? 'blue' : k.unit === 'percentual' ? 'green' : 'purple',
                 };
               });
-            const cards = [
-              { label: 'Investimento', value: `R$${Math.round(data.investment).toLocaleString('pt-BR')}`, icon: Megaphone, color: 'orange' },
+            const calcCards = hasCalcMetrics ? data.calculatedCards.map(c => ({
+              label: c.label,
+              value: formatCardValue(c.value, c.unit),
+              icon: c.unit === 'moeda' ? DollarSign : c.unit === 'percentual' ? TrendingUp : Target,
+              color: c.unit === 'moeda' ? 'blue' : c.unit === 'percentual' ? 'green' : 'purple',
+            })) : [];
+            const hardcodedCards = hasCalcMetrics ? [] : [
               data.impressions > 0 && { label: 'Impressões', value: Math.round(data.impressions).toLocaleString('pt-BR'), icon: Eye, color: 'blue' },
               data.reach > 0 && { label: 'Alcance', value: Math.round(data.reach).toLocaleString('pt-BR'), icon: Users, color: 'green' },
               frequency > 0 && { label: 'Frequência', value: frequency.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }), icon: TrendingUp, color: 'purple' },
               data.clicks > 0 && { label: 'Cliques', value: Math.round(data.clicks).toLocaleString('pt-BR'), icon: MousePointer, color: 'purple' },
+            ].filter(Boolean);
+            const cards = [
+              { label: 'Investimento', value: `R$${Math.round(data.investment).toLocaleString('pt-BR')}`, icon: Megaphone, color: 'orange' },
+              ...calcCards,
+              ...hardcodedCards,
               ...kpiCards,
             ].filter(Boolean);
             return (
@@ -355,23 +391,36 @@ export default function PlanDetail() {
             <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Performance</span>
           </div>
           {Object.entries(performanceGroups).map(([objName, data]) => {
+            const hasCalcMetrics = data.calculatedCards?.length > 0;
             const isCPL = (l) => { l = l.toLowerCase(); return l.includes('cpl') || l.includes('lead') || l.includes('custo por lead'); };
+            const usedVars = hasCalcMetrics ? new Set((data.objective?.calculated_metrics || []).flatMap(m => (m.formula || '').toLowerCase().match(/[a-z_]+/g) || [])) : null;
             const kpiCards = Object.values(data.kpis || {})
-              .filter(k => !(isCPL(k.label) && data.leads > 0))
+              .filter(k => {
+                if (usedVars?.has(sanitizeVar(k.label))) return false;
+                if (isCPL(k.label) && data.leads > 0) return false;
+                return true;
+              })
               .map(k => {
                 const val = k.unit === 'numero' ? (k.count > 0 ? k.totalValue / k.count : 0) : (k.totalBudget > 0 ? k.totalValue / k.totalBudget : (k.count > 0 ? k.totalValue / k.count : 0));
                 return {
                   label: k.label,
-                  value: k.unit === 'percentual' ? `${(val * 100).toFixed(1)}%` : k.unit === 'moeda' ? `R$${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : val.toLocaleString('pt-BR', { maximumFractionDigits: 2 }),
+                  value: formatCardValue(val, k.unit),
                   icon: k.unit === 'moeda' ? DollarSign : k.unit === 'percentual' ? TrendingUp : Target,
                   color: k.unit === 'moeda' ? 'blue' : k.unit === 'percentual' ? 'green' : 'purple',
                 };
               });
+            const calcCards = hasCalcMetrics ? data.calculatedCards.map(c => ({
+              label: c.label,
+              value: formatCardValue(c.value, c.unit),
+              icon: c.unit === 'moeda' ? DollarSign : c.unit === 'percentual' ? TrendingUp : Target,
+              color: c.unit === 'moeda' ? 'blue' : c.unit === 'percentual' ? 'green' : 'purple',
+            })) : [];
             const cards = [
               { label: 'Investimento', value: `R$${Math.round(data.investment).toLocaleString('pt-BR')}`, icon: DollarSign, color: 'blue' },
               data.leads > 0 && { label: 'Leads Esperados', value: Math.round(data.leads).toLocaleString('pt-BR'), icon: Users, color: 'purple' },
               data.sales > 0 && { label: 'Vendas Esperadas', value: Math.round(data.sales).toLocaleString('pt-BR'), icon: Target, color: 'orange' },
               data.revenue > 0 && { label: 'Receita Projetada', value: `R$${Math.round(data.revenue).toLocaleString('pt-BR')}`, icon: TrendingUp, color: 'green' },
+              ...calcCards,
               ...kpiCards,
             ].filter(Boolean);
             return (

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Plus, Trash2, Pencil, X, Check, ToggleLeft, ToggleRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
+import { sanitizeVar } from '@/lib/formulaEvaluator';
 
 const UNIT_LABELS = { numero: 'Número', moeda: 'Moeda (R$)', percentual: 'Percentual (%)' };
 const UNIT_SHORT = { numero: 'nº', moeda: 'R$', percentual: '%' };
@@ -173,6 +174,10 @@ function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [], funne
   const updateKpi = (i, k, v) => setForm(f => ({ ...f, kpis: f.kpis.map((kp, j) => j === i ? { ...kp, [k]: v } : kp) }));
   const removeKpi = (i) => setForm(f => ({ ...f, kpis: f.kpis.filter((_, j) => j !== i) }));
 
+  const addCalcMetric = () => setForm(f => ({ ...f, calculated_metrics: [...(f.calculated_metrics || []), { label: '', formula: '', unit: 'numero' }] }));
+  const updateCalcMetric = (i, k, v) => setForm(f => ({ ...f, calculated_metrics: (f.calculated_metrics || []).map((m, j) => j === i ? { ...m, [k]: v } : m) }));
+  const removeCalcMetric = (i) => setForm(f => ({ ...f, calculated_metrics: (f.calculated_metrics || []).filter((_, j) => j !== i) }));
+
   const activeChannels = channels.filter(c => c.is_active);
 
   return (
@@ -247,6 +252,48 @@ function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [], funne
                 {Object.entries(UNIT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
               <button onClick={() => removeKpi(i)} className="p-1 rounded hover:bg-red-50 text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Métricas Calculadas */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Métricas Calculadas</Label>
+            <p className="text-[10px] text-gray-400 mt-0.5">Configure os cards calculados que aparecem no resumo do plano. Use as variáveis abaixo para construir a fórmula. Operadores: + - * / e parênteses.</p>
+          </div>
+          <button onClick={addCalcMetric} type="button" className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0">
+            <Plus className="w-3.5 h-3.5" /> Adicionar Métrica
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-1 mb-2">
+          <span className="text-[10px] text-gray-400">Variáveis:</span>
+          {['investimento', 'investimento_liquido',
+            ...(form.kpis || []).filter(k => k.label).map(k => sanitizeVar(k.label)),
+            ...(form.calculated_metrics || []).filter(m => m.label).map(m => sanitizeVar(m.label))
+          ].map((v, i) => (
+            <code key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-mono">{v}</code>
+          ))}
+        </div>
+        <div className="space-y-2">
+          {(form.calculated_metrics || []).length === 0 && (
+            <p className="text-xs text-gray-400 italic py-2">Nenhuma métrica calculada. Os cards do resumo mostrarão apenas os KPIs preenchidos.</p>
+          )}
+          {(form.calculated_metrics || []).map((metric, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input className="w-36 border border-gray-200 rounded-md px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder="Nome (ex: Impressões)" value={metric.label}
+                onChange={e => updateCalcMetric(i, 'label', e.target.value)} />
+              <select className="w-32 border border-gray-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary bg-white"
+                value={metric.unit} onChange={e => updateCalcMetric(i, 'unit', e.target.value)}>
+                {Object.entries(UNIT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+              <input className="flex-1 border border-gray-200 rounded-md px-2.5 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder="investimento_liquido / cpm * 1000" value={metric.formula}
+                onChange={e => updateCalcMetric(i, 'formula', e.target.value)} />
+              <button onClick={() => removeCalcMetric(i)} className="p-1 rounded hover:bg-red-50 text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
             </div>
           ))}
         </div>

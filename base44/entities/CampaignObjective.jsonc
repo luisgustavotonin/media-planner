@@ -46,6 +46,33 @@
         }
       }
     },
+    "calculated_metrics": {
+      "type": "array",
+      "description": "M\u00e9tricas calculadas dinamicamente. Cada item gera um card no resumo do plano. As f\u00f3rmulas usam vari\u00e1veis: investimento, investimento_liquido, e os labels dos KPIs (sanitizados). M\u00e9tricas calculadas anteriores tamb\u00e9m podem ser referenciadas.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Nome do card exibido no resumo (ex: Impress\u00f5es, Alcance, Seguidores)"
+          },
+          "formula": {
+            "type": "string",
+            "description": "F\u00f3rmula matem\u00e1tica (ex: investimento_liquido / cpm * 1000). Operadores: + - * / e par\u00eanteses."
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "numero",
+              "moeda",
+              "percentual"
+            ],
+            "default": "numero",
+            "description": "Unidade do resultado"
+          }
+        }
+      }
+    },
     "channels": {
       "type": "array",
       "description": "Canais em que este objetivo pode ser usado. Vazio = dispon\u00edvel para todos.",
