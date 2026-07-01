@@ -38,7 +38,7 @@ export default function ResultsTable({ channelResults, totals, blended, funnelSt
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-50">
-        <h3 className="text-sm font-semibold text-gray-900">Resultados Projetados</h3>
+        <h3 className="text-sm font-semibold text-gray-900">Resultados projetados por canal</h3>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
@@ -61,7 +61,7 @@ export default function ResultsTable({ channelResults, totals, blended, funnelSt
             {channelResults?.map((ch, i) => (
               <tr key={i} className="hover:bg-gray-50/50">
                 <td className="py-2.5 px-4"><ChannelBadge channel={ch.channel_name} /></td>
-                <td className="py-2.5 px-3 text-right font-medium">{fmt(netBudget(ch))}</td>
+                <td className="py-2.5 px-3 text-right font-medium">{fmt(ch.budget_value || 0)}</td>
                 <td className="py-2.5 px-3 text-right">{fmtN(ch.metrics.leads)}</td>
                 {middleCols.map((col, j) => (
                   <td key={j} className="py-2.5 px-3 text-right">{getMiddleValue(ch, col)}</td>
@@ -70,14 +70,14 @@ export default function ResultsTable({ channelResults, totals, blended, funnelSt
                 <td className="py-2.5 px-3 text-right font-medium text-primary">{fmt(ch.metrics.revenue)}</td>
                 <td className="py-2.5 px-3 text-right">{fmt(ch.metrics.cost_per_lead)}</td>
                 <td className="py-2.5 px-3 text-right">{fmt(ch.metrics.cost_per_sale)}</td>
-                <td className="py-2.5 px-3 text-right font-medium text-secondary-foreground">{fmtRoas(ch.metrics.revenue, netBudget(ch))}</td>
+                <td className="py-2.5 px-3 text-right font-medium text-secondary-foreground">{fmtRoas(ch.metrics.revenue, ch.budget_value || 0)}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr className="bg-gray-50 border-t border-gray-200 font-semibold">
               <td className="py-3 px-4 text-gray-900">Total</td>
-              <td className="py-3 px-3 text-right">{fmt(totals?.total_net_budget ?? totals?.total_budget)}</td>
+              <td className="py-3 px-3 text-right">{fmt(totals?.total_budget)}</td>
               <td className="py-3 px-3 text-right">{fmtN(totals?.total_leads)}</td>
               {middleCols.map((col, j) => (
                 <td key={j} className="py-3 px-3 text-right">{getTotalMiddleValue(col)}</td>
@@ -86,7 +86,7 @@ export default function ResultsTable({ channelResults, totals, blended, funnelSt
               <td className="py-3 px-3 text-right text-primary">{fmt(totals?.total_revenue)}</td>
               <td className="py-3 px-3 text-right">{fmt(blended?.blended_cpl)}</td>
               <td className="py-3 px-3 text-right">{fmt(blended?.blended_cost_per_sale)}</td>
-              <td className="py-3 px-3 text-right text-secondary-foreground">{fmtRoas(totals?.total_revenue, totals?.total_net_budget ?? totals?.total_budget)}</td>
+              <td className="py-3 px-3 text-right text-secondary-foreground">{fmtRoas(totals?.total_revenue, totals?.total_budget)}</td>
             </tr>
           </tfoot>
         </table>

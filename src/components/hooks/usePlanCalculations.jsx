@@ -194,11 +194,11 @@ export function calculateConsolidated(channels, conversionRates, averageTicket, 
   return {
     channelResults,
     totals,
-    blended_cpl: totals.total_leads > 0 ? totals.total_net_budget / totals.total_leads : 0,
-    blended_cpa: totals.total_appointments > 0 ? totals.total_net_budget / totals.total_appointments : 0,
-    blended_cps: totals.total_showups > 0 ? totals.total_net_budget / totals.total_showups : 0,
-    blended_cost_per_sale: totals.total_sales > 0 ? totals.total_net_budget / totals.total_sales : 0,
-    overall_roi: totals.total_net_budget > 0 ? ((totals.total_revenue - totals.total_net_budget) / totals.total_net_budget) * 100 : 0,
+    blended_cpl: totals.total_leads > 0 ? totals.total_budget / totals.total_leads : 0,
+    blended_cpa: totals.total_appointments > 0 ? totals.total_budget / totals.total_appointments : 0,
+    blended_cps: totals.total_showups > 0 ? totals.total_budget / totals.total_showups : 0,
+    blended_cost_per_sale: totals.total_sales > 0 ? totals.total_budget / totals.total_sales : 0,
+    overall_roi: totals.total_budget > 0 ? ((totals.total_revenue - totals.total_budget) / totals.total_budget) * 100 : 0,
   };
 }
 

@@ -213,10 +213,10 @@ export default function PlanDetail() {
           let campImpressions = 0;
           if (kpiValue > 0) {
             if (costKpiLabel.includes('cpm') || costKpiLabel.includes('impress') || costKpiLabel.includes('mil')) {
-              campImpressions = (netBudget / kpiValue) * 1000;
+              campImpressions = (campBudget / kpiValue) * 1000;
               g.impressions += campImpressions;
             } else if (costKpiLabel.includes('cpc') || costKpiLabel.includes('click') || costKpiLabel.includes('clique')) {
-              g.clicks += netBudget / kpiValue;
+              g.clicks += campBudget / kpiValue;
             }
           }
           const freqKpi = kpiValues.find(kv => kv.unit === 'numero' && (kv.label || '').toLowerCase().includes('freq'));
@@ -226,7 +226,7 @@ export default function PlanDetail() {
         } else {
           // Performance: calcula leads, vendas e receita pelo funil
           if (kpiValue > 0) {
-            const campLeads = netBudget / kpiValue;
+            const campLeads = campBudget / kpiValue;
             g.leads += campLeads;
             const campRates = camp.funnel_rates?.length ? camp.funnel_rates : (activeRates.length > 0 ? activeRates : null);
             if (campRates && campRates.length > 0) {
