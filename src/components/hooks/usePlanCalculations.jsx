@@ -38,10 +38,10 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket,
       let campImpressions = 0;
       if (kpiValue > 0) {
         if (costKpiLabel.includes('cpm') || costKpiLabel.includes('impress') || costKpiLabel.includes('mil')) {
-          campImpressions = (campNetBudget / kpiValue) * 1000;
+          campImpressions = (campBudget / kpiValue) * 1000;
           branding.impressions += campImpressions;
         } else if (costKpiLabel.includes('cpc') || costKpiLabel.includes('click') || costKpiLabel.includes('clique')) {
-          branding.clicks += campNetBudget / kpiValue;
+          branding.clicks += campBudget / kpiValue;
         }
       }
       const freqKpi = (camp.kpi_values || []).find(kv =>
@@ -51,7 +51,7 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket,
       }
     } else {
       if (kpiValue > 0) {
-        const campLeads = campNetBudget / kpiValue;
+        const campLeads = campBudget / kpiValue;
         leads += campLeads;
         // Usa taxas do funil da campanha se disponível, senão usa as do plano (legacy)
         const campRates = camp.funnel_rates?.length ? camp.funnel_rates : (rates.length > 0 ? rates : null);
@@ -71,7 +71,7 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket,
 
   // Retrocompatibilidade: se não há campanhas com KPI, usa expected_cpl do canal
   if (leads === 0 && channel.expected_cpl) {
-    leads = netBudget / channel.expected_cpl;
+    leads = budget / channel.expected_cpl;
     if (rates.length > 0) {
       const stageValues = [leads];
       for (let i = 0; i < rates.length; i++) {

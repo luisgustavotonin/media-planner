@@ -247,8 +247,8 @@ export default function PlanDetail() {
       const calcMetrics = g.objective?.calculated_metrics;
       if (calcMetrics?.length) {
         const ctx = {
-          investimento: g.netInvestment,
-          investimento_liquido: g.netInvestment,
+          investimento: g.investment,
+          investimento_liquido: g.investment,
           receita: g.revenue,
           vendas: g.sales,
           leads: g.leads,
