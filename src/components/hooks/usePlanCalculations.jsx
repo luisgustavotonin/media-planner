@@ -54,8 +54,10 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket,
       if (kpiValue > 0) {
         const campLeads = campBudget / kpiValue;
         leads += campLeads;
-        // Usa taxas do funil da campanha se disponível, senão usa as do plano (legacy)
-        const campRates = camp.funnel_rates?.length ? camp.funnel_rates : (rates.length > 0 ? rates : null);
+        // Usa taxas percentuais dos KPIs se disponíveis, senão usa funnel_rates ou rates do plano (legacy)
+        const percentKpis = (camp.kpi_values || []).filter(kv => kv.unit === 'percentual' && kv.value > 0);
+        const kpiRates = percentKpis.map(kv => kv.value);
+        const campRates = kpiRates.length > 0 ? kpiRates : (camp.funnel_rates?.length ? camp.funnel_rates : (rates.length > 0 ? rates : null));
         if (campRates && campRates.length > 0) {
           const campStages = [campLeads];
           for (let i = 0; i < campRates.length; i++) {
