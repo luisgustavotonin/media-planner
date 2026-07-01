@@ -211,14 +211,11 @@ export default function PlanDetail() {
       </div>
 
       {channels.length > 0 && (
-        <div className={`grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6 ${hasAnyTax ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
-          <StatCard label="Investimento Bruto" value={`R$${totalInvestment.toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" />
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6 lg:grid-cols-2">
+          <StatCard label="Investimento Total" value={`R$${totalInvestment.toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" />
           {hasAnyTax && (
             <StatCard label="Investimento Líquido" value={`R$${Math.round(netInvestment).toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" sublabel="após impostos" />
           )}
-          <StatCard label="Leads Esperados" value={consolidated.totals.total_leads.toLocaleString()} icon={Users} color="purple" />
-          <StatCard label="Vendas Esperadas" value={Math.round(consolidated.totals.total_sales).toLocaleString()} icon={Target} color="orange" />
-          <StatCard label="Receita Projetada" value={`R$${Math.round(consolidated.totals.total_revenue).toLocaleString('pt-BR')}`} icon={TrendingUp} color="green" />
         </div>
       )}
 
@@ -258,14 +255,18 @@ export default function PlanDetail() {
       )}
 
       {/* Performance */}
-      {consolidated.totals.kpi_totals_performance?.length > 0 && (
+      {channels.length > 0 && (
         <>
           <div className="flex items-center gap-2 mb-2">
             <Target className="w-3.5 h-3.5 text-gray-400" />
             <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Performance</span>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6 lg:grid-cols-4">
-            {consolidated.totals.kpi_totals_performance.map((kpi, i) => (
+            <StatCard label="Investimento Performance" value={`R$${Math.round(totalInvestment - (consolidated.totals.branding?.investment || 0)).toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" />
+            <StatCard label="Leads Esperados" value={consolidated.totals.total_leads.toLocaleString()} icon={Users} color="purple" />
+            <StatCard label="Vendas Esperadas" value={Math.round(consolidated.totals.total_sales).toLocaleString()} icon={Target} color="orange" />
+            <StatCard label="Receita Projetada" value={`R$${Math.round(consolidated.totals.total_revenue).toLocaleString('pt-BR')}`} icon={TrendingUp} color="green" />
+            {consolidated.totals.kpi_totals_performance?.map((kpi, i) => (
               <StatCard
                 key={`p-${i}`}
                 label={kpi.label}
@@ -291,7 +292,7 @@ export default function PlanDetail() {
       )}
 
       <div className="mb-6">
-        <ChannelEditor channels={channels} onChange={handleChannelsChange} totalInvestment={totalInvestment} readOnly={readOnly} days={daysInMonth} funnelStages={funnelStages} funnelTypes={funnelTypes} benchmarks={benchmarks} segment={localPlan.segment} />
+        <ChannelEditor channels={channels} onChange={handleChannelsChange} totalInvestment={totalInvestment} readOnly={readOnly} days={daysInMonth} funnelStages={funnelStages} funnelTypes={funnelTypes} benchmarks={benchmarks} segment={localPlan.segment} planFunnelTypeId={localPlan.funnel_type_id} />
       </div>
 
       {channels.length > 0 && (
