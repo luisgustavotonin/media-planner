@@ -170,7 +170,7 @@ export default function PlanDetail() {
     return obj?.type === 'branding';
   }));
   const valorAlocado = channels.reduce((s, ch) => s + (ch.strategies || []).reduce((cs, camp) => cs + (camp.budget_value || 0), 0), 0);
-  const saldoDisponivel = totalInvestment - valorAlocado;
+  const saldoDisponivel = netInvestment - valorAlocado;
   const performanceInvestment = channels.reduce((s, ch) =>
     s + (ch.strategies || []).filter(camp => {
       const obj = objectives.find(o => o.name === camp.objective);

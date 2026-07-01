@@ -87,7 +87,7 @@ function CampaignKpis({ campaign, objectives, onChange, readOnly }) {
 }
 
 // Componente que renderiza o seletor de funil e as taxas de conversão da campanha
-function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnly }) {
+function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnly, taxPercent = 0 }) {
   const funnelType = funnelTypes.find(ft => ft.id === funnelTypeId);
   const stages = funnelType?.stages || [];
   if (!funnelType || stages.length < 2) return null;
@@ -101,13 +101,14 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
 
   // Calcula valores das etapas para o gráfico de barras
   const budget = campaign.budget_value || 0;
+  const netBudget = budget * (1 - (taxPercent || 0) / 100);
   const costKpi = (campaign.kpi_values || []).find(kv => kv.unit === 'moeda');
   const cpl = costKpi?.value || campaign.kpi_value || 0;
   const rates = campaign.funnel_rates || [];
   const stagesWithValues = [];
   for (let i = 0; i < stages.length; i++) {
     if (i === 0) {
-      const value = (cpl > 0 && budget > 0) ? budget / cpl : 0;
+      const value = (cpl > 0 && netBudget > 0) ? netBudget / cpl : 0;
       stagesWithValues.push({ label: stages[i].label, value });
     } else {
       const rate = rates[i - 1] || 0;
@@ -195,7 +196,7 @@ function ParamField({ label, value, onChange, placeholder, readOnly }) {
 }
 
 // ─── Campaign (Meta) ─────────────────────────────────────────────────────────
-function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives, availableObjectives, funnelTypes = [], benchmarks = [], segment = '', channelName = 'Meta', planFunnelTypeId = '' }) {
+function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives, availableObjectives, funnelTypes = [], benchmarks = [], segment = '', channelName = 'Meta', planFunnelTypeId = '', taxPercent = 0 }) {
   const [open, setOpen] = useState(true);
 
   const updateField = (field, val) => onChange({ ...campaign, [field]: val });
@@ -313,14 +314,14 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
 
       {/* Funil da campanha — no rodapé do card, vem do objetivo */}
       {effectiveFunnelTypeId && (
-        <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} />
+        <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} taxPercent={taxPercent} />
       )}
     </div>
   );
 }
 
 // ─── Google Campaign ──────────────────────────────────────────────────────────
-function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives, availableObjectives, funnelTypes = [], benchmarks = [], segment = '', planFunnelTypeId = '' }) {
+function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives, availableObjectives, funnelTypes = [], benchmarks = [], segment = '', planFunnelTypeId = '', taxPercent = 0 }) {
   const [open, setOpen] = useState(true);
   const updateField = (field, val) => onChange({ ...campaign, [field]: val });
   const updateParam = (field, val) => onChange({ ...campaign, params: { ...(campaign.params || {}), [field]: val } });
@@ -404,7 +405,7 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
 
       {/* Funil da campanha — no rodapé do card, vem do objetivo */}
       {effectiveFunnelTypeId && (
-        <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} />
+        <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} taxPercent={taxPercent} />
       )}
     </div>
   );
@@ -454,7 +455,7 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, 
           const otherTotal = totalAllocated - (camp.budget_value || 0);
           const maxForCampaign = netBudget - otherTotal;
           return (
-            <GoogleCampaign key={idx} campaign={camp} days={days}
+            <GoogleCampaign key={idx} campaign={camp} days={days} taxPercent={taxPercent}
               onChange={updated => updateCampaign(idx, updated)} onRemove={() => removeCampaign(idx)}
               readOnly={readOnly} maxCampaignBudget={maxForCampaign} objectives={objectives} availableObjectives={availableObjectives}
               funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} planFunnelTypeId={planFunnelTypeId} />
@@ -521,7 +522,7 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
           const otherTotal = totalAllocated - (camp.budget_value || 0);
           const maxForCampaign = netBudget - otherTotal;
           return (
-            <Campaign key={idx} campaign={camp} days={days}
+            <Campaign key={idx} campaign={camp} days={days} taxPercent={taxPercent}
               onChange={updated => updateCampaign(idx, updated)} onRemove={() => removeCampaign(idx)}
               readOnly={readOnly} maxCampaignBudget={maxForCampaign} objectives={objectives} availableObjectives={availableObjectives}
               funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} channelName={channelName} planFunnelTypeId={planFunnelTypeId} />
