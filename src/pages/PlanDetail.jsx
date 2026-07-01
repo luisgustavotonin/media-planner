@@ -222,20 +222,6 @@ export default function PlanDetail() {
           if (freqKpi && freqKpi.value > 0 && campImpressions > 0) {
             g.reach += campImpressions / freqKpi.value;
           }
-        } else {
-          if (kpiValue > 0) {
-            const campLeads = netBudget / kpiValue;
-            g.leads += campLeads;
-            const campRates = camp.funnel_rates || [];
-            if (campRates.length > 0) {
-              const campStages = [campLeads];
-              for (let i = 0; i < campRates.length; i++) {
-                campStages.push(campStages[i] * (campRates[i] || 0));
-              }
-              g.sales += campStages[campStages.length - 1];
-              g.revenue += campStages[campStages.length - 1] * (localPlan.average_ticket || 0);
-            }
-          }
         }
       });
     });
@@ -392,14 +378,9 @@ export default function PlanDetail() {
           </div>
           {Object.entries(performanceGroups).map(([objName, data]) => {
             const hasCalcMetrics = data.calculatedCards?.length > 0;
-            const isCPL = (l) => { l = l.toLowerCase(); return l.includes('cpl') || l.includes('lead') || l.includes('custo por lead'); };
             const usedVars = hasCalcMetrics ? new Set((data.objective?.calculated_metrics || []).flatMap(m => (m.formula || '').toLowerCase().match(/[a-z_]+/g) || [])) : null;
             const kpiCards = Object.values(data.kpis || {})
-              .filter(k => {
-                if (usedVars?.has(sanitizeVar(k.label))) return false;
-                if (isCPL(k.label) && data.leads > 0) return false;
-                return true;
-              })
+              .filter(k => !usedVars?.has(sanitizeVar(k.label)))
               .map(k => {
                 const val = k.unit === 'numero' ? (k.count > 0 ? k.totalValue / k.count : 0) : (k.totalBudget > 0 ? k.totalValue / k.totalBudget : (k.count > 0 ? k.totalValue / k.count : 0));
                 return {
@@ -417,9 +398,6 @@ export default function PlanDetail() {
             })) : [];
             const cards = [
               { label: 'Investimento', value: `R$${Math.round(data.investment).toLocaleString('pt-BR')}`, icon: DollarSign, color: 'blue' },
-              data.leads > 0 && { label: 'Leads Esperados', value: Math.round(data.leads).toLocaleString('pt-BR'), icon: Users, color: 'purple' },
-              data.sales > 0 && { label: 'Vendas Esperadas', value: Math.round(data.sales).toLocaleString('pt-BR'), icon: Target, color: 'orange' },
-              data.revenue > 0 && { label: 'Receita Projetada', value: `R$${Math.round(data.revenue).toLocaleString('pt-BR')}`, icon: TrendingUp, color: 'green' },
               ...calcCards,
               ...kpiCards,
             ].filter(Boolean);
