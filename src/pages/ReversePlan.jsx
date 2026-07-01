@@ -301,12 +301,13 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
 }
 
 // ── Criar novo planejamento ──
-function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
+function PlanNew({ clients, plans, funnelTypes, objectives, onSave, onBack }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState('');
+  const [selectedObjectiveId, setSelectedObjectiveId] = useState('');
   const [title, setTitle] = useState('');
   const [targetRevenue, setTargetRevenue] = useState(0);
   const [distribution, setDistribution] = useState([]);
@@ -325,52 +326,106 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
   );
   const clientPlans = plans.filter(p => p.client_id === selectedClientId);
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
+  const selectedObjective = objectives.find(o => o.id === selectedObjectiveId);
 
-  // Busca o funnelType do plano selecionado para obter os labels das etapas
-  const funnelType = funnelTypes.find(f => f.id === selectedPlan?.funnel_type_id);
+  // Filtra campanhas do objetivo selecionado no plano
+  const objectiveCampaigns = selectedPlan && selectedObjectiveId
+    ? (selectedPlan.channels || []).flatMap(ch => 
+        (ch.strategies || []).filter(camp => {
+          const obj = objectives.find(o => o.name === camp.objective);
+          return obj?.id === selectedObjectiveId;
+        })
+      )
+    : [];
+
+  // Busca o funnelType do objetivo selecionado
+  const funnelType = selectedObjective?.funnel_type_id 
+    ? funnelTypes.find(f => f.id === selectedObjective.funnel_type_id)
+    : null;
   const funnelStages = funnelType?.stages || [];
   const stageLabels = funnelStages.length >= 2 ? funnelStages.map(s => s.label) : null;
 
-  // Labels de conversão para exibir nos "Dados do Funil"
+  // Labels de conversão
   const conversionLabels = stageLabels && stageLabels.length >= 2
     ? stageLabels.slice(0, -1).map((l, i) => `${l} → ${stageLabels[i + 1]}`)
     : ['Lead → Agend.', 'Agend. → Compar.', 'Compar. → Venda'];
 
   useEffect(() => {
     setSelectedPlanId('');
+    setSelectedObjectiveId('');
     setDistribution([]);
     setResult(null);
   }, [selectedClientId]);
 
   useEffect(() => {
-    if (!selectedPlan) {
+    setSelectedObjectiveId('');
+    setDistribution([]);
+    setConversionRates([]);
+    setEditedTicket(0);
+    setResult(null);
+  }, [selectedPlanId]);
+
+  useEffect(() => {
+    if (!selectedObjective || !selectedPlan) {
       setDistribution([]);
       setConversionRates([]);
       setEditedTicket(0);
       setResult(null);
       return;
     }
-    if (selectedPlan.channels?.length > 0) {
-      const totalBudget = selectedPlan.channels.reduce((s, c) => s + (c.budget_value || 0), 0);
-      setDistribution(selectedPlan.channels.map(ch => ({
+
+    // Calcula CPL médio por canal para as campanhas desse objetivo
+    const channelCpls = {};
+    (selectedPlan.channels || []).forEach(ch => {
+      const campaignsInChannel = (ch.strategies || []).filter(camp => {
+        const obj = objectives.find(o => o.name === camp.objective);
+        return obj?.id === selectedObjectiveId;
+      });
+      if (campaignsInChannel.length > 0) {
+        let totalBudget = 0;
+        let totalUnits = 0;
+        campaignsInChannel.forEach(camp => {
+          const campBudget = camp.budget_value || 0;
+          const costKpi = (camp.kpi_values || []).find(kv => kv.unit === 'moeda' && kv.value > 0);
+          const kpiValue = costKpi?.value || 0;
+          totalBudget += campBudget;
+          if (kpiValue > 0) totalUnits += campBudget / kpiValue;
+        });
+        channelCpls[ch.channel_name] = totalUnits > 0 ? totalBudget / totalUnits : 0;
+      }
+    });
+
+    // Distribui por canal que tem campanhas deste objetivo
+    const channelsWithObjective = (selectedPlan.channels || []).filter(ch =>
+      (ch.strategies || []).some(camp => {
+        const obj = objectives.find(o => o.name === camp.objective);
+        return obj?.id === selectedObjectiveId;
+      })
+    );
+
+    if (channelsWithObjective.length > 0) {
+      const totalBudget = channelsWithObjective.reduce((s, c) => s + (c.budget_value || 0), 0);
+      setDistribution(channelsWithObjective.map(ch => ({
         channel_name: ch.channel_name,
         percent: totalBudget > 0 ? Math.round((ch.budget_value / totalBudget) * 100) : 0,
-        expected_cpl: getChannelBlendedKpi(ch),
+        expected_cpl: channelCpls[ch.channel_name] || 0,
       })));
     } else {
       setDistribution([]);
     }
-    const rates = (Array.isArray(selectedPlan.conversion_rates) && selectedPlan.conversion_rates.length
-        ? selectedPlan.conversion_rates
-        : [selectedPlan.lead_to_appointment_rate || 0, selectedPlan.appointment_to_show_rate || 0, selectedPlan.show_to_sale_rate || 0]);
+
+    // Taxa de conversão do funil do objetivo
+    const rates = selectedObjective?.funnel_type_id && funnelType?.stages
+      ? funnelType.stages.slice(0, -1).map(s => s.default_rate || 0)
+      : [0.3, 0.5, 0.5];
     setConversionRates(rates);
-    setEditedTicket(selectedPlan.average_ticket || 0);
+    setEditedTicket(selectedObjective?.average_ticket || 0);
     setResult(null);
-  }, [selectedPlanId]);
+  }, [selectedObjectiveId]);
 
   const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
   const fmtPct = v => `${(v * 100).toFixed(1)}%`;
-  const canCalculate = selectedPlanId && targetRevenue > 0 && distribution.length > 0 && editedTicket > 0;
+  const canCalculate = selectedObjectiveId && targetRevenue > 0 && distribution.length > 0 && editedTicket > 0;
 
   const handleDistChange = (idx, field, value) => {
     setDistribution(d => d.map((ch, i) => i === idx ? { ...ch, [field]: Number(value) } : ch));
@@ -469,8 +524,32 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
           </div>
         )}
 
+        {selectedPlanId && (
+          <div className="mb-5">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">3. Selecione o Objetivo</p>
+            {objectives.length === 0 ? (
+              <p className="text-sm text-gray-400">Nenhum objetivo cadastrado.</p>
+            ) : (
+              <Select value={selectedObjectiveId} onValueChange={setSelectedObjectiveId}>
+                <SelectTrigger className="max-w-xs"><SelectValue placeholder="Selecione um objetivo..." /></SelectTrigger>
+                <SelectContent>
+                  {objectives
+                    .filter(obj => objectiveCampaigns.length > 0 || (selectedPlan?.channels || []).some(ch =>
+                      (ch.strategies || []).some(camp => objectives.find(o => o.name === camp.objective)?.id === obj.id)
+                    ))
+                    .map(obj => (
+                      <SelectItem key={obj.id} value={obj.id}>
+                        {obj.name} {obj.type === 'branding' ? '(Branding)' : '(Performance)'}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        )}
+
         {/* Dados do Funil — dinâmico com os labels reais das etapas */}
-        {selectedPlan && editedTicket > 0 && (
+         {selectedObjective && editedTicket > 0 && (
           <div className="mb-5 p-4 bg-secondary/40 rounded-lg border border-border">
             <div className="flex items-center gap-2 mb-3">
               <Info className="w-4 h-4 text-secondary-foreground" />
@@ -497,14 +576,14 @@ function PlanNew({ clients, plans, funnelTypes, onSave, onBack }) {
           </div>
         )}
 
-        {selectedPlanId && (
-          <>
-            <div className="mb-5">
-              <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Meta de Receita (R$)</Label>
-              <div className="mt-2 max-w-xs">
-                <CurrencyInput value={targetRevenue} onChange={v => setTargetRevenue(v || 0)} prefix="R$" />
-              </div>
-            </div>
+        {selectedObjectiveId && (
+           <>
+             <div className="mb-5">
+               <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Meta de Receita (R$)</Label>
+               <div className="mt-2 max-w-xs">
+                 <CurrencyInput value={targetRevenue} onChange={v => setTargetRevenue(v || 0)} prefix="R$" />
+               </div>
+             </div>
 
             <div className="mb-4">
               <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2 block">Distribuição por Canal</Label>
@@ -634,6 +713,11 @@ export default function ReversePlan() {
     queryFn: () => base44.entities.FunnelType.list(),
   });
 
+  const { data: objectives = [] } = useQuery({
+    queryKey: ['campaign-objectives'],
+    queryFn: () => base44.entities.CampaignObjective.filter({ is_active: true }),
+  });
+
   return (
     <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
       <PageHeader title="Planejamento Reverso" description="Calcule o investimento necessário para atingir suas metas de receita." />
@@ -660,6 +744,7 @@ export default function ReversePlan() {
           clients={clients}
           plans={plans}
           funnelTypes={funnelTypes}
+          objectives={objectives}
           onSave={() => setView('list')}
           onBack={() => setView('list')}
         />
