@@ -298,16 +298,20 @@ export default function PlanDetail() {
           </div>
           {Object.entries(brandingGroups).map(([objName, data]) => {
             const frequency = data.reach > 0 ? data.impressions / data.reach : 0;
+            const cards = [
+              { label: 'Investimento', value: `R$${Math.round(data.investment).toLocaleString('pt-BR')}`, icon: Megaphone, color: 'orange' },
+              data.impressions > 0 && { label: 'Impressões', value: Math.round(data.impressions).toLocaleString('pt-BR'), icon: Eye, color: 'blue' },
+              data.reach > 0 && { label: 'Alcance', value: Math.round(data.reach).toLocaleString('pt-BR'), icon: Users, color: 'green' },
+              frequency > 0 && { label: 'Frequência', value: frequency.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }), icon: TrendingUp, color: 'purple' },
+              data.clicks > 0 && { label: 'Cliques', value: Math.round(data.clicks).toLocaleString('pt-BR'), icon: MousePointer, color: 'purple' },
+            ].filter(Boolean);
             return (
               <div key={objName} className="mb-4">
                 <div className="flex items-center gap-2 mb-2 ml-1">
                   <span className="text-[10px] font-medium text-gray-400">{objName}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-                  <StatCard label="Investimento" value={`R$${Math.round(data.investment).toLocaleString('pt-BR')}`} icon={Megaphone} color="orange" sublabel={objName} />
-                  <StatCard label="Impressões" value={data.impressions > 0 ? Math.round(data.impressions).toLocaleString('pt-BR') : '—'} icon={Eye} color="blue" />
-                  <StatCard label="Alcance" value={data.reach > 0 ? Math.round(data.reach).toLocaleString('pt-BR') : '—'} icon={Users} color="green" />
-                  <StatCard label="Frequência" value={frequency > 0 ? frequency.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) : '—'} icon={TrendingUp} color="purple" />
+                  {cards.map((c, i) => <StatCard key={i} {...c} />)}
                 </div>
               </div>
             );
@@ -322,25 +326,24 @@ export default function PlanDetail() {
             <Target className="w-3.5 h-3.5 text-gray-400" />
             <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Performance</span>
           </div>
-          {Object.entries(performanceGroups).map(([objName, data]) => (
-            <div key={objName} className="mb-4">
-              <div className="flex items-center gap-2 mb-2 ml-1">
-                <span className="text-[10px] font-medium text-gray-400">{objName}</span>
+          {Object.entries(performanceGroups).map(([objName, data]) => {
+            const cards = [
+              { label: 'Investimento', value: `R$${Math.round(data.investment).toLocaleString('pt-BR')}`, icon: DollarSign, color: 'blue' },
+              data.leads > 0 && { label: 'Leads Esperados', value: Math.round(data.leads).toLocaleString('pt-BR'), icon: Users, color: 'purple' },
+              data.sales > 0 && { label: 'Vendas Esperadas', value: Math.round(data.sales).toLocaleString('pt-BR'), icon: Target, color: 'orange' },
+              data.revenue > 0 && { label: 'Receita Projetada', value: `R$${Math.round(data.revenue).toLocaleString('pt-BR')}`, icon: TrendingUp, color: 'green' },
+            ].filter(Boolean);
+            return (
+              <div key={objName} className="mb-4">
+                <div className="flex items-center gap-2 mb-2 ml-1">
+                  <span className="text-[10px] font-medium text-gray-400">{objName}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+                  {cards.map((c, i) => <StatCard key={i} {...c} />)}
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-                <StatCard label="Investimento" value={`R$${Math.round(data.investment).toLocaleString('pt-BR')}`} icon={DollarSign} color="blue" sublabel={objName} />
-                {data.leads > 0 && (
-                  <StatCard label="Leads Esperados" value={Math.round(data.leads).toLocaleString('pt-BR')} icon={Users} color="purple" />
-                )}
-                {data.sales > 0 && (
-                  <StatCard label="Vendas Esperadas" value={Math.round(data.sales).toLocaleString('pt-BR')} icon={Target} color="orange" />
-                )}
-                {data.revenue > 0 && (
-                  <StatCard label="Receita Projetada" value={`R$${Math.round(data.revenue).toLocaleString('pt-BR')}`} icon={TrendingUp} color="green" />
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </>
       )}
 

@@ -136,52 +136,6 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
   );
 }
 
-// Cards de branding: Investimento, CPM, Impressões, Alcance, Frequência
-function BrandingFunnel({ campaign, objectives, readOnly }) {
-  const obj = objectives.find(o => o.name === campaign.objective);
-  if (!obj || obj.type !== 'branding') return null;
-
-  const budget = campaign.budget_value || 0;
-  const kpiValues = campaign.kpi_values || [];
-  const cpmKpi = kpiValues.find(kv => kv.unit === 'moeda' && (kv.label || '').toLowerCase().match(/cpm|impress|mil/));
-  const freqKpi = kpiValues.find(kv => kv.unit === 'numero' && (kv.label || '').toLowerCase().includes('freq'));
-
-  const cpm = cpmKpi?.value || 0;
-  const frequency = freqKpi?.value || 0;
-
-  const impressions = (cpm > 0 && budget > 0) ? (budget / cpm) * 1000 : 0;
-  const reach = (impressions > 0 && frequency > 0) ? impressions / frequency : 0;
-
-  const fmtNum = (n) => Math.round(n).toLocaleString('pt-BR');
-  const fmtBRL = (n) => `R$ ${(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-  const cards = [
-    { label: 'Investimento', value: fmtBRL(budget) },
-    { label: 'CPM', value: cpm > 0 ? fmtBRL(cpm) : '—' },
-    { label: 'Impressões', value: impressions > 0 ? fmtNum(impressions) : '—' },
-    { label: 'Alcance', value: reach > 0 ? fmtNum(reach) : '—' },
-    { label: 'Frequência', value: frequency > 0 ? frequency.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) : '—' },
-  ];
-
-  return (
-    <div className="px-3 pb-3 pt-2 bg-secondary/20 border-t border-gray-50">
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-          Branding: {campaign.objective}
-        </span>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-        {cards.map((c, i) => (
-          <div key={i} className="bg-white rounded-lg border border-gray-100 px-3 py-2">
-            <p className="text-[9px] text-gray-400 uppercase tracking-wider font-medium">{c.label}</p>
-            <p className="text-sm font-bold text-gray-800 mt-0.5">{c.value}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ─── Ad Set (Conjunto de Anúncios) ───────────────────────────────────────────
 function AdSet({ adset, days, onChange, onRemove, readOnly, maxBudget }) {
   const [open, setOpen] = useState(false);
@@ -357,12 +311,10 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
         </div>
       )}
 
-      {/* Funil/Branding da campanha — no rodapé do card, vem do objetivo */}
-      {currentObj?.type === 'branding' ? (
-        <BrandingFunnel campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
-      ) : effectiveFunnelTypeId ? (
+      {/* Funil da campanha — no rodapé do card, vem do objetivo */}
+      {effectiveFunnelTypeId && (
         <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} />
-      ) : null}
+      )}
     </div>
   );
 }
@@ -450,12 +402,10 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
         </div>
       )}
 
-      {/* Funil/Branding da campanha — no rodapé do card, vem do objetivo */}
-      {currentObj?.type === 'branding' ? (
-        <BrandingFunnel campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
-      ) : effectiveFunnelTypeId ? (
+      {/* Funil da campanha — no rodapé do card, vem do objetivo */}
+      {effectiveFunnelTypeId && (
         <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} />
-      ) : null}
+      )}
     </div>
   );
 }
