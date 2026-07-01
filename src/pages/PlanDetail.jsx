@@ -192,9 +192,10 @@ export default function PlanDetail() {
         g.investment += campBudget;
         g.netInvestment += netBudget;
         const kpiValues = camp.kpi_values || [];
-        // Coleta todos os KPIs preenchidos dinamicamente
+        // Só coleta KPIs que pertencem ao objetivo atual (ignora KPIs órfãos de objetivos anteriores)
+        const objKpiLabels = new Set((obj?.kpis || []).map(k => k.label));
         kpiValues.forEach(kv => {
-          if (kv.value > 0) {
+          if (kv.value > 0 && (objKpiLabels.size === 0 || objKpiLabels.has(kv.label))) {
             if (!g.kpis[kv.label]) g.kpis[kv.label] = { label: kv.label, unit: kv.unit, totalValue: 0, totalBudget: 0, count: 0 };
             if (kv.unit === 'numero') {
               g.kpis[kv.label].totalValue += kv.value;
