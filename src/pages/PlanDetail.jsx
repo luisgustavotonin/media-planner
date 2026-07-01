@@ -178,12 +178,25 @@ export default function PlanDetail() {
         const obj = objectives.find(o => o.name === camp.objective);
         if ((obj?.type || 'performance') !== type) return;
         const key = camp.objective || 'Sem objetivo';
-        if (!groups[key]) groups[key] = { investment: 0, impressions: 0, clicks: 0, reach: 0, leads: 0, sales: 0, revenue: 0 };
+        if (!groups[key]) groups[key] = { investment: 0, impressions: 0, clicks: 0, reach: 0, leads: 0, sales: 0, revenue: 0, kpis: {} };
         const g = groups[key];
         const campBudget = camp.budget_value || 0;
         const netBudget = campBudget * (1 - taxRate);
         g.investment += campBudget;
         const kpiValues = camp.kpi_values || [];
+        // Coleta todos os KPIs preenchidos dinamicamente
+        kpiValues.forEach(kv => {
+          if (kv.value > 0) {
+            if (!g.kpis[kv.label]) g.kpis[kv.label] = { label: kv.label, unit: kv.unit, totalValue: 0, totalBudget: 0, count: 0 };
+            if (kv.unit === 'numero') {
+              g.kpis[kv.label].totalValue += kv.value;
+            } else {
+              g.kpis[kv.label].totalValue += kv.value * campBudget;
+              g.kpis[kv.label].totalBudget += campBudget;
+            }
+            g.kpis[kv.label].count++;
+          }
+        });
         const costKpi = kpiValues.find(kv => kv.unit === 'moeda' && kv.value > 0);
         const costKpiLabel = (costKpi?.label || '').toLowerCase();
         const kpiValue = costKpi?.value || 0;
@@ -298,12 +311,27 @@ export default function PlanDetail() {
           </div>
           {Object.entries(brandingGroups).map(([objName, data]) => {
             const frequency = data.reach > 0 ? data.impressions / data.reach : 0;
+            const isCPM = (l) => { l = l.toLowerCase(); return l.includes('cpm') || l.includes('impress') || l.includes('mil'); };
+            const isCPC = (l) => { l = l.toLowerCase(); return l.includes('cpc') || l.includes('click') || l.includes('clique'); };
+            const isFreq = (l) => l.toLowerCase().includes('freq');
+            const kpiCards = Object.values(data.kpis || {})
+              .filter(k => !((isCPM(k.label) && data.impressions > 0) || (isCPC(k.label) && data.clicks > 0) || (isFreq(k.label) && data.reach > 0)))
+              .map(k => {
+                const val = k.unit === 'numero' ? (k.count > 0 ? k.totalValue / k.count : 0) : (k.totalBudget > 0 ? k.totalValue / k.totalBudget : (k.count > 0 ? k.totalValue / k.count : 0));
+                return {
+                  label: k.label,
+                  value: k.unit === 'percentual' ? `${(val * 100).toFixed(1)}%` : k.unit === 'moeda' ? `R$${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : val.toLocaleString('pt-BR', { maximumFractionDigits: 2 }),
+                  icon: k.unit === 'moeda' ? DollarSign : k.unit === 'percentual' ? TrendingUp : Target,
+                  color: k.unit === 'moeda' ? 'blue' : k.unit === 'percentual' ? 'green' : 'purple',
+                };
+              });
             const cards = [
               { label: 'Investimento', value: `R$${Math.round(data.investment).toLocaleString('pt-BR')}`, icon: Megaphone, color: 'orange' },
               data.impressions > 0 && { label: 'Impressões', value: Math.round(data.impressions).toLocaleString('pt-BR'), icon: Eye, color: 'blue' },
               data.reach > 0 && { label: 'Alcance', value: Math.round(data.reach).toLocaleString('pt-BR'), icon: Users, color: 'green' },
               frequency > 0 && { label: 'Frequência', value: frequency.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }), icon: TrendingUp, color: 'purple' },
               data.clicks > 0 && { label: 'Cliques', value: Math.round(data.clicks).toLocaleString('pt-BR'), icon: MousePointer, color: 'purple' },
+              ...kpiCards,
             ].filter(Boolean);
             return (
               <div key={objName} className="mb-4">
@@ -327,11 +355,24 @@ export default function PlanDetail() {
             <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Performance</span>
           </div>
           {Object.entries(performanceGroups).map(([objName, data]) => {
+            const isCPL = (l) => { l = l.toLowerCase(); return l.includes('cpl') || l.includes('lead') || l.includes('custo por lead'); };
+            const kpiCards = Object.values(data.kpis || {})
+              .filter(k => !(isCPL(k.label) && data.leads > 0))
+              .map(k => {
+                const val = k.unit === 'numero' ? (k.count > 0 ? k.totalValue / k.count : 0) : (k.totalBudget > 0 ? k.totalValue / k.totalBudget : (k.count > 0 ? k.totalValue / k.count : 0));
+                return {
+                  label: k.label,
+                  value: k.unit === 'percentual' ? `${(val * 100).toFixed(1)}%` : k.unit === 'moeda' ? `R$${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : val.toLocaleString('pt-BR', { maximumFractionDigits: 2 }),
+                  icon: k.unit === 'moeda' ? DollarSign : k.unit === 'percentual' ? TrendingUp : Target,
+                  color: k.unit === 'moeda' ? 'blue' : k.unit === 'percentual' ? 'green' : 'purple',
+                };
+              });
             const cards = [
               { label: 'Investimento', value: `R$${Math.round(data.investment).toLocaleString('pt-BR')}`, icon: DollarSign, color: 'blue' },
               data.leads > 0 && { label: 'Leads Esperados', value: Math.round(data.leads).toLocaleString('pt-BR'), icon: Users, color: 'purple' },
               data.sales > 0 && { label: 'Vendas Esperadas', value: Math.round(data.sales).toLocaleString('pt-BR'), icon: Target, color: 'orange' },
               data.revenue > 0 && { label: 'Receita Projetada', value: `R$${Math.round(data.revenue).toLocaleString('pt-BR')}`, icon: TrendingUp, color: 'green' },
+              ...kpiCards,
             ].filter(Boolean);
             return (
               <div key={objName} className="mb-4">
