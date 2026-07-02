@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import PercentInput from '../components/ui-custom/PercentInput';
-import { Save, Users, DollarSign, TrendingUp, Target, ArrowLeft, FileDown, Trash2, Eye, MousePointer, Megaphone, Wallet } from 'lucide-react';
+import { Save, Users, DollarSign, TrendingUp, Target, ArrowLeft, FileDown, Trash2, Eye, MousePointer, Megaphone, Wallet, Radio, UserPlus, UserCheck, Repeat, MessageCircle, ShoppingBag, Calculator, Receipt, PhoneCall, CalendarCheck, Filter, Gauge, Sparkles, Activity, BarChart3, Image, Zap, Phone } from 'lucide-react';
 import { exportPlanToPdf } from '../components/plan/PlanPdfExport';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -33,6 +33,33 @@ const formatCardValue = (value, unit) => {
   if (unit === 'percentual') return `${(value * 100).toFixed(1)}%`;
   if (unit === 'moeda') return `R$${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   return Math.round(value).toLocaleString('pt-BR');
+};
+
+// Mapeia o label da métrica para o ícone mais adequado — máxima variedade
+const getMetricIcon = (label) => {
+  const l = (label || '').toLowerCase();
+  if (l.includes('investimento') || l.includes('orçamento') || l.includes('budget')) return Wallet;
+  if (l.includes('custo') || l.includes('cpl') || l.includes('cpc') || l.includes('cpa') || l.includes('cpm')) return Calculator;
+  if (l.includes('impress')) return Eye;
+  if (l.includes('alcance') || l.includes('reach')) return Radio;
+  if (l.includes('frequência') || l.includes('frequencia')) return Repeat;
+  if (l.includes('clique') || l.includes('click') || l.includes('tráfego') || l.includes('trafego')) return MousePointer;
+  if (l.includes('seguidor') || l.includes('follower')) return UserPlus;
+  if (l.includes('visita') || l.includes('perfil')) return UserCheck;
+  if (l.includes('conversa') || l.includes('mensagem') || l.includes('whats')) return MessageCircle;
+  if (l.includes('lead')) return Filter;
+  if (l.includes('agend') || l.includes('consulta')) return CalendarCheck;
+  if (l.includes('telefone') || l.includes('ligação') || l.includes('ligacao')) return PhoneCall;
+  if (l.includes('comparec')) return UserCheck;
+  if (l.includes('venda')) return ShoppingBag;
+  if (l.includes('receita') || l.includes('faturamento') || l.includes('roas')) return TrendingUp;
+  if (l.includes('ticket')) return Receipt;
+  if (l.includes('conversão') || l.includes('conversao') || l.includes('conversion')) return Target;
+  if (l.includes('ctr')) return Zap;
+  if (l.includes('roi') || l.includes('roas')) return Gauge;
+  if (l.includes('engaj')) return Activity;
+  if (l.includes('reconhec') || l.includes('awareness') || l.includes('marca')) return Megaphone;
+  return BarChart3;
 };
 
 export default function PlanDetail() {
@@ -348,17 +375,17 @@ export default function PlanDetail() {
             const calcCards = hasCalcMetrics ? data.calculatedCards.map(c => ({
               label: c.label,
               value: formatCardValue(c.value, c.unit),
-              icon: c.unit === 'moeda' ? DollarSign : c.unit === 'percentual' ? TrendingUp : Eye,
+              icon: getMetricIcon(c.label),
               color: c.unit === 'moeda' ? 'amber' : c.unit === 'percentual' ? 'teal' : 'amber',
             })) : [];
             const hardcodedCards = hasCalcMetrics ? [] : [
-              data.impressions > 0 && { label: 'Impressões', value: Math.round(data.impressions).toLocaleString('pt-BR'), icon: Eye, color: 'amber' },
-              data.reach > 0 && { label: 'Alcance', value: Math.round(data.reach).toLocaleString('pt-BR'), icon: Users, color: 'teal' },
-              frequency > 0 && { label: 'Frequência', value: frequency.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }), icon: TrendingUp, color: 'amber' },
-              data.clicks > 0 && { label: 'Cliques', value: Math.round(data.clicks).toLocaleString('pt-BR'), icon: MousePointer, color: 'teal' },
+              data.impressions > 0 && { label: 'Impressões', value: Math.round(data.impressions).toLocaleString('pt-BR'), icon: getMetricIcon('Impressões'), color: 'amber' },
+              data.reach > 0 && { label: 'Alcance', value: Math.round(data.reach).toLocaleString('pt-BR'), icon: getMetricIcon('Alcance'), color: 'teal' },
+              frequency > 0 && { label: 'Frequência', value: frequency.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }), icon: getMetricIcon('Frequência'), color: 'amber' },
+              data.clicks > 0 && { label: 'Cliques', value: Math.round(data.clicks).toLocaleString('pt-BR'), icon: getMetricIcon('Cliques'), color: 'teal' },
             ].filter(Boolean);
             const cards = [
-              { label: 'Investimento', value: `R$${Math.round(data.investment).toLocaleString('pt-BR')}`, icon: Megaphone, color: 'amber' },
+              { label: 'Investimento', value: `R$${Math.round(data.investment).toLocaleString('pt-BR')}`, icon: getMetricIcon('Investimento'), color: 'amber' },
               ...calcCards,
               ...hardcodedCards,
             ].filter(Boolean);
@@ -392,11 +419,11 @@ export default function PlanDetail() {
             const calcCards = hasCalcMetrics ? data.calculatedCards.map(c => ({
               label: c.label,
               value: formatCardValue(c.value, c.unit),
-              icon: c.unit === 'moeda' ? DollarSign : c.unit === 'percentual' ? TrendingUp : Target,
+              icon: getMetricIcon(c.label),
               color: c.unit === 'moeda' ? 'indigo' : c.unit === 'percentual' ? 'rose' : 'indigo',
             })) : [];
             const cards = [
-              { label: 'Investimento', value: `R$${Math.round(data.investment).toLocaleString('pt-BR')}`, icon: DollarSign, color: 'indigo' },
+              { label: 'Investimento', value: `R$${Math.round(data.investment).toLocaleString('pt-BR')}`, icon: getMetricIcon('Investimento'), color: 'indigo' },
               ...calcCards,
             ].filter(Boolean);
             return (

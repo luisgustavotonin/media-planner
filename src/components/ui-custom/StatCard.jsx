@@ -1,52 +1,20 @@
 import React from 'react';
 
 const COLOR_STYLES = {
-  blue: {
-    iconBg: 'bg-blue-100',
-    iconText: 'text-blue-600',
-    accent: 'border-blue-200',
-  },
-  orange: {
-    iconBg: 'bg-orange-100',
-    iconText: 'text-orange-600',
-    accent: 'border-orange-200',
-  },
-  green: {
-    iconBg: 'bg-emerald-100',
-    iconText: 'text-emerald-600',
-    accent: 'border-emerald-200',
-  },
-  purple: {
-    iconBg: 'bg-violet-100',
-    iconText: 'text-violet-600',
-    accent: 'border-violet-200',
-  },
-  amber: {
-    iconBg: 'bg-amber-100',
-    iconText: 'text-amber-700',
-    accent: 'border-amber-200',
-  },
-  indigo: {
-    iconBg: 'bg-indigo-100',
-    iconText: 'text-indigo-600',
-    accent: 'border-indigo-200',
-  },
-  teal: {
-    iconBg: 'bg-teal-100',
-    iconText: 'text-teal-600',
-    accent: 'border-teal-200',
-  },
-  rose: {
-    iconBg: 'bg-rose-100',
-    iconText: 'text-rose-600',
-    accent: 'border-rose-200',
-  },
+  blue: { iconBg: 'bg-blue-50', iconText: 'text-blue-500' },
+  orange: { iconBg: 'bg-orange-50', iconText: 'text-orange-500' },
+  green: { iconBg: 'bg-emerald-50', iconText: 'text-emerald-500' },
+  purple: { iconBg: 'bg-violet-50', iconText: 'text-violet-500' },
+  amber: { iconBg: 'bg-amber-50', iconText: 'text-amber-600' },
+  indigo: { iconBg: 'bg-indigo-50', iconText: 'text-indigo-500' },
+  teal: { iconBg: 'bg-teal-50', iconText: 'text-teal-500' },
+  rose: { iconBg: 'bg-rose-50', iconText: 'text-rose-500' },
 };
 
 export default function StatCard({ label, value, sublabel, icon: Icon, trend, color = 'blue' }) {
   const styles = COLOR_STYLES[color] || COLOR_STYLES.blue;
   return (
-    <div className={`bg-card rounded-xl border border-border p-4 sm:p-5 hover:shadow-sm transition-shadow min-h-[90px] flex flex-col justify-between ${styles.accent}`}>
+    <div className="bg-card rounded-xl border border-border p-4 sm:p-5 hover:shadow-sm transition-shadow min-h-[90px] flex flex-col justify-between">
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-1 min-w-0 flex-1">
           <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider truncate">{label}</p>

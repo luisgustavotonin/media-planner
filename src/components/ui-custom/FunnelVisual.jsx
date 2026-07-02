@@ -41,10 +41,11 @@ export default function FunnelVisual({ stages, benchmarkStages, funnelName }) {
         {stages.map((stage, i) => {
           const val = stage.value || 0;
           const bm = hasBenchmark ? (benchmarkStages[i]?.value || 0) : 0;
-          const valW = Math.round((val / maxVal) * 100);
-          const bmW = Math.round((bm / maxVal) * 100);
+          const valW = (val / maxVal) * 100;
+          const bmW = (bm / maxVal) * 100;
           const deltaPct = hasBenchmark && bm > 0 ? ((val - bm) / bm) * 100 : 0;
           const isPositive = deltaPct >= 0;
+          const valFull = valW >= 90;
 
           return (
             <div key={i}>
@@ -52,20 +53,30 @@ export default function FunnelVisual({ stages, benchmarkStages, funnelName }) {
               <div className="flex items-stretch gap-2">
                 {/* Bars column */}
                 <div className="flex-1 space-y-1">
-                  {/* Projeção bar */}
-                  <div className="flex items-center gap-1.5">
-                    <div className="relative h-5 bg-gray-100 rounded-sm overflow-hidden flex-1">
-                      <div className="h-full bg-primary rounded-sm transition-all duration-300" style={{ width: `${Math.max(valW, 8)}%` }}></div>
+                  {/* Projeção bar — value follows the tip */}
+                  <div className="relative h-5 bg-gray-100 rounded-sm overflow-visible">
+                    <div className="absolute inset-0 bg-gray-100 rounded-sm"></div>
+                    <div className="absolute top-0 left-0 h-full bg-primary rounded-sm transition-all duration-300" style={{ width: `${Math.max(valW, 2)}%` }}>
+                      {valFull && (
+                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-white tabular-nums">{fmt(val)}</span>
+                      )}
                     </div>
-                    <span className="text-[10px] font-bold text-primary tabular-nums w-12 text-right flex-shrink-0">{fmt(val)}</span>
+                    {!valFull && (
+                      <span className="absolute top-1/2 -translate-y-1/2 text-[9px] font-bold text-primary tabular-nums whitespace-nowrap" style={{ left: `calc(${Math.max(valW, 2)}% + 4px)` }}>{fmt(val)}</span>
+                    )}
                   </div>
-                  {/* Benchmark bar */}
+                  {/* Benchmark bar — value follows the tip */}
                   {hasBenchmark && (
-                    <div className="flex items-center gap-1.5">
-                      <div className="relative h-4 bg-gray-50 rounded-sm overflow-hidden flex-1">
-                        <div className="h-full bg-secondary rounded-sm transition-all duration-300" style={{ width: `${Math.max(bmW, 8)}%` }}></div>
+                    <div className="relative h-4 bg-gray-50 rounded-sm overflow-visible">
+                      <div className="absolute inset-0 bg-gray-50 rounded-sm"></div>
+                      <div className="absolute top-0 left-0 h-full bg-secondary rounded-sm transition-all duration-300" style={{ width: `${Math.max(bmW, 2)}%` }}>
+                        {bmW >= 90 && (
+                          <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-white tabular-nums">{fmt(bm)}</span>
+                        )}
                       </div>
-                      <span className="text-[10px] font-semibold text-gray-400 tabular-nums w-12 text-right flex-shrink-0">{fmt(bm)}</span>
+                      {bmW < 90 && (
+                        <span className="absolute top-1/2 -translate-y-1/2 text-[9px] font-semibold text-gray-400 tabular-nums whitespace-nowrap" style={{ left: `calc(${Math.max(bmW, 2)}% + 4px)` }}>{fmt(bm)}</span>
+                      )}
                     </div>
                   )}
                 </div>
