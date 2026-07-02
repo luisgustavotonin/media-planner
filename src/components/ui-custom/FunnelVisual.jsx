@@ -19,29 +19,25 @@ export default function FunnelVisual({ stages, benchmarkStages, funnelName }) {
     <div className="w-full py-2">
       {/* Legend */}
       {hasBenchmark && (
-        <div className="flex items-center gap-3 mb-1.5 px-1">
-          <div className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-sm bg-primary"></span>
-            <span className="text-[9px] text-gray-500">Projeção</span>
+        <div className="flex items-center justify-between mb-2 px-1">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-sm bg-primary"></span>
+              <span className="text-[9px] text-gray-500">Projeção</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-sm bg-secondary"></span>
+              <span className="text-[9px] text-gray-500">Benchmark</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-sm bg-secondary"></span>
-            <span className="text-[9px] text-gray-500">Benchmark</span>
-          </div>
+          {hasBenchmark && (
+            <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider">Delta %</span>
+          )}
         </div>
       )}
 
-      {/* Column headers */}
-      <div className="flex items-center justify-between px-1 mb-1.5">
-        <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider w-24">Etapa</span>
-        <div className="flex-1"></div>
-        {hasBenchmark && (
-          <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider w-16 text-right">Delta %</span>
-        )}
-      </div>
-
       {/* Stage rows */}
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         {stages.map((stage, i) => {
           const val = stage.value || 0;
           const bm = hasBenchmark ? (benchmarkStages[i]?.value || 0) : 0;
@@ -51,38 +47,36 @@ export default function FunnelVisual({ stages, benchmarkStages, funnelName }) {
           const isPositive = deltaPct >= 0;
 
           return (
-            <div key={i} className="space-y-0.5">
-              <div className="flex items-center justify-between px-1 gap-2">
-                <span className="text-[11px] font-medium text-gray-600 w-24 flex-shrink-0 truncate">{stage.label}</span>
-                <div className="flex-1"></div>
-                {hasBenchmark && (
-                  <span className={`text-[10px] font-medium tabular-nums w-16 text-right flex-shrink-0 ${isPositive ? 'text-green-600' : 'text-red-500'}`}>
-                    {fmtPct(deltaPct)}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 space-y-0.5">
+            <div key={i}>
+              <span className="text-[11px] font-medium text-gray-600 block mb-1 px-1">{stage.label}</span>
+              <div className="flex items-stretch gap-2">
+                {/* Bars column */}
+                <div className="flex-1 space-y-1">
                   {/* Projeção bar */}
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-[9px] font-bold text-primary tabular-nums">{fmt(val)}</span>
-                  </div>
-                  <div className="relative h-4 bg-gray-100 rounded-sm overflow-hidden">
-                    <div className="h-full bg-primary rounded-sm transition-all duration-300" style={{ width: `${Math.max(valW, 8)}%` }}></div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="relative h-5 bg-gray-100 rounded-sm overflow-hidden flex-1">
+                      <div className="h-full bg-primary rounded-sm transition-all duration-300" style={{ width: `${Math.max(valW, 8)}%` }}></div>
+                    </div>
+                    <span className="text-[10px] font-bold text-primary tabular-nums w-12 text-right flex-shrink-0">{fmt(val)}</span>
                   </div>
                   {/* Benchmark bar */}
                   {hasBenchmark && (
-                    <>
-                      <div className="flex items-center justify-between mb-0.5 mt-0.5">
-                        <span className="text-[9px] font-semibold text-gray-400 tabular-nums">{fmt(bm)}</span>
-                      </div>
-                      <div className="relative h-3 bg-gray-50 rounded-sm overflow-hidden">
+                    <div className="flex items-center gap-1.5">
+                      <div className="relative h-4 bg-gray-50 rounded-sm overflow-hidden flex-1">
                         <div className="h-full bg-secondary rounded-sm transition-all duration-300" style={{ width: `${Math.max(bmW, 8)}%` }}></div>
                       </div>
-                    </>
+                      <span className="text-[10px] font-semibold text-gray-400 tabular-nums w-12 text-right flex-shrink-0">{fmt(bm)}</span>
+                    </div>
                   )}
                 </div>
-                <div className="w-16 flex-shrink-0"></div>
+                {/* Delta column — vertically centered between the two bars */}
+                {hasBenchmark && (
+                  <div className="flex items-center w-16 flex-shrink-0">
+                    <span className={`text-[11px] font-bold tabular-nums ${isPositive ? 'text-green-600' : 'text-red-500'}`}>
+                      {fmtPct(deltaPct)}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           );

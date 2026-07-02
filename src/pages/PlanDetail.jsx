@@ -335,8 +335,12 @@ export default function PlanDetail() {
       {hasBrandingCampaigns && (
         <>
           <div className="flex items-center gap-2 mb-3">
-            <Megaphone className="w-3.5 h-3.5 text-gray-400" />
-            <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Branding</span>
+            <div className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center">
+              <Megaphone className="w-3.5 h-3.5 text-amber-700" />
+            </div>
+            <span className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider">Branding</span>
+            <span className="text-[10px] text-amber-500/60">·</span>
+            <span className="text-[10px] text-amber-600/70">Awareness & Reconhecimento</span>
           </div>
           {Object.entries(brandingGroups).map(([objName, data]) => {
             const hasCalcMetrics = data.calculatedCards?.length > 0;
@@ -344,24 +348,24 @@ export default function PlanDetail() {
             const calcCards = hasCalcMetrics ? data.calculatedCards.map(c => ({
               label: c.label,
               value: formatCardValue(c.value, c.unit),
-              icon: c.unit === 'moeda' ? DollarSign : c.unit === 'percentual' ? TrendingUp : Target,
-              color: c.unit === 'moeda' ? 'blue' : c.unit === 'percentual' ? 'green' : 'purple',
+              icon: c.unit === 'moeda' ? DollarSign : c.unit === 'percentual' ? TrendingUp : Eye,
+              color: c.unit === 'moeda' ? 'amber' : c.unit === 'percentual' ? 'teal' : 'amber',
             })) : [];
             const hardcodedCards = hasCalcMetrics ? [] : [
-              data.impressions > 0 && { label: 'Impressões', value: Math.round(data.impressions).toLocaleString('pt-BR'), icon: Eye, color: 'blue' },
-              data.reach > 0 && { label: 'Alcance', value: Math.round(data.reach).toLocaleString('pt-BR'), icon: Users, color: 'green' },
-              frequency > 0 && { label: 'Frequência', value: frequency.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }), icon: TrendingUp, color: 'purple' },
-              data.clicks > 0 && { label: 'Cliques', value: Math.round(data.clicks).toLocaleString('pt-BR'), icon: MousePointer, color: 'purple' },
+              data.impressions > 0 && { label: 'Impressões', value: Math.round(data.impressions).toLocaleString('pt-BR'), icon: Eye, color: 'amber' },
+              data.reach > 0 && { label: 'Alcance', value: Math.round(data.reach).toLocaleString('pt-BR'), icon: Users, color: 'teal' },
+              frequency > 0 && { label: 'Frequência', value: frequency.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }), icon: TrendingUp, color: 'amber' },
+              data.clicks > 0 && { label: 'Cliques', value: Math.round(data.clicks).toLocaleString('pt-BR'), icon: MousePointer, color: 'teal' },
             ].filter(Boolean);
             const cards = [
-              { label: 'Investimento', value: `R$${Math.round(data.investment).toLocaleString('pt-BR')}`, icon: Megaphone, color: 'orange' },
+              { label: 'Investimento', value: `R$${Math.round(data.investment).toLocaleString('pt-BR')}`, icon: Megaphone, color: 'amber' },
               ...calcCards,
               ...hardcodedCards,
             ].filter(Boolean);
             return (
               <div key={objName} className="mb-4">
                 <div className="flex items-center gap-2 mb-2 ml-1">
-                  <span className="text-[10px] font-medium text-gray-400">{objName}</span>
+                  <span className="text-[10px] font-medium text-amber-600/80">{objName}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                   {cards.map((c, i) => <StatCard key={i} {...c} />)}
@@ -376,8 +380,12 @@ export default function PlanDetail() {
       {hasPerformanceCampaigns && (
         <>
           <div className="flex items-center gap-2 mb-3">
-            <Target className="w-3.5 h-3.5 text-gray-400" />
-            <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Performance</span>
+            <div className="w-6 h-6 rounded-lg bg-indigo-100 flex items-center justify-center">
+              <Target className="w-3.5 h-3.5 text-indigo-600" />
+            </div>
+            <span className="text-[10px] font-semibold text-indigo-600 uppercase tracking-wider">Performance</span>
+            <span className="text-[10px] text-indigo-400/60">·</span>
+            <span className="text-[10px] text-indigo-500/70">Conversão & Vendas</span>
           </div>
           {Object.entries(performanceGroups).map(([objName, data]) => {
             const hasCalcMetrics = data.calculatedCards?.length > 0;
@@ -385,16 +393,16 @@ export default function PlanDetail() {
               label: c.label,
               value: formatCardValue(c.value, c.unit),
               icon: c.unit === 'moeda' ? DollarSign : c.unit === 'percentual' ? TrendingUp : Target,
-              color: c.unit === 'moeda' ? 'blue' : c.unit === 'percentual' ? 'green' : 'purple',
+              color: c.unit === 'moeda' ? 'indigo' : c.unit === 'percentual' ? 'rose' : 'indigo',
             })) : [];
             const cards = [
-              { label: 'Investimento', value: `R$${Math.round(data.investment).toLocaleString('pt-BR')}`, icon: DollarSign, color: 'blue' },
+              { label: 'Investimento', value: `R$${Math.round(data.investment).toLocaleString('pt-BR')}`, icon: DollarSign, color: 'indigo' },
               ...calcCards,
             ].filter(Boolean);
             return (
               <div key={objName} className="mb-4">
                 <div className="flex items-center gap-2 mb-2 ml-1">
-                  <span className="text-[10px] font-medium text-gray-400">{objName}</span>
+                  <span className="text-[10px] font-medium text-indigo-500/80">{objName}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                   {cards.map((c, i) => <StatCard key={i} {...c} />)}
