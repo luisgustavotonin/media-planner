@@ -5,7 +5,6 @@ import { Trash2, Plus, ChevronDown, ChevronRight, Layers } from 'lucide-react';
 import CurrencyInput from '../ui-custom/CurrencyInput';
 import PercentInput from '../ui-custom/PercentInput';
 import FunnelVisual from '../ui-custom/FunnelVisual';
-import ObjectivePicker from './ObjectivePicker';
 
 const fmtBRL = (n) => `R$ ${(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtDaily = (budget, days) => days > 0 ? fmtBRL(budget / days) : fmtBRL(0);
@@ -267,31 +266,28 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
             prefix="R$" className={`text-xs h-8 ${isCampaignOver ? 'border-red-400 ring-1 ring-red-300' : ''}`}
             disabled={readOnly} placeholder="Budget" />
         </div>
+        <div className="w-28 shrink-0">
+          <label className="text-[10px] text-gray-400 block mb-1">Objetivo</label>
+          {readOnly ? (
+            <span className="text-[10px] font-medium px-2 py-1 rounded-full border bg-secondary/60 text-secondary-foreground border-border whitespace-nowrap">
+              {campaign.objective || '—'}
+            </span>
+          ) : (
+            <Select value={campaign.objective || ''} onValueChange={handleObjectiveChange}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Objetivo" /></SelectTrigger>
+              <SelectContent>
+                {(availableObjectives || objectives).map(o => <SelectItem key={o.id} value={o.name}>{o.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
         <CampaignKpis campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
-        {campaign.objective && (
-          <span className="text-[10px] font-medium px-2 py-1 rounded-full border bg-secondary/60 text-secondary-foreground border-border whitespace-nowrap mb-1.5">
-            {campaign.objective}
-          </span>
-        )}
         {!readOnly && (
           <button onClick={onRemove} className="p-1.5 rounded hover:bg-red-50 ml-1 mb-1.5">
             <Trash2 className="w-3.5 h-3.5 text-red-400" />
           </button>
         )}
       </div>
-
-      {/* Objective picker */}
-      {open && !readOnly && (
-        <div className="px-3 pt-2 border-t border-gray-50 bg-gray-50/30">
-          <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-1.5">Objetivo da Campanha</label>
-          <ObjectivePicker
-            objectives={availableObjectives || objectives}
-            value={campaign.objective || ''}
-            onChange={handleObjectiveChange}
-            readOnly={readOnly}
-          />
-        </div>
-      )}
 
       {/* Ad sets */}
       {open && (
@@ -379,35 +375,32 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
           <CurrencyInput value={campaign.budget_value || 0} onChange={v => updateField('budget_value', Number(v))}
             prefix="R$" className={`text-xs h-8 ${isOver ? 'border-red-400 ring-1 ring-red-300' : ''}`} disabled={readOnly} />
         </div>
+        <div className="w-28 shrink-0">
+          <label className="text-[10px] text-gray-400 block mb-1">Objetivo</label>
+          {readOnly ? (
+            <span className="text-[10px] font-medium px-2 py-1 rounded-full border bg-secondary/60 text-secondary-foreground border-border whitespace-nowrap">
+              {campaign.objective || '—'}
+            </span>
+          ) : (
+            <Select value={campaign.objective || ''} onValueChange={handleObjectiveChange}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Objetivo" /></SelectTrigger>
+              <SelectContent>
+                {(availableObjectives || objectives).map(o => <SelectItem key={o.id} value={o.name}>{o.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
         <CampaignKpis campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
         <div className="text-right w-16 shrink-0">
           <span className="text-[10px] text-gray-400">por dia</span>
           <p className="text-[11px] font-medium text-gray-600">{fmtDaily(campaign.budget_value || 0, days)}</p>
         </div>
-        {campaign.objective && (
-          <span className="text-[10px] font-medium px-2 py-1 rounded-full border bg-secondary/60 text-secondary-foreground border-border whitespace-nowrap mb-1.5">
-            {campaign.objective}
-          </span>
-        )}
         {!readOnly && (
           <button onClick={onRemove} className="p-1.5 rounded hover:bg-red-50 ml-1 mb-1.5">
             <Trash2 className="w-3.5 h-3.5 text-red-400" />
           </button>
         )}
       </div>
-
-      {/* Objective picker */}
-      {open && !readOnly && (
-        <div className="px-4 pt-2 border-t border-gray-50 bg-gray-50/30">
-          <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-1.5">Objetivo da Campanha</label>
-          <ObjectivePicker
-            objectives={availableObjectives || objectives}
-            value={campaign.objective || ''}
-            onChange={handleObjectiveChange}
-            readOnly={readOnly}
-          />
-        </div>
-      )}
 
       {open && (
         <div className="px-4 pb-4 pt-2 border-t border-gray-100 bg-gray-50/50">
