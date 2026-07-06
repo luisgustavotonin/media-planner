@@ -41,14 +41,14 @@
     --chart-4: 34 47% 60%;
     --chart-5: 42 25% 50%;
 
-    /* Sidebar (mantém o padrão escuro da referência) */
-    --sidebar-background: 42 22% 12%;
-    --sidebar-foreground: 40 29% 94%;
+    /* Sidebar clara — padrão da referência */
+    --sidebar-background: 40 29% 94%;
+    --sidebar-foreground: 42 22% 15%;
     --sidebar-primary: 21 95% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 42 22% 18%;
-    --sidebar-accent-foreground: 40 29% 94%;
-    --sidebar-border: 42 27% 18%;
+    --sidebar-accent: 30 100% 94%;
+    --sidebar-accent-foreground: 42 22% 15%;
+    --sidebar-border: 37 20% 87%;
     --sidebar-ring: 21 95% 50%;
   }
 
