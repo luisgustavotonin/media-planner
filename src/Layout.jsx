@@ -52,13 +52,9 @@ export default function Layout({ children, currentPageName }) {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between h-16 px-5 border-b border-sidebar-border">
-            <h1 className="flex items-baseline" style={{ fontSize: '16px', lineHeight: 1 }}>
-              <span style={{ color: '#E87635', fontWeight: 700, letterSpacing: '-0.01em' }}>Media Planner</span>
-              <span style={{ marginLeft: '8px', display: 'inline-flex', alignItems: 'baseline' }}>
-                <span style={{ color: '#877969', fontWeight: 400, fontSize: '6.5px', textTransform: 'lowercase', marginRight: '1px' }}>by</span>
-                <span style={{ color: '#2D2C28', fontWeight: 900, letterSpacing: '-0.04em' }}>IDK</span>
-              </span>
-            </h1>
+            <div className="text-base font-semibold text-[#f85d07]">
+              Media Planner <span className="inline-flex items-baseline gap-[1px]"><span className="text-[10px] text-[#7e6951] font-medium [font-family:'Albert_Sans',_sans-serif] translate-y-[2px]">by</span><span className="text-[#312b1d]">IDK</span></span>
+            </div>
             <button className="lg:hidden p-1" onClick={() => setSidebarOpen(false)}>
               <X className="w-5 h-5 text-sidebar-foreground/60" />
             </button>
@@ -117,12 +113,8 @@ export default function Layout({ children, currentPageName }) {
           <button onClick={() => setSidebarOpen(true)} className="p-1.5 -ml-1.5">
             <Menu className="w-5 h-5 text-sidebar-foreground" />
           </button>
-          <div className="flex items-baseline ml-3" style={{ fontSize: '14px', lineHeight: 1 }}>
-            <span style={{ color: '#E87635', fontWeight: 700, letterSpacing: '-0.01em' }}>Media Planner</span>
-            <span style={{ marginLeft: '7px', display: 'inline-flex', alignItems: 'baseline' }}>
-              <span style={{ color: '#877969', fontWeight: 400, fontSize: '5.5px', textTransform: 'lowercase', marginRight: '1px' }}>by</span>
-              <span style={{ color: '#2D2C28', fontWeight: 900, letterSpacing: '-0.04em' }}>IDK</span>
-            </span>
+          <div className="text-sm font-semibold text-[#f85d07] ml-3">
+            Media Planner <span className="inline-flex items-baseline gap-[1px]"><span className="text-[9px] text-[#7e6951] font-medium [font-family:'Albert_Sans',_sans-serif] translate-y-[2px]">by</span><span className="text-[#312b1d]">IDK</span></span>
           </div>
         </header>
 
