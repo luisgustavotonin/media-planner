@@ -52,9 +52,9 @@ export default function Layout({ children, currentPageName }) {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between h-16 px-5 border-b border-sidebar-border">
-            <h1 className="text-base font-bold tracking-tight">
-              <span className="text-primary">Media Planner</span>{' '}
-              <span className="text-sidebar-foreground/50 font-normal text-sm">by</span>{' '}
+            <h1 className="text-base font-bold tracking-tight flex items-baseline gap-1">
+              <span className="text-primary">Media Planner</span>
+              <span className="text-sidebar-foreground/70 font-normal text-[10px] lowercase translate-y-1">by</span>
               <span className="text-sidebar-foreground">IDK</span>
             </h1>
             <button className="lg:hidden p-1" onClick={() => setSidebarOpen(false)}>
@@ -115,9 +115,9 @@ export default function Layout({ children, currentPageName }) {
           <button onClick={() => setSidebarOpen(true)} className="p-1.5 -ml-1.5">
             <Menu className="w-5 h-5 text-sidebar-foreground" />
           </button>
-          <div className="flex items-center gap-2 ml-3">
+          <div className="flex items-baseline gap-1 ml-3">
             <span className="text-sm font-bold text-primary">Media Planner</span>
-            <span className="text-[11px] text-sidebar-foreground/50 font-normal">by</span>
+            <span className="text-sidebar-foreground/70 font-normal text-[9px] lowercase translate-y-1">by</span>
             <span className="text-sm font-bold text-sidebar-foreground">IDK</span>
           </div>
         </header>
