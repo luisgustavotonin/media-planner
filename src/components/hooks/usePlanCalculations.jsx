@@ -220,10 +220,21 @@ export function calculateReversePlan(targetRevenue, averageTicket, conversionRat
   const channelBudgets = channelDistribution.map(ch => {
     const chLeads = requiredLeads * (ch.percent / 100);
     const chBudget = chLeads * (ch.expected_cpl || 0);
-    return { ...ch, required_leads: Math.round(chLeads), required_budget: Math.round(chBudget) };
+    const chSales = requiredSales * (ch.percent / 100);
+    const chRevenue = chSales * averageTicket;
+    return {
+      ...ch,
+      required_leads: Math.round(chLeads),
+      required_budget: Math.round(chBudget),
+      required_sales: Math.round(chSales * 10) / 10,
+      revenue: Math.round(chRevenue),
+      roas: chBudget > 0 ? Math.round((chRevenue / chBudget) * 100) / 100 : 0,
+      cac: chSales > 0 ? Math.round(chBudget / chSales) : 0,
+    };
   });
 
   const totalInvestment = channelBudgets.reduce((sum, ch) => sum + ch.required_budget, 0);
+  const totalRevenue = requiredSales * averageTicket;
 
   return {
     required_sales: Math.round(requiredSales * 10) / 10,
@@ -234,6 +245,9 @@ export function calculateReversePlan(targetRevenue, averageTicket, conversionRat
     required_showups: Math.round(requiredLeads * (rates[0] || 0) * (rates[1] || 0)),
     channel_budgets: channelBudgets,
     total_investment: totalInvestment,
+    total_revenue: Math.round(totalRevenue),
+    total_roas: totalInvestment > 0 ? Math.round((totalRevenue / totalInvestment) * 100) / 100 : 0,
+    total_cac: requiredSales > 0 ? Math.round(totalInvestment / requiredSales) : 0,
   };
 }
 

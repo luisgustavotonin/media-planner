@@ -237,6 +237,8 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">KPI</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Leads Nec.</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Budget Nec.</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">ROAS</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">CAC</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -247,6 +249,8 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
                         <td className="py-2.5 px-4 text-right">R${ch.expected_cpl}</td>
                         <td className="py-2.5 px-4 text-right">{ch.required_leads.toLocaleString()}</td>
                         <td className="py-2.5 px-4 text-right font-semibold">{fmt(ch.required_budget)}</td>
+                        <td className="py-2.5 px-4 text-right">{ch.roas ? `${ch.roas.toFixed(2)}x` : '—'}</td>
+                        <td className="py-2.5 px-4 text-right">{ch.cac ? fmt(ch.cac) : '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -257,6 +261,8 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
                       <td></td>
                       <td className="py-3 px-4 text-right">{result.required_leads.toLocaleString()}</td>
                       <td className="py-3 px-4 text-right">{fmt(result.total_investment)}</td>
+                      <td className="py-3 px-4 text-right">{result.total_roas ? `${result.total_roas.toFixed(2)}x` : '—'}</td>
+                      <td className="py-3 px-4 text-right">{result.total_cac ? fmt(result.total_cac) : '—'}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -559,6 +565,8 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">CPL</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Leads Nec.</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Budget Nec.</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">ROAS</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">CAC</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -569,6 +577,8 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                         <td className="py-2.5 px-4 text-right">R${ch.expected_cpl}</td>
                         <td className="py-2.5 px-4 text-right">{ch.required_leads.toLocaleString()}</td>
                         <td className="py-2.5 px-4 text-right font-semibold">{fmt(ch.required_budget)}</td>
+                        <td className="py-2.5 px-4 text-right">{ch.roas ? `${ch.roas.toFixed(2)}x` : '—'}</td>
+                        <td className="py-2.5 px-4 text-right">{ch.cac ? fmt(ch.cac) : '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -579,6 +589,8 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                       <td></td>
                       <td className="py-3 px-4 text-right">{result.required_leads.toLocaleString()}</td>
                       <td className="py-3 px-4 text-right">{fmt(result.total_investment)}</td>
+                      <td className="py-3 px-4 text-right">{result.total_roas ? `${result.total_roas.toFixed(2)}x` : '—'}</td>
+                      <td className="py-3 px-4 text-right">{result.total_cac ? fmt(result.total_cac) : '—'}</td>
                     </tr>
                   </tfoot>
                 </table>
