@@ -30,6 +30,15 @@ function buildFunnelVisualStages(result, stageLabels) {
   return stageValues.map((v, i) => ({ label: genericLabels[i] || `Etapa ${i + 1}`, value: v }));
 }
 
+// Busca CPL padrão de um canal a partir do benchmark do segmento
+function getCplForChannel(channelName, benchmark) {
+  if (!benchmark) return 0;
+  const name = (channelName || '').toLowerCase();
+  if (name === 'google') return benchmark.google_default_cpl || 0;
+  // Meta, TikTok, YouTube, etc. usam o CPL do Meta como referência
+  return benchmark.meta_default_cpl || 0;
+}
+
 // ── Lista: cliente → planejamentos reversos ──
 function PlanList({ records, clients, onSelect, onNew }) {
   const [selectedClientId, setSelectedClientId] = useState('');
@@ -261,7 +270,7 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
 }
 
 // ── Criar novo planejamento ──
-function PlanNew({ clients, funnelTypes, objectives, onSave, onBack }) {
+function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -298,8 +307,9 @@ function PlanNew({ clients, funnelTypes, objectives, onSave, onBack }) {
     ? stageLabels.slice(0, -1).map((l, i) => `${l} → ${stageLabels[i + 1]}`)
     : GENERIC_RATE_LABELS;
 
-  // KPI de custo (unit=moeda) do objetivo — apenas para exibir o label correto
-  const costKpiLabel = (selectedObjective?.kpis || []).find(k => k.unit === 'moeda')?.label || 'CPL';
+  // Benchmark do segmento do cliente (para defaults de CPL)
+  const clientBenchmark = benchmarks.find(b => b.segment === selectedClient?.specialty)
+    || benchmarks.find(b => b.segment === 'general');
 
   useEffect(() => {
     setSelectedObjectiveId('');
@@ -331,19 +341,20 @@ function PlanNew({ clients, funnelTypes, objectives, onSave, onBack }) {
     setEditedTicket(selectedClient?.average_ticket || 0);
 
     // Pré-popula distribuição com canais do objetivo (se definidos), split igual
+    // CPL vem do benchmark do segmento do cliente
     const objChannels = selectedObjective.channels?.length > 0 ? selectedObjective.channels : [];
     if (objChannels.length > 0) {
       const equal = Math.round(100 / objChannels.length);
       setDistribution(objChannels.map((ch, i) => ({
         channel_name: ch,
         percent: i === objChannels.length - 1 ? 100 - equal * (objChannels.length - 1) : equal,
-        expected_cpl: 0,
+        expected_cpl: getCplForChannel(ch, clientBenchmark),
       })));
     } else {
-      setDistribution([{ channel_name: 'Meta', percent: 100, expected_cpl: 0 }]);
+      setDistribution([{ channel_name: 'Meta', percent: 100, expected_cpl: getCplForChannel('Meta', clientBenchmark) }]);
     }
     setResult(null);
-  }, [selectedObjectiveId]);
+  }, [selectedObjectiveId, clientBenchmark]);
 
   const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
   const canCalculate = selectedObjectiveId && targetRevenue > 0 && distribution.length > 0 && editedTicket > 0;
@@ -482,7 +493,7 @@ function PlanNew({ clients, funnelTypes, objectives, onSave, onBack }) {
               {distribution.length > 0 && (
                 <div className="space-y-2 mb-3">
                   <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_32px] gap-3 text-[10px] text-gray-400 font-medium uppercase tracking-wider px-1">
-                    <span>Canal</span><span>% do Budget</span><span>{costKpiLabel} (R$)</span><span></span>
+                    <span>Canal</span><span>% do Budget</span><span>CPL (R$)</span><span></span>
                   </div>
                   {distribution.map((ch, idx) => (
                     <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_32px] gap-2 sm:gap-3 items-center">
@@ -493,7 +504,7 @@ function PlanNew({ clients, funnelTypes, objectives, onSave, onBack }) {
                         </SelectContent>
                       </Select>
                       <CurrencyInput value={ch.percent} onChange={v => handleDistChange(idx, 'percent', v)} className="text-xs" placeholder="%" />
-                      <CurrencyInput value={ch.expected_cpl} onChange={v => handleDistChange(idx, 'expected_cpl', v)} prefix="R$" className="text-xs" placeholder={costKpiLabel} />
+                      <CurrencyInput value={ch.expected_cpl} onChange={v => handleDistChange(idx, 'expected_cpl', v)} prefix="R$" className="text-xs" placeholder="CPL" />
                       <button onClick={() => { setDistribution(d => d.filter((_, i) => i !== idx)); setResult(null); }} className="p-1.5 rounded-md hover:bg-red-50 text-red-400">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -545,7 +556,7 @@ function PlanNew({ clients, funnelTypes, objectives, onSave, onBack }) {
                     <tr className="bg-gray-50/50 border-b border-gray-100">
                       <th className="text-left py-2.5 px-4 font-medium text-gray-500">Canal</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Distribuição</th>
-                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">{costKpiLabel}</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">CPL</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Leads Nec.</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Budget Nec.</th>
                     </tr>
@@ -605,6 +616,11 @@ export default function ReversePlan() {
     queryFn: () => base44.entities.CampaignObjective.filter({ is_active: true }),
   });
 
+  const { data: benchmarks = [] } = useQuery({
+    queryKey: ['benchmarks'],
+    queryFn: () => base44.entities.Benchmark.list(),
+  });
+
   return (
     <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
       <PageHeader title="Planejamento Reverso" description="Calcule o investimento necessário para atingir suas metas de receita — independente do plano de mídia." />
@@ -630,6 +646,7 @@ export default function ReversePlan() {
           clients={clients}
           funnelTypes={funnelTypes}
           objectives={objectives}
+          benchmarks={benchmarks}
           onSave={() => setView('list')}
           onBack={() => setView('list')}
         />
