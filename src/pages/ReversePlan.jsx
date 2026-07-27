@@ -210,7 +210,7 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
       {result && (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
-            <StatCard label="Investimento Necessário" value={fmt(result.total_investment)} icon={DollarSign} color="blue" />
+            <StatCard label="Investimento Necessário" value={fmt(result.total_with_tax || result.total_investment)} sublabel={result.total_tax ? `Inclui ${fmt(result.total_tax)} em impostos` : ''} icon={DollarSign} color="blue" />
             <StatCard label="Leads Necessários" value={result.required_leads.toLocaleString()} icon={Users} color="purple" />
             <StatCard label="Vendas Necessárias" value={result.required_sales.toLocaleString()} icon={Target} color="orange" />
             <StatCard label="Meta de Receita" value={fmt(record.target_revenue)} icon={TrendingDown} color="green" />
@@ -237,6 +237,8 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">KPI</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Leads Nec.</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Budget Nec.</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Imposto</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Total c/ Imposto</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">ROAS</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">CAC</th>
                     </tr>
@@ -249,6 +251,8 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
                         <td className="py-2.5 px-4 text-right">R${ch.expected_cpl}</td>
                         <td className="py-2.5 px-4 text-right">{ch.required_leads.toLocaleString()}</td>
                         <td className="py-2.5 px-4 text-right font-semibold">{fmt(ch.required_budget)}</td>
+                        <td className="py-2.5 px-4 text-right">{ch.tax_value ? fmt(ch.tax_value) : '—'}</td>
+                        <td className="py-2.5 px-4 text-right font-semibold">{ch.total_with_tax ? fmt(ch.total_with_tax) : fmt(ch.required_budget)}</td>
                         <td className="py-2.5 px-4 text-right">{ch.roas ? `${ch.roas.toFixed(2)}x` : '—'}</td>
                         <td className="py-2.5 px-4 text-right">{ch.cac ? fmt(ch.cac) : '—'}</td>
                       </tr>
@@ -261,6 +265,8 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
                       <td></td>
                       <td className="py-3 px-4 text-right">{result.required_leads.toLocaleString()}</td>
                       <td className="py-3 px-4 text-right">{fmt(result.total_investment)}</td>
+                      <td className="py-3 px-4 text-right">{result.total_tax ? fmt(result.total_tax) : '—'}</td>
+                      <td className="py-3 px-4 text-right font-semibold">{result.total_with_tax ? fmt(result.total_with_tax) : fmt(result.total_investment)}</td>
                       <td className="py-3 px-4 text-right">{result.total_roas ? `${result.total_roas.toFixed(2)}x` : '—'}</td>
                       <td className="py-3 px-4 text-right">{result.total_cac ? fmt(result.total_cac) : '—'}</td>
                     </tr>
@@ -359,9 +365,10 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
         channel_name: ch,
         percent: i === objChannels.length - 1 ? 100 - equal * (objChannels.length - 1) : equal,
         expected_cpl: getCplForChannel(ch, clientBenchmark),
+        tax_percent: 0,
       })));
     } else {
-      setDistribution([{ channel_name: 'Meta', percent: 100, expected_cpl: getCplForChannel('Meta', clientBenchmark) }]);
+      setDistribution([{ channel_name: 'Meta', percent: 100, expected_cpl: getCplForChannel('Meta', clientBenchmark), tax_percent: 0 }]);
     }
     setResult(null);
   }, [selectedObjectiveId, clientBenchmark]);
@@ -502,11 +509,11 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
               <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2 block">Distribuição por Canal</Label>
               {distribution.length > 0 && (
                 <div className="space-y-2 mb-3">
-                  <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_32px] gap-3 text-[10px] text-gray-400 font-medium uppercase tracking-wider px-1">
-                    <span>Canal</span><span>% do Budget</span><span>CPL (R$)</span><span></span>
+                  <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_1fr_32px] gap-3 text-[10px] text-gray-400 font-medium uppercase tracking-wider px-1">
+                    <span>Canal</span><span>% do Budget</span><span>CPL (R$)</span><span>Imposto %</span><span></span>
                   </div>
                   {distribution.map((ch, idx) => (
-                    <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_32px] gap-2 sm:gap-3 items-center">
+                    <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_1fr_32px] gap-2 sm:gap-3 items-center">
                       <Select value={ch.channel_name} onValueChange={v => handleDistChange(idx, 'channel_name', v)}>
                         <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -515,6 +522,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                       </Select>
                       <CurrencyInput value={ch.percent} onChange={v => handleDistChange(idx, 'percent', v)} className="text-xs" placeholder="%" />
                       <CurrencyInput value={ch.expected_cpl} onChange={v => handleDistChange(idx, 'expected_cpl', v)} prefix="R$" className="text-xs" placeholder="CPL" />
+                      <PercentInput value={ch.tax_percent || 0} onChange={v => handleDistChange(idx, 'tax_percent', v)} className="text-xs h-9" />
                       <button onClick={() => { setDistribution(d => d.filter((_, i) => i !== idx)); setResult(null); }} className="p-1.5 rounded-md hover:bg-red-50 text-red-400">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -523,7 +531,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                 </div>
               )}
               <div className="flex flex-wrap gap-3 mt-3">
-                <Button variant="outline" onClick={() => { setDistribution(d => [...d, { channel_name: 'Meta', percent: 0, expected_cpl: 0 }]); setResult(null); }} className="gap-2 text-sm">
+                <Button variant="outline" onClick={() => { setDistribution(d => [...d, { channel_name: 'Meta', percent: 0, expected_cpl: 0, tax_percent: 0 }]); setResult(null); }} className="gap-2 text-sm">
                   <Plus className="w-4 h-4" /> Adicionar Canal
                 </Button>
                 <Button
@@ -542,7 +550,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
       {result && (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
-            <StatCard label="Investimento Necessário" value={fmt(result.total_investment)} icon={DollarSign} color="blue" />
+            <StatCard label="Investimento Necessário" value={fmt(result.total_with_tax || result.total_investment)} sublabel={result.total_tax ? `Inclui ${fmt(result.total_tax)} em impostos` : ''} icon={DollarSign} color="blue" />
             <StatCard label="Leads Necessários" value={result.required_leads.toLocaleString()} icon={Users} color="purple" />
             <StatCard label="Vendas Necessárias" value={result.required_sales.toLocaleString()} icon={Target} color="orange" />
             <StatCard label="Meta de Receita" value={fmt(targetRevenue)} icon={TrendingDown} color="green" />
@@ -569,6 +577,8 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">CPL</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Leads Nec.</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Budget Nec.</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Imposto</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Total c/ Imposto</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">ROAS</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">CAC</th>
                     </tr>
@@ -581,6 +591,8 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                         <td className="py-2.5 px-4 text-right">R${ch.expected_cpl}</td>
                         <td className="py-2.5 px-4 text-right">{ch.required_leads.toLocaleString()}</td>
                         <td className="py-2.5 px-4 text-right font-semibold">{fmt(ch.required_budget)}</td>
+                        <td className="py-2.5 px-4 text-right">{ch.tax_value ? fmt(ch.tax_value) : '—'}</td>
+                        <td className="py-2.5 px-4 text-right font-semibold">{ch.total_with_tax ? fmt(ch.total_with_tax) : fmt(ch.required_budget)}</td>
                         <td className="py-2.5 px-4 text-right">{ch.roas ? `${ch.roas.toFixed(2)}x` : '—'}</td>
                         <td className="py-2.5 px-4 text-right">{ch.cac ? fmt(ch.cac) : '—'}</td>
                       </tr>
@@ -593,6 +605,8 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                       <td></td>
                       <td className="py-3 px-4 text-right">{result.required_leads.toLocaleString()}</td>
                       <td className="py-3 px-4 text-right">{fmt(result.total_investment)}</td>
+                      <td className="py-3 px-4 text-right">{result.total_tax ? fmt(result.total_tax) : '—'}</td>
+                      <td className="py-3 px-4 text-right font-semibold">{result.total_with_tax ? fmt(result.total_with_tax) : fmt(result.total_investment)}</td>
                       <td className="py-3 px-4 text-right">{result.total_roas ? `${result.total_roas.toFixed(2)}x` : '—'}</td>
                       <td className="py-3 px-4 text-right">{result.total_cac ? fmt(result.total_cac) : '—'}</td>
                     </tr>
