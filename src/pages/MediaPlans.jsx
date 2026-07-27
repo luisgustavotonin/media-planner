@@ -63,17 +63,14 @@ export default function MediaPlans() {
         || benchmarks.find(b => b.funnel_type_id === d.funnel_type_id)
         || benchmarks.find(b => b.funnel_type_name === ft?.name);
 
-      const ftStages = ft?.stages || [];
-      // Prioriza as taxas do benchmark cadastrado; se não houver, usa default_rate do FunnelType
+      // Prioriza as taxas do benchmark cadastrado; se não houver, usa campos legados
       const conversion_rates = bm?.conversion_rates?.length > 0
         ? bm.conversion_rates
-        : ftStages.length >= 2
-          ? ftStages.slice(1).map(s => s.default_rate ?? 0)
-          : [
-              bm?.lead_to_appointment_rate ?? 0.35,
-              bm?.appointment_to_show_rate ?? 0.7,
-              bm?.show_to_sale_rate ?? 0.35,
-            ];
+        : [
+            bm?.lead_to_appointment_rate ?? 0.35,
+            bm?.appointment_to_show_rate ?? 0.7,
+            bm?.show_to_sale_rate ?? 0.35,
+          ];
 
       return base44.entities.MediaPlan.create({
         ...d,

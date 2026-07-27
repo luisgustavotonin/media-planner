@@ -26,15 +26,14 @@ const emptyStage = () => ({
   key: `stage_${Date.now()}`,
   label: '',
   metric_type: 'quantidade',
-  default_rate: null,
 });
 
 const emptyForm = {
   name: '',
   description: '',
   stages: [
-    { key: 'stage_1', label: 'Lead', metric_type: 'quantidade', default_rate: null },
-    { key: 'stage_2', label: 'Venda', metric_type: 'quantidade', default_rate: 0.35 },
+    { key: 'stage_1', label: 'Lead', metric_type: 'quantidade' },
+    { key: 'stage_2', label: 'Venda', metric_type: 'quantidade' },
   ],
   is_active: true,
 };
@@ -125,7 +124,7 @@ export default function FunnelTypes() {
     <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-5xl mx-auto w-full">
       <PageHeader
         title="Tipos de Funil"
-        description="Configure modelos de funil totalmente livres — etapas, métricas e taxas de conversão."
+        description="Configure modelos de funil totalmente livres — etapas e métricas. As taxas de conversão ficam nos Benchmarks."
         actions={
           <Button onClick={handleNew} className="gap-2 bg-primary hover:bg-primary/90">
             <Plus className="w-4 h-4" /> Novo Tipo de Funil
@@ -248,21 +247,6 @@ export default function FunnelTypes() {
                           </SelectContent>
                         </Select>
                       </div>
-                      {idx > 0 && (
-                        <div className="w-28">
-                          <Label className="text-[10px] text-gray-400">Taxa conversão padrão</Label>
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <Input
-                              type="number" min="0" max="100"
-                              value={stage.default_rate != null ? Math.round(stage.default_rate * 100) : ''}
-                              onChange={e => updateStage(idx, 'default_rate', e.target.value ? Number(e.target.value) / 100 : null)}
-                              placeholder="—"
-                              className="h-7 text-xs"
-                            />
-                            <span className="text-xs text-gray-400">%</span>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 ))}

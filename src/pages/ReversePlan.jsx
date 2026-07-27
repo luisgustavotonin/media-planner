@@ -335,11 +335,15 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
       return;
     }
 
-    // Taxas de conversão padrão a partir das etapas do funil
-    let rates = [];
-    if (funnelType?.stages?.length >= 2) {
-      rates = funnelType.stages.slice(0, -1).map(s => s.default_rate || 0);
-    }
+    // Taxas de conversão do benchmark (associado ao funil + segmento do cliente)
+    const funnelBenchmark = benchmarks.find(b =>
+      b.funnel_type_id === funnelType?.id && b.segment === selectedClient?.specialty
+    ) || benchmarks.find(b =>
+      b.funnel_type_id === funnelType?.id && b.segment === 'general'
+    );
+    let rates = funnelBenchmark?.conversion_rates?.length > 0
+      ? [...funnelBenchmark.conversion_rates]
+      : [];
     if (rates.length === 0) rates = [0.3, 0.5, 0.5];
     setConversionRates(rates);
 

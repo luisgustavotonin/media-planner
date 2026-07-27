@@ -240,7 +240,7 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
     const st = ft?.stages || [];
     const bm = benchmarks.find(b => b.funnel_type_id === funnelTypeId && b.segment === segment)
       || benchmarks.find(b => b.funnel_type_id === funnelTypeId);
-    const rates = bm?.conversion_rates?.length ? bm.conversion_rates : st.slice(0, -1).map(s => s.default_rate || 0);
+    const rates = bm?.conversion_rates?.length ? bm.conversion_rates : [bm?.lead_to_appointment_rate || 0.35, bm?.appointment_to_show_rate || 0.7, bm?.show_to_sale_rate || 0.35];
     const bmCpl = channelName === 'Google' ? bm?.google_default_cpl : bm?.meta_default_cpl;
     const updatedKpiValues = newKpiValues.map(kv => kv.unit === 'moeda' && bmCpl ? { ...kv, value: bmCpl } : kv);
     const costKpi = updatedKpiValues.find(kv => kv.unit === 'moeda');
@@ -351,7 +351,7 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
     const st = ft?.stages || [];
     const bm = benchmarks.find(b => b.funnel_type_id === funnelTypeId && b.segment === segment)
       || benchmarks.find(b => b.funnel_type_id === funnelTypeId);
-    const rates = bm?.conversion_rates?.length ? bm.conversion_rates : st.slice(0, -1).map(s => s.default_rate || 0);
+    const rates = bm?.conversion_rates?.length ? bm.conversion_rates : [bm?.lead_to_appointment_rate || 0.35, bm?.appointment_to_show_rate || 0.7, bm?.show_to_sale_rate || 0.35];
     const bmCpl = bm?.google_default_cpl;
     const updatedKpiValues = newKpiValues.map(kv => kv.unit === 'moeda' && bmCpl ? { ...kv, value: bmCpl } : kv);
     const costKpi = updatedKpiValues.find(kv => kv.unit === 'moeda');
