@@ -209,7 +209,7 @@ function ParamField({ label, value, onChange, placeholder, readOnly }) {
 }
 
 // ─── Campaign (Meta) ─────────────────────────────────────────────────────────
-function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives, availableObjectives, funnelTypes = [], benchmarks = [], segment = '', channelName = 'Meta', planFunnelTypeId = '', taxPercent = 0 }) {
+function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives, availableObjectives, funnelTypes = [], benchmarks = [], segment = '', channelName = 'Meta', planFunnelTypeId = '', taxPercent = 0, averageTicket = 0 }) {
   const [open, setOpen] = useState(true);
 
   const updateField = (field, val) => onChange({ ...campaign, [field]: val });
@@ -242,7 +242,14 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
       || benchmarks.find(b => b.funnel_type_id === funnelTypeId);
     const rates = bm?.conversion_rates?.length ? bm.conversion_rates : [bm?.lead_to_appointment_rate || 0.35, bm?.appointment_to_show_rate || 0.7, bm?.show_to_sale_rate || 0.35];
     const bmCpl = channelName === 'Google' ? bm?.google_default_cpl : bm?.meta_default_cpl;
-    const updatedKpiValues = newKpiValues.map(kv => kv.unit === 'moeda' && bmCpl && !(kv.label || '').toLowerCase().includes('ticket') ? { ...kv, value: bmCpl } : kv);
+    let pctIdx = 0;
+    const updatedKpiValues = newKpiValues.map(kv => {
+      const label = (kv.label || '').toLowerCase();
+      if (label.includes('ticket')) return { ...kv, value: averageTicket || 0 };
+      if (kv.unit === 'moeda' && bmCpl) return { ...kv, value: bmCpl };
+      if (kv.unit === 'percentual' && rates.length > 0) return { ...kv, value: rates[pctIdx++] || 0 };
+      return kv;
+    });
     const costKpi = updatedKpiValues.find(kv => kv.unit === 'moeda' && !(kv.label || '').toLowerCase().includes('ticket'));
     onChange({ ...campaign, objective: v, kpi_values: updatedKpiValues, kpi_value: costKpi?.value || campaign.kpi_value || 0, funnel_type_id: funnelTypeId, funnel_rates: rates });
   };
@@ -334,7 +341,7 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
 }
 
 // ─── Google Campaign ──────────────────────────────────────────────────────────
-function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives, availableObjectives, funnelTypes = [], benchmarks = [], segment = '', planFunnelTypeId = '', taxPercent = 0 }) {
+function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives, availableObjectives, funnelTypes = [], benchmarks = [], segment = '', planFunnelTypeId = '', taxPercent = 0, averageTicket = 0 }) {
   const channelName = 'Google';
   const [open, setOpen] = useState(true);
   const updateField = (field, val) => onChange({ ...campaign, [field]: val });
@@ -353,7 +360,14 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
       || benchmarks.find(b => b.funnel_type_id === funnelTypeId);
     const rates = bm?.conversion_rates?.length ? bm.conversion_rates : [bm?.lead_to_appointment_rate || 0.35, bm?.appointment_to_show_rate || 0.7, bm?.show_to_sale_rate || 0.35];
     const bmCpl = bm?.google_default_cpl;
-    const updatedKpiValues = newKpiValues.map(kv => kv.unit === 'moeda' && bmCpl && !(kv.label || '').toLowerCase().includes('ticket') ? { ...kv, value: bmCpl } : kv);
+    let pctIdx = 0;
+    const updatedKpiValues = newKpiValues.map(kv => {
+      const label = (kv.label || '').toLowerCase();
+      if (label.includes('ticket')) return { ...kv, value: averageTicket || 0 };
+      if (kv.unit === 'moeda' && bmCpl) return { ...kv, value: bmCpl };
+      if (kv.unit === 'percentual' && rates.length > 0) return { ...kv, value: rates[pctIdx++] || 0 };
+      return kv;
+    });
     const costKpi = updatedKpiValues.find(kv => kv.unit === 'moeda' && !(kv.label || '').toLowerCase().includes('ticket'));
     onChange({ ...campaign, objective: v, kpi_values: updatedKpiValues, kpi_value: costKpi?.value || campaign.kpi_value || 0, funnel_type_id: funnelTypeId, funnel_rates: rates });
   };
@@ -425,7 +439,7 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
   );
 }
 
-function GoogleStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, days = 30, onChange, readOnly, objectives, availableObjectives, funnelTypes = [], benchmarks = [], segment = '', planFunnelTypeId = '' }) {
+function GoogleStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, days = 30, onChange, readOnly, objectives, availableObjectives, funnelTypes = [], benchmarks = [], segment = '', planFunnelTypeId = '', averageTicket = 0 }) {
   const netBudget = (channelBudget || 0) * (1 - (taxPercent || 0) / 100);
   const totalAllocated = strategies.reduce((s, c) => s + (c.budget_value || 0), 0);
   const remaining = netBudget - totalAllocated;
@@ -472,7 +486,7 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, 
             <GoogleCampaign key={idx} campaign={camp} days={days} taxPercent={taxPercent}
               onChange={updated => updateCampaign(idx, updated)} onRemove={() => removeCampaign(idx)}
               readOnly={readOnly} maxCampaignBudget={maxForCampaign} objectives={objectives} availableObjectives={availableObjectives}
-              funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} planFunnelTypeId={planFunnelTypeId} />
+              funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} planFunnelTypeId={planFunnelTypeId} averageTicket={averageTicket} />
           );
         })}
       </div>
@@ -481,7 +495,7 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, 
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function ChannelStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, days = 30, onChange, readOnly, channelName = 'Meta', objectives = [], funnelTypes = [], benchmarks = [], segment = '', planFunnelTypeId = '' }) {
+export default function ChannelStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, days = 30, onChange, readOnly, channelName = 'Meta', objectives = [], funnelTypes = [], benchmarks = [], segment = '', planFunnelTypeId = '', averageTicket = 0 }) {
   // Filtra objetivos aplicáveis a este canal (sem channels = disponível para todos)
   const availableObjectives = objectives.filter(o => !o.channels || o.channels.length === 0 || o.channels.includes(channelName));
 
@@ -506,7 +520,7 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
     return (
       <GoogleStrategies strategies={strategies} channelBudget={channelBudget} taxPercent={taxPercent} days={days}
         onChange={onChange} readOnly={readOnly} objectives={objectives} availableObjectives={availableObjectives}
-        funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} planFunnelTypeId={planFunnelTypeId} />
+        funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} planFunnelTypeId={planFunnelTypeId} averageTicket={averageTicket} />
     );
   }
 
@@ -539,7 +553,7 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
             <Campaign key={idx} campaign={camp} days={days} taxPercent={taxPercent}
               onChange={updated => updateCampaign(idx, updated)} onRemove={() => removeCampaign(idx)}
               readOnly={readOnly} maxCampaignBudget={maxForCampaign} objectives={objectives} availableObjectives={availableObjectives}
-              funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} channelName={channelName} planFunnelTypeId={planFunnelTypeId} />
+              funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} channelName={channelName} planFunnelTypeId={planFunnelTypeId} averageTicket={averageTicket} />
           );
         })}
       </div>

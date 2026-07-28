@@ -441,7 +441,7 @@ export default function PlanDetail() {
       )}
 
       <div className="mb-6">
-        <ChannelEditor channels={channels} onChange={handleChannelsChange} totalInvestment={totalInvestment} readOnly={readOnly} days={daysInMonth} funnelStages={funnelStages} funnelTypes={funnelTypes} benchmarks={benchmarks} segment={localPlan.segment} planFunnelTypeId={localPlan.funnel_type_id} />
+        <ChannelEditor channels={channels} onChange={handleChannelsChange} totalInvestment={totalInvestment} readOnly={readOnly} days={daysInMonth} funnelStages={funnelStages} funnelTypes={funnelTypes} benchmarks={benchmarks} segment={localPlan.segment} planFunnelTypeId={localPlan.funnel_type_id} averageTicket={localPlan.average_ticket} />
       </div>
 
       {channels.length > 0 && (

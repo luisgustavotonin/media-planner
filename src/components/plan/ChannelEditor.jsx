@@ -81,7 +81,7 @@ function AddChannelModal({ channels, onAdd, onClose }) {
   );
 }
 
-export default function ChannelEditor({ channels, onChange, totalInvestment, readOnly, days = 30, funnelStages = [], funnelTypes = [], benchmarks = [], segment = '', planFunnelTypeId = '' }) {
+export default function ChannelEditor({ channels, onChange, totalInvestment, readOnly, days = 30, funnelStages = [], funnelTypes = [], benchmarks = [], segment = '', planFunnelTypeId = '', averageTicket = 0 }) {
   const [expandedIdx, setExpandedIdx] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -236,6 +236,7 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                   benchmarks={benchmarks}
                   segment={segment}
                   planFunnelTypeId={planFunnelTypeId}
+                  averageTicket={averageTicket}
                   onChange={(newStrategies) => updateChannel(idx, 'strategies', newStrategies)}
                 />
               </div>
