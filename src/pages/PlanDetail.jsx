@@ -29,9 +29,10 @@ const SEGMENTOS = {
 };
 const STATUS_PT = { draft: 'Rascunho', active: 'Ativo', completed: 'Concluído' };
 
-const formatCardValue = (value, unit) => {
+const formatCardValue = (value, unit, label) => {
   if (unit === 'percentual') return `${(value * 100).toFixed(1)}%`;
   if (unit === 'moeda') return `R$${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (label && label.toLowerCase().includes('frequ')) return value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
   return Math.round(value).toLocaleString('pt-BR');
 };
 
@@ -374,7 +375,7 @@ export default function PlanDetail() {
             const frequency = data.reach > 0 ? data.impressions / data.reach : 0;
             const calcCards = hasCalcMetrics ? data.calculatedCards.map(c => ({
               label: c.label,
-              value: formatCardValue(c.value, c.unit),
+              value: formatCardValue(c.value, c.unit, c.label),
               icon: getMetricIcon(c.label),
               color: c.unit === 'moeda' ? 'amber' : c.unit === 'percentual' ? 'teal' : 'amber',
             })) : [];
@@ -418,7 +419,7 @@ export default function PlanDetail() {
             const hasCalcMetrics = data.calculatedCards?.length > 0;
             const calcCards = hasCalcMetrics ? data.calculatedCards.map(c => ({
               label: c.label,
-              value: formatCardValue(c.value, c.unit),
+              value: formatCardValue(c.value, c.unit, c.label),
               icon: getMetricIcon(c.label),
               color: c.unit === 'moeda' ? 'indigo' : c.unit === 'percentual' ? 'rose' : 'indigo',
             })) : [];
