@@ -242,8 +242,8 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
       || benchmarks.find(b => b.funnel_type_id === funnelTypeId);
     const rates = bm?.conversion_rates?.length ? bm.conversion_rates : [bm?.lead_to_appointment_rate || 0.35, bm?.appointment_to_show_rate || 0.7, bm?.show_to_sale_rate || 0.35];
     const bmCpl = channelName === 'Google' ? bm?.google_default_cpl : bm?.meta_default_cpl;
-    const updatedKpiValues = newKpiValues.map(kv => kv.unit === 'moeda' && bmCpl ? { ...kv, value: bmCpl } : kv);
-    const costKpi = updatedKpiValues.find(kv => kv.unit === 'moeda');
+    const updatedKpiValues = newKpiValues.map(kv => kv.unit === 'moeda' && bmCpl && !(kv.label || '').toLowerCase().includes('ticket') ? { ...kv, value: bmCpl } : kv);
+    const costKpi = updatedKpiValues.find(kv => kv.unit === 'moeda' && !(kv.label || '').toLowerCase().includes('ticket'));
     onChange({ ...campaign, objective: v, kpi_values: updatedKpiValues, kpi_value: costKpi?.value || campaign.kpi_value || 0, funnel_type_id: funnelTypeId, funnel_rates: rates });
   };
 
@@ -353,8 +353,8 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
       || benchmarks.find(b => b.funnel_type_id === funnelTypeId);
     const rates = bm?.conversion_rates?.length ? bm.conversion_rates : [bm?.lead_to_appointment_rate || 0.35, bm?.appointment_to_show_rate || 0.7, bm?.show_to_sale_rate || 0.35];
     const bmCpl = bm?.google_default_cpl;
-    const updatedKpiValues = newKpiValues.map(kv => kv.unit === 'moeda' && bmCpl ? { ...kv, value: bmCpl } : kv);
-    const costKpi = updatedKpiValues.find(kv => kv.unit === 'moeda');
+    const updatedKpiValues = newKpiValues.map(kv => kv.unit === 'moeda' && bmCpl && !(kv.label || '').toLowerCase().includes('ticket') ? { ...kv, value: bmCpl } : kv);
+    const costKpi = updatedKpiValues.find(kv => kv.unit === 'moeda' && !(kv.label || '').toLowerCase().includes('ticket'));
     onChange({ ...campaign, objective: v, kpi_values: updatedKpiValues, kpi_value: costKpi?.value || campaign.kpi_value || 0, funnel_type_id: funnelTypeId, funnel_rates: rates });
   };
 
