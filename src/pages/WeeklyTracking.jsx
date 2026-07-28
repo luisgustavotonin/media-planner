@@ -100,15 +100,21 @@ export default function WeeklyTracking() {
 
   let consolidated = null;
   let weeklyTargets = [];
+  let netInvestment = 0;
   if (plan && plan.channels?.length > 0) {
     const rates = Array.isArray(plan.conversion_rates) && plan.conversion_rates.length
       ? plan.conversion_rates
       : [plan.lead_to_appointment_rate || 0.35, plan.appointment_to_show_rate || 0.7, plan.show_to_sale_rate || 0.35];
     consolidated = calculateConsolidated(plan.channels, rates, plan.average_ticket || 5000);
+    netInvestment = (plan.channels || []).reduce((s, c) => {
+      const tax = (c.tax_percent || 0) / 100;
+      return s + (c.budget_value || 0) * (1 - tax);
+    }, 0);
+    const baseInvestment = netInvestment || consolidated.totals.total_budget || 0;
     for (let w = 1; w <= 4; w++) {
       weeklyTargets.push({
         week: w,
-        investment: (consolidated.totals.total_budget || 0) / 4,
+        investment: baseInvestment / 4,
       });
     }
   }
@@ -241,9 +247,9 @@ export default function WeeklyTracking() {
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5 sm:mb-6">
             <StatCard label="Investimento Real" value={`R$${totalActualInvestment.toLocaleString('pt-BR')}`} icon={DollarSign} color="blue"
-              trend={pctOf(totalActualInvestment, consolidated.totals.total_budget) - 100} />
+              trend={pctOf(totalActualInvestment, netInvestment || consolidated.totals.total_budget) - 100} />
             <StatCard label="Invest. Projetado" value={`R$${Math.round(projectedInvestment).toLocaleString('pt-BR')}`} icon={TrendingUp} color="orange"
-              sublabel={`Meta: R$${Math.round(consolidated.totals.total_budget).toLocaleString('pt-BR')}`} />
+              sublabel={`Meta: R$${Math.round(netInvestment || consolidated.totals.total_budget).toLocaleString('pt-BR')}`} />
             {kpiTotals.slice(0, 2).map((kpi, i) => (
               <StatCard key={i} label={`${kpi.label} Real`} value={fmtKpi(kpi.totalActual, kpi.unit)} icon={Target} color="purple"
                 sublabel={`Projetado: ${fmtKpi(Math.round(kpi.projected), kpi.unit)}`} />
