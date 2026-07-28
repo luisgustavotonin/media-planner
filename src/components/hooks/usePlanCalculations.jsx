@@ -273,7 +273,9 @@ export function calculateScenarios(channels, conversionRates, averageTicket, adj
         ...camp,
         kpi_value: (camp.kpi_value || 0) * (1 + cplMult),
         kpi_values: (camp.kpi_values || []).map(kv =>
-          kv.unit === 'moeda' ? { ...kv, value: (kv.value || 0) * (1 + cplMult) } : kv
+          kv.unit === 'moeda' && !(kv.label || '').toLowerCase().includes('ticket')
+            ? { ...kv, value: (kv.value || 0) * (1 + cplMult) }
+            : kv
         ),
       })),
       // Retrocompatibilidade: ajusta expected_cpl também
