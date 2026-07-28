@@ -16,8 +16,22 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { calculateConsolidated } from '../components/hooks/usePlanCalculations';
 
 const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+function calcPlanLeads(plan) {
+  if (!plan?.channels?.length) return 0;
+  const rates = Array.isArray(plan.conversion_rates) && plan.conversion_rates.length
+    ? plan.conversion_rates
+    : [plan.lead_to_appointment_rate || 0.35, plan.appointment_to_show_rate || 0.7, plan.show_to_sale_rate || 0.35];
+  const consolidated = calculateConsolidated(plan.channels, rates, plan.average_ticket || 5000);
+  return consolidated.totals.total_leads || 0;
+}
+
+function calcPlanInvestment(plan) {
+  return (plan?.channels || []).reduce((s, c) => s + (c.budget_value || 0), 0);
+}
 
 export default function Dashboard() {
   const currentMonth = new Date().getMonth() + 1;
@@ -44,17 +58,11 @@ export default function Dashboard() {
   const draftPlans = currentMonthPlans.filter(p => p.status === 'draft');
 
   // Métricas
-  const activeInvestment = activePlans.reduce((sum, p) => sum + (p.total_investment || 0), 0);
-  const activeLeads = activePlans.reduce((sum, p) => {
-    const channels = p.channels || [];
-    return sum + channels.reduce((s, c) => s + (c.budget_value || 0) / (c.expected_cpl || 1), 0);
-  }, 0);
+  const activeInvestment = activePlans.reduce((sum, p) => sum + calcPlanInvestment(p), 0);
+  const activeLeads = activePlans.reduce((sum, p) => sum + calcPlanLeads(p), 0);
 
-  const totalInvestment = plans.reduce((sum, p) => sum + (p.total_investment || 0), 0);
-  const totalLeads = plans.reduce((sum, p) => {
-    const channels = p.channels || [];
-    return sum + channels.reduce((s, c) => s + (c.budget_value || 0) / (c.expected_cpl || 1), 0);
-  }, 0);
+  const totalInvestment = plans.reduce((sum, p) => sum + calcPlanInvestment(p), 0);
+  const totalLeads = plans.reduce((sum, p) => sum + calcPlanLeads(p), 0);
 
   const isLoading = clientsLoading || plansLoading;
 
@@ -149,8 +157,8 @@ export default function Dashboard() {
           <div className="space-y-3">
             {activePlans.slice(0, 5).map(plan => {
               const clientInfo = clients.find(c => c.id === plan.client_id);
-              const investment = plan.total_investment || 0;
-              const leads = (plan.channels || []).reduce((s, c) => s + (c.budget_value || 0) / (c.expected_cpl || 1), 0);
+              const investment = calcPlanInvestment(plan);
+              const leads = calcPlanLeads(plan);
               
               return (
                 <Link 
