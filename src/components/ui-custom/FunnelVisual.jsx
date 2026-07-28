@@ -26,7 +26,7 @@ export default function FunnelVisual({ stages, benchmarkStages, funnelName }) {
               <span className="text-[9px] text-gray-500">Projeção</span>
             </div>
             <div className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-sm bg-secondary"></span>
+              <span className="w-2.5 h-2.5 rounded-sm bg-gray-400"></span>
               <span className="text-[9px] text-gray-500">Benchmark</span>
             </div>
           </div>
@@ -69,7 +69,7 @@ export default function FunnelVisual({ stages, benchmarkStages, funnelName }) {
                   {hasBenchmark && (
                     <div className="relative h-4 bg-gray-50 rounded-sm overflow-visible">
                       <div className="absolute inset-0 bg-gray-50 rounded-sm"></div>
-                      <div className="absolute top-0 left-0 h-full bg-secondary rounded-sm transition-all duration-300" style={{ width: `${Math.max(bmW, 2)}%` }}>
+                      <div className="absolute top-0 left-0 h-full bg-gray-300 rounded-sm transition-all duration-300" style={{ width: `${Math.max(bmW, 2)}%` }}>
                         {bmW >= 90 && (
                           <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-white tabular-nums">{fmt(bm)}</span>
                         )}
