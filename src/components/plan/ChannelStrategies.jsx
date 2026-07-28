@@ -242,12 +242,9 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
       || benchmarks.find(b => b.funnel_type_id === funnelTypeId);
     const rates = bm?.conversion_rates?.length ? bm.conversion_rates : [bm?.lead_to_appointment_rate || 0.35, bm?.appointment_to_show_rate || 0.7, bm?.show_to_sale_rate || 0.35];
     const bmCpl = channelName === 'Google' ? bm?.google_default_cpl : bm?.meta_default_cpl;
-    let pctIdx = 0;
     const updatedKpiValues = newKpiValues.map(kv => {
       const label = (kv.label || '').toLowerCase();
       if (label.includes('ticket')) return { ...kv, value: averageTicket || 0 };
-      if (kv.unit === 'moeda' && bmCpl) return { ...kv, value: bmCpl };
-      if (kv.unit === 'percentual' && rates.length > 0) return { ...kv, value: rates[pctIdx++] || 0 };
       return kv;
     });
     const costKpi = updatedKpiValues.find(kv => kv.unit === 'moeda' && !(kv.label || '').toLowerCase().includes('ticket'));
@@ -360,12 +357,9 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
       || benchmarks.find(b => b.funnel_type_id === funnelTypeId);
     const rates = bm?.conversion_rates?.length ? bm.conversion_rates : [bm?.lead_to_appointment_rate || 0.35, bm?.appointment_to_show_rate || 0.7, bm?.show_to_sale_rate || 0.35];
     const bmCpl = bm?.google_default_cpl;
-    let pctIdx = 0;
     const updatedKpiValues = newKpiValues.map(kv => {
       const label = (kv.label || '').toLowerCase();
       if (label.includes('ticket')) return { ...kv, value: averageTicket || 0 };
-      if (kv.unit === 'moeda' && bmCpl) return { ...kv, value: bmCpl };
-      if (kv.unit === 'percentual' && rates.length > 0) return { ...kv, value: rates[pctIdx++] || 0 };
       return kv;
     });
     const costKpi = updatedKpiValues.find(kv => kv.unit === 'moeda' && !(kv.label || '').toLowerCase().includes('ticket'));
