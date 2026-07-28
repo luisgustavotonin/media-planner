@@ -20,12 +20,12 @@ import { calculateConsolidated } from '../components/hooks/usePlanCalculations';
 
 const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
-function calcPlanLeads(plan) {
+function calcPlanLeads(plan, objectives = []) {
   if (!plan?.channels?.length) return 0;
   const rates = Array.isArray(plan.conversion_rates) && plan.conversion_rates.length
     ? plan.conversion_rates
     : [plan.lead_to_appointment_rate || 0.35, plan.appointment_to_show_rate || 0.7, plan.show_to_sale_rate || 0.35];
-  const consolidated = calculateConsolidated(plan.channels, rates, plan.average_ticket || 5000);
+  const consolidated = calculateConsolidated(plan.channels, rates, plan.average_ticket || 5000, objectives);
   return consolidated.totals.total_leads || 0;
 }
 
@@ -50,6 +50,11 @@ export default function Dashboard() {
     queryFn: () => base44.entities.MediaPlan.list('-created_date'),
   });
 
+  const { data: objectives = [] } = useQuery({
+    queryKey: ['campaignObjectives'],
+    queryFn: () => base44.entities.CampaignObjective.filter({ is_active: true }),
+  });
+
   // Filtros para mês atual
   const currentMonthPlans = plans.filter(p => 
     p.period_month === currentMonth && p.period_year === currentYear
@@ -59,10 +64,10 @@ export default function Dashboard() {
 
   // Métricas
   const activeInvestment = activePlans.reduce((sum, p) => sum + calcPlanInvestment(p), 0);
-  const activeLeads = activePlans.reduce((sum, p) => sum + calcPlanLeads(p), 0);
+  const activeLeads = activePlans.reduce((sum, p) => sum + calcPlanLeads(p, objectives), 0);
 
   const totalInvestment = plans.reduce((sum, p) => sum + calcPlanInvestment(p), 0);
-  const totalLeads = plans.reduce((sum, p) => sum + calcPlanLeads(p), 0);
+  const totalLeads = plans.reduce((sum, p) => sum + calcPlanLeads(p, objectives), 0);
 
   const isLoading = clientsLoading || plansLoading;
 
@@ -158,7 +163,7 @@ export default function Dashboard() {
             {activePlans.slice(0, 5).map(plan => {
               const clientInfo = clients.find(c => c.id === plan.client_id);
               const investment = calcPlanInvestment(plan);
-              const leads = calcPlanLeads(plan);
+              const leads = calcPlanLeads(plan, objectives);
               
               return (
                 <Link 
