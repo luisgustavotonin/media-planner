@@ -25,8 +25,11 @@ function KpiInput({ kpi, value, onChange, className }) {
   if (kpi.unit === 'percentual') {
     return (
       <div className="relative">
-        <input type="number" step="0.1" min="0" value={value ? (value * 100).toFixed(1) : ''} placeholder="0"
-          onChange={e => onChange((parseFloat(e.target.value) || 0) / 100)}
+        <input type="text" inputMode="decimal" value={value ? String(value * 100) : ''} placeholder="0"
+          onChange={e => {
+            const clean = e.target.value.replace(/[^\d.,]/g, '').replace(',', '.');
+            onChange((parseFloat(clean) || 0) / 100);
+          }}
           className={`w-full h-9 border border-gray-200 rounded-md text-sm px-3 pr-8 bg-white focus:outline-none focus:ring-1 focus:ring-primary ${className || ''}`} />
         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
       </div>
