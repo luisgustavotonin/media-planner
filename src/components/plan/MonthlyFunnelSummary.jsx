@@ -11,7 +11,8 @@ function fmtPct(val) {
   return `${((val || 0) * 100).toFixed(1)}%`;
 }
 
-export default function MonthlyFunnelSummary({ meta, real, stageLabels, dayFraction = 1, referenceDate, periodMonth, periodYear }) {
+export default function MonthlyFunnelSummary({ meta, real, stageLabels, dayFraction = 1, referenceDate, viewMode = 'proportional' }) {
+  const effectiveFraction = viewMode === 'proportional' ? dayFraction : 1;
   const labels = stageLabels && stageLabels.length >= 3
     ? stageLabels
     : ['Leads', 'Agendamentos', 'Comparecimentos'];
@@ -40,7 +41,10 @@ export default function MonthlyFunnelSummary({ meta, real, stageLabels, dayFract
           <h3 className="text-sm font-semibold text-gray-900">Funil do Mês — Meta vs Realizado</h3>
           {referenceDate && (
             <p className="text-xs text-gray-400 mt-1">
-              Realizado até {new Date(referenceDate + 'T00:00:00').toLocaleDateString('pt-BR')} — Proporcional: {dayFraction > 0 ? (dayFraction * 100).toFixed(0) : 0}% do mês
+              Realizado até {new Date(referenceDate + 'T00:00:00').toLocaleDateString('pt-BR')}
+              {viewMode === 'proportional'
+                ? ` — Proporcional: ${dayFraction > 0 ? (dayFraction * 100).toFixed(0) : 0}% do mês`
+                : ' — Comparação com meta do mês completo'}
             </p>
           )}
         </div>
@@ -58,12 +62,12 @@ export default function MonthlyFunnelSummary({ meta, real, stageLabels, dayFract
               {stages.map(stage => {
                 const metaVal = meta[stage.key] || 0;
                 const realVal = real[stage.key] || 0;
-                const propMeta = metaVal * dayFraction;
+                const propMeta = metaVal * effectiveFraction;
                 const achievement = propMeta > 0 ? (realVal / propMeta) * 100 : 0;
                 return (
                   <tr key={stage.key} className="hover:bg-gray-50/30">
                     <td className="py-3 px-4 font-medium text-gray-900">{stage.label}</td>
-                    <td className="py-3 px-4 text-right text-gray-500">{stage.fmt(metaVal)}</td>
+                    <td className="py-3 px-4 text-right text-gray-500">{stage.fmt(propMeta)}</td>
                     <td className="py-3 px-4 text-right font-semibold text-gray-900">{stage.fmt(realVal)}</td>
                     <td className="py-3 px-4 text-right">
                       <span className={`inline-flex items-center gap-1 text-sm font-medium ${
@@ -75,8 +79,8 @@ export default function MonthlyFunnelSummary({ meta, real, stageLabels, dayFract
                          achievement > 0 ? <TrendingDown className="w-3.5 h-3.5" /> : null}
                         {achievement.toFixed(0)}%
                       </span>
-                      {dayFraction < 1 && metaVal > 0 && (
-                        <span className="block text-[10px] text-gray-400 mt-0.5">Meta parcial: {stage.fmt(propMeta)}</span>
+                      {viewMode === 'proportional' && dayFraction < 1 && metaVal > 0 && (
+                        <span className="block text-[10px] text-gray-400 mt-0.5">Meta mês: {stage.fmt(metaVal)}</span>
                       )}
                     </td>
                   </tr>

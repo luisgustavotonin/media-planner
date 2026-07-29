@@ -76,6 +76,7 @@ export default function WeeklyTracking() {
     kpi_actuals: [],
   });
   const [filterClientId, setFilterClientId] = useState('');
+  const [viewMode, setViewMode] = useState('proportional');
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
@@ -106,18 +107,12 @@ export default function WeeklyTracking() {
   const actuals = allActuals.filter(a => a.plan_id === selectedPlanId);
 
   let consolidated = null;
-  let netInvestment = 0;
   let rates = [];
   if (plan && plan.channels?.length > 0) {
     rates = Array.isArray(plan.conversion_rates) && plan.conversion_rates.length
       ? plan.conversion_rates
       : [plan.lead_to_appointment_rate || 0.35, plan.appointment_to_show_rate || 0.7, plan.show_to_sale_rate || 0.35];
     consolidated = calculateConsolidated(plan.channels, rates, plan.average_ticket || 5000);
-    netInvestment = (plan.channels || []).reduce((s, c) => {
-      const tax = (c.tax_percent || 0) / 100;
-      return s + (c.budget_value || 0) * (1 - tax);
-    }, 0);
-
   }
 
   const funnelType = funnelTypes.find(ft => ft.id === plan?.funnel_type_id);
@@ -138,7 +133,7 @@ export default function WeeklyTracking() {
   }, 0);
 
   const meta = consolidated ? {
-    investment: netInvestment || consolidated.totals.total_budget,
+    investment: consolidated.totals.total_budget,
     leads: consolidated.totals.total_leads,
     appointments: consolidated.totals.total_appointments,
     showups: consolidated.totals.total_showups,
@@ -294,7 +289,25 @@ export default function WeeklyTracking() {
       {plan && consolidated && (
         <>
           <div className="mb-6">
-            <MonthlyFunnelSummary meta={meta} real={real} stageLabels={stageLabels} dayFraction={dayFraction} referenceDate={referenceDate} periodMonth={plan?.period_month} periodYear={plan?.period_year} />
+            <div className="flex items-center gap-2 mb-3">
+              <button
+                onClick={() => setViewMode('proportional')}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  viewMode === 'proportional' ? 'bg-primary text-primary-foreground' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Proporcional à data
+              </button>
+              <button
+                onClick={() => setViewMode('full_month')}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  viewMode === 'full_month' ? 'bg-primary text-primary-foreground' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Mês todo
+              </button>
+            </div>
+            <MonthlyFunnelSummary meta={meta} real={real} stageLabels={stageLabels} dayFraction={dayFraction} referenceDate={referenceDate} viewMode={viewMode} />
           </div>
 
           <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
