@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../components/hooks/useAuth';
@@ -68,6 +68,7 @@ export default function WeeklyTracking() {
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [weekForm, setWeekForm] = useState({
     week_number: 1,
+    week_start_date: new Date().toISOString().split('T')[0],
     investment_actual: 0,
     leads_actual: 0,
     appointments_actual: 0,
@@ -104,38 +105,7 @@ export default function WeeklyTracking() {
   const plan = myPlans.find(p => p.id === selectedPlanId);
   const actuals = allActuals.filter(a => a.plan_id === selectedPlanId);
 
-  const activeKpis = useMemo(() => {
-    if (!plan) return [];
-    const kpiMap = new Map();
-    for (const ch of plan.channels || []) {
-      for (const camp of ch.strategies || []) {
-        for (const kv of camp.kpi_values || []) {
-          if (kv.value > 0 && !kpiMap.has(kv.label)) {
-            kpiMap.set(kv.label, { label: kv.label, unit: kv.unit });
-          }
-        }
-        if (!(camp.kpi_values || []).length && camp.kpi_value > 0) {
-          const label = camp.kpi_label || 'KPI';
-          if (!kpiMap.has(label)) {
-            kpiMap.set(label, { label, unit: 'moeda' });
-          }
-        }
-      }
-    }
-    return Array.from(kpiMap.values());
-  }, [plan]);
-
-  const additionalKpis = useMemo(
-    () => activeKpis.filter(k => !FUNNEL_KPIS.some(fk => fk.label === k.label)),
-    [activeKpis]
-  );
-  const formKpis = useMemo(
-    () => [...FUNNEL_KPIS, ...additionalKpis],
-    [additionalKpis]
-  );
-
   let consolidated = null;
-  let weeklyTargets = [];
   let netInvestment = 0;
   let rates = [];
   if (plan && plan.channels?.length > 0) {
@@ -147,18 +117,7 @@ export default function WeeklyTracking() {
       const tax = (c.tax_percent || 0) / 100;
       return s + (c.budget_value || 0) * (1 - tax);
     }, 0);
-    const baseInvestment = netInvestment || consolidated.totals.total_budget || 0;
-    for (let w = 1; w <= 4; w++) {
-      weeklyTargets.push({
-        week: w,
-        investment: baseInvestment / 4,
-        leads: (consolidated.totals.total_leads || 0) / 4,
-        appointments: (consolidated.totals.total_appointments || 0) / 4,
-        showups: (consolidated.totals.total_showups || 0) / 4,
-        sales: (consolidated.totals.total_sales || 0) / 4,
-        revenue: (consolidated.totals.total_revenue || 0) / 4,
-      });
-    }
+
   }
 
   const funnelType = funnelTypes.find(ft => ft.id === plan?.funnel_type_id);
@@ -206,9 +165,22 @@ export default function WeeklyTracking() {
     cpl: realLeads > 0 ? realInvestment / realLeads : 0,
   };
 
+  const referenceDate = actuals[0]?.week_start_date || weekForm.week_start_date;
+  const dayFraction = referenceDate && plan
+    ? (() => {
+        const d = new Date(referenceDate + 'T00:00:00');
+        const pMonth = plan.period_month;
+        const pYear = plan.period_year;
+        if (d.getFullYear() > pYear || (d.getFullYear() === pYear && d.getMonth() + 1 > pMonth)) return 1;
+        if (d.getFullYear() < pYear || (d.getFullYear() === pYear && d.getMonth() + 1 < pMonth)) return 0;
+        const daysInMonth = new Date(pYear, pMonth, 0).getDate();
+        return Math.min(1, Math.max(0, d.getDate() / daysInMonth));
+      })()
+    : 1;
+
   const saveMut = useMutation({
     mutationFn: (data) => {
-      const existing = actuals.find(a => a.week_number === data.week_number);
+      const existing = actuals[0];
       if (existing) {
         const { id, created_date, updated_date, created_by, ...rest } = data;
         return base44.entities.WeeklyActual.update(existing.id, rest);
@@ -219,15 +191,16 @@ export default function WeeklyTracking() {
   });
 
   useEffect(() => {
-    const existing = actuals.find(a => a.week_number === weekForm.week_number);
+    const existing = actuals[0];
     if (existing) {
       setWeekForm({
-        week_number: existing.week_number,
+        week_number: 1,
+        week_start_date: existing.week_start_date || new Date().toISOString().split('T')[0],
         investment_actual: existing.investment_actual || 0,
         leads_actual: existing.leads_actual || 0,
         appointments_actual: existing.appointments_actual || 0,
         showups_actual: existing.showups_actual || 0,
-        kpi_actuals: formKpis.map(k => {
+        kpi_actuals: FUNNEL_KPIS.map(k => {
           const found = (existing.kpi_actuals || []).find(ka => ka.label === k.label);
           return { label: k.label, value: found?.value || 0 };
         }),
@@ -239,10 +212,10 @@ export default function WeeklyTracking() {
         leads_actual: 0,
         appointments_actual: 0,
         showups_actual: 0,
-        kpi_actuals: formKpis.map(k => ({ label: k.label, value: 0 })),
+        kpi_actuals: FUNNEL_KPIS.map(k => ({ label: k.label, value: 0 })),
       }));
     }
-  }, [weekForm.week_number, allActuals, selectedPlanId, formKpis]);
+  }, [allActuals, selectedPlanId]);
 
   const getKpiVal = (label) => (weekForm.kpi_actuals || []).find(ka => ka.label === label)?.value || 0;
   const setKpiVal = (label, value) => setWeekForm(f => ({
@@ -321,20 +294,15 @@ export default function WeeklyTracking() {
       {plan && consolidated && (
         <>
           <div className="mb-6">
-            <MonthlyFunnelSummary meta={meta} real={real} stageLabels={stageLabels} />
+            <MonthlyFunnelSummary meta={meta} real={real} stageLabels={stageLabels} dayFraction={dayFraction} referenceDate={referenceDate} periodMonth={plan?.period_month} periodYear={plan?.period_year} />
           </div>
 
           <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
             <h3 className="text-sm font-semibold text-gray-900 mb-4">Lançar Dados Semanais</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               <div>
-                <Label className="text-xs">Semana</Label>
-                <Select value={String(weekForm.week_number)} onValueChange={v => setWeekForm(f => ({ ...f, week_number: Number(v) }))}>
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {[1,2,3,4].map(w => <SelectItem key={w} value={String(w)}>Semana {w}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <Label className="text-xs">Data de Referência</Label>
+                <input type="date" value={weekForm.week_start_date || ''} onChange={e => setWeekForm(f => ({ ...f, week_start_date: e.target.value }))} className="mt-1 w-full h-9 border border-gray-200 rounded-md text-sm px-3 bg-white focus:outline-none focus:ring-1 focus:ring-primary" />
               </div>
               <div>
                 <Label className="text-xs">Investimento (R$)</Label>
@@ -360,15 +328,6 @@ export default function WeeklyTracking() {
                 <Label className="text-xs">Receita (R$)</Label>
                 <CurrencyInput value={getKpiVal('Receita')} onChange={v => setKpiVal('Receita', v || 0)} prefix="R$" className="mt-1" />
               </div>
-              {additionalKpis.map(kpi => (
-                <div key={kpi.label}>
-                  <Label className="text-xs">{kpi.label} {kpi.unit === 'percentual' ? '(%)' : kpi.unit === 'moeda' ? '(R$)' : ''}</Label>
-                  <KpiInput kpi={kpi}
-                    value={getKpiVal(kpi.label)}
-                    onChange={v => setKpiVal(kpi.label, v)}
-                    className="mt-1" />
-                </div>
-              ))}
               <div className="flex items-end">
                 <Button onClick={() => saveMut.mutate(weekForm)} className="w-full gap-2 bg-primary hover:bg-primary/90" disabled={saveMut.isPending}>
                   <Save className="w-4 h-4" /> {saveMut.isPending ? 'Salvando...' : 'Salvar'}
@@ -377,44 +336,7 @@ export default function WeeklyTracking() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
-            <div className="px-6 py-4 border-b border-gray-50">
-              <h3 className="text-sm font-semibold text-gray-900">Acompanhamento Semanal — Meta vs Realizado</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-gray-50/50 border-b border-gray-100">
-                    <th className="text-left py-2.5 px-4 font-medium text-gray-500">Semana</th>
-                    <th className="text-right py-2.5 px-3 font-medium text-gray-500">Meta Invest.</th>
-                    <th className="text-right py-2.5 px-3 font-medium text-gray-500">Real Invest.</th>
-                    <th className="text-right py-2.5 px-3 font-medium text-gray-500">Leads</th>
-                    <th className="text-right py-2.5 px-3 font-medium text-gray-500">Agend.</th>
-                    <th className="text-right py-2.5 px-3 font-medium text-gray-500">Comp.</th>
-                    <th className="text-right py-2.5 px-3 font-medium text-gray-500">Vendas</th>
-                    <th className="text-right py-2.5 px-3 font-medium text-gray-500">Receita</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {weeklyTargets.map((t, i) => {
-                    const actual = actuals.find(a => a.week_number === t.week);
-                    return (
-                      <tr key={i}>
-                        <td className="py-2.5 px-4 font-medium">Semana {t.week}</td>
-                        <td className="py-2.5 px-3 text-right text-gray-400">R${Math.round(t.investment).toLocaleString('pt-BR')}</td>
-                        <td className="py-2.5 px-3 text-right font-medium">{actual?.investment_actual ? `R$${Math.round(actual.investment_actual).toLocaleString('pt-BR')}` : '—'}</td>
-                        <td className="py-2.5 px-3 text-right">{actual?.leads_actual ? Math.round(actual.leads_actual).toLocaleString('pt-BR') : '—'}</td>
-                        <td className="py-2.5 px-3 text-right">{actual?.appointments_actual ? Math.round(actual.appointments_actual).toLocaleString('pt-BR') : '—'}</td>
-                        <td className="py-2.5 px-3 text-right">{actual?.showups_actual ? Math.round(actual.showups_actual).toLocaleString('pt-BR') : '—'}</td>
-                        <td className="py-2.5 px-3 text-right">{getActualKpi(actual, 'Vendas') ? Math.round(getActualKpi(actual, 'Vendas')).toLocaleString('pt-BR') : '—'}</td>
-                        <td className="py-2.5 px-3 text-right">{getActualKpi(actual, 'Receita') ? `R$${Math.round(getActualKpi(actual, 'Receita')).toLocaleString('pt-BR')}` : '—'}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+
         </>
       )}
     </div>

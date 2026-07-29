@@ -11,7 +11,7 @@ function fmtPct(val) {
   return `${((val || 0) * 100).toFixed(1)}%`;
 }
 
-export default function MonthlyFunnelSummary({ meta, real, stageLabels }) {
+export default function MonthlyFunnelSummary({ meta, real, stageLabels, dayFraction = 1, referenceDate, periodMonth, periodYear }) {
   const labels = stageLabels && stageLabels.length >= 3
     ? stageLabels
     : ['Leads', 'Agendamentos', 'Comparecimentos'];
@@ -38,6 +38,11 @@ export default function MonthlyFunnelSummary({ meta, real, stageLabels }) {
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-50">
           <h3 className="text-sm font-semibold text-gray-900">Funil do Mês — Meta vs Realizado</h3>
+          {referenceDate && (
+            <p className="text-xs text-gray-400 mt-1">
+              Realizado até {new Date(referenceDate + 'T00:00:00').toLocaleDateString('pt-BR')} — Proporcional: {dayFraction > 0 ? (dayFraction * 100).toFixed(0) : 0}% do mês
+            </p>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -53,7 +58,8 @@ export default function MonthlyFunnelSummary({ meta, real, stageLabels }) {
               {stages.map(stage => {
                 const metaVal = meta[stage.key] || 0;
                 const realVal = real[stage.key] || 0;
-                const achievement = metaVal > 0 ? (realVal / metaVal) * 100 : 0;
+                const propMeta = metaVal * dayFraction;
+                const achievement = propMeta > 0 ? (realVal / propMeta) * 100 : 0;
                 return (
                   <tr key={stage.key} className="hover:bg-gray-50/30">
                     <td className="py-3 px-4 font-medium text-gray-900">{stage.label}</td>
@@ -69,6 +75,9 @@ export default function MonthlyFunnelSummary({ meta, real, stageLabels }) {
                          achievement > 0 ? <TrendingDown className="w-3.5 h-3.5" /> : null}
                         {achievement.toFixed(0)}%
                       </span>
+                      {dayFraction < 1 && metaVal > 0 && (
+                        <span className="block text-[10px] text-gray-400 mt-0.5">Meta parcial: {stage.fmt(propMeta)}</span>
+                      )}
                     </td>
                   </tr>
                 );
