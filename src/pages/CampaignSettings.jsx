@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import PageHeader from '@/components/ui-custom/PageHeader';
@@ -358,9 +358,16 @@ function ObjectivesTab() {
 
   const activeChannels = channels.filter(c => c.is_active);
   const activeChannelNames = activeChannels.map(c => c.name);
+
+  useEffect(() => {
+    if (!selectedChannel && activeChannels.length > 0) {
+      setSelectedChannel(activeChannels[0].name);
+    }
+  }, [activeChannels, selectedChannel]);
+
   const filteredObjectives = selectedChannel
-    ? objectives.filter(o => !o.channels?.length || o.channels.includes(selectedChannel))
-    : objectives;
+    ? objectives.filter(o => !o.channels?.length || o.channels.includes(selectedChannel)).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+    : [];
 
   const createMut = useMutation({
     mutationFn: (d) => base44.entities.CampaignObjective.create(d),
@@ -443,10 +450,6 @@ function ObjectivesTab() {
     <div>
       <div className="flex items-center gap-2 mb-4 flex-wrap">
         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider mr-1">Filtrar por canal:</span>
-        <button onClick={() => setSelectedChannel('')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${!selectedChannel ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
-          Todos
-        </button>
         {activeChannels.map(ch => (
           <button key={ch.id} onClick={() => setSelectedChannel(ch.name)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selectedChannel === ch.name ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>

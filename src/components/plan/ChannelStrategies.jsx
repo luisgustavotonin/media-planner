@@ -491,7 +491,7 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function ChannelStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, days = 30, onChange, readOnly, channelName = 'Meta', objectives = [], funnelTypes = [], benchmarks = [], segment = '', planFunnelTypeId = '', averageTicket = 0 }) {
   // Filtra objetivos aplicáveis a este canal (sem channels = disponível para todos)
-  const availableObjectives = objectives.filter(o => !o.channels || o.channels.length === 0 || o.channels.includes(channelName));
+  const availableObjectives = objectives.filter(o => !o.channels || o.channels.length === 0 || o.channels.includes(channelName)).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
   const netBudget = (channelBudget || 0) * (1 - (taxPercent || 0) / 100);
   const totalAllocated = strategies.reduce((s, camp) => s + (camp.budget_value || 0), 0);
