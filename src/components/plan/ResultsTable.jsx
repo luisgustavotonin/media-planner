@@ -45,7 +45,7 @@ export default function ResultsTable({ channelResults, totals, blended, funnelSt
           <thead>
             <tr className="bg-gray-50/50 border-b border-gray-100">
               <th className="text-left py-2.5 px-4 font-medium text-gray-500">Canal</th>
-              <th className="text-right py-2.5 px-3 font-medium text-gray-500">Budget</th>
+              <th className="text-right py-2.5 px-3 font-medium text-gray-500">Investimento</th>
               <th className="text-right py-2.5 px-3 font-medium text-gray-500">Leads</th>
               {middleCols.map((col, i) => (
                 <th key={i} className="text-right py-2.5 px-3 font-medium text-gray-500">{col.label}</th>

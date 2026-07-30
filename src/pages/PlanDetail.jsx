@@ -8,6 +8,7 @@ import StatCard from '../components/ui-custom/StatCard';
 import FunnelChart from '../components/ui-custom/FunnelChart';
 import ChannelEditor from '../components/plan/ChannelEditor';
 import ResultsTable from '../components/plan/ResultsTable';
+import ChannelBadge from '../components/ui-custom/ChannelBadge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -213,8 +214,9 @@ export default function PlanDetail() {
         const obj = objectives.find(o => o.name === camp.objective);
         if ((obj?.type || 'performance') !== type) return;
         const key = camp.objective || 'Sem objetivo';
-        if (!groups[key]) groups[key] = { investment: 0, netInvestment: 0, impressions: 0, clicks: 0, reach: 0, leads: 0, sales: 0, revenue: 0, kpis: {}, objective: obj };
+        if (!groups[key]) groups[key] = { investment: 0, netInvestment: 0, impressions: 0, clicks: 0, reach: 0, leads: 0, sales: 0, revenue: 0, kpis: {}, objective: obj, channels: new Set() };
         const g = groups[key];
+        g.channels.add(ch.channel_name);
         const campBudget = camp.budget_value || 0;
         const netBudget = campBudget * (1 - taxRate);
         g.investment += campBudget;
@@ -392,8 +394,11 @@ export default function PlanDetail() {
             ].filter(Boolean);
             return (
               <div key={objName} className="mb-4">
-                <div className="flex items-center gap-2 mb-2 ml-1">
+                <div className="flex items-center gap-2 mb-2 ml-1 flex-wrap">
                   <span className="text-[10px] font-medium text-amber-600/80">{objName}</span>
+                  {data.channels && Array.from(data.channels).map(chName => (
+                    <ChannelBadge key={chName} channel={chName} />
+                  ))}
                 </div>
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                   {cards.map((c, i) => <StatCard key={i} {...c} />)}
@@ -429,8 +434,11 @@ export default function PlanDetail() {
             ].filter(Boolean);
             return (
               <div key={objName} className="mb-4">
-                <div className="flex items-center gap-2 mb-2 ml-1">
+                <div className="flex items-center gap-2 mb-2 ml-1 flex-wrap">
                   <span className="text-[10px] font-medium text-indigo-500/80">{objName}</span>
+                  {data.channels && Array.from(data.channels).map(chName => (
+                    <ChannelBadge key={chName} channel={chName} />
+                  ))}
                 </div>
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                   {cards.map((c, i) => <StatCard key={i} {...c} />)}
