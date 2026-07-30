@@ -137,15 +137,15 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
       </div>
 
       {/* Labels */}
-      <div className="hidden sm:grid grid-cols-[1fr_1fr_60px_80px_36px] gap-3 px-4 text-[10px] text-gray-400 uppercase tracking-wider">
-        <span>Canal</span><span>Budget (R$)</span><span className="text-center">%</span><span>Imposto</span><span></span>
+      <div className="hidden sm:grid grid-cols-[1fr_1fr_60px_80px_100px_36px] gap-3 px-4 text-[10px] text-gray-400 uppercase tracking-wider">
+        <span>Canal</span><span>Investimento</span><span className="text-center">%</span><span>Imposto</span><span className="text-center">Líquido</span><span></span>
       </div>
 
       <div className="space-y-2">
         {channels.map((ch, idx) => (
           <div key={idx} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
             <div className="flex items-center gap-3 p-4">
-              <div className="flex-1 grid grid-cols-2 sm:grid-cols-[1fr_1fr_60px_80px] gap-3 items-center">
+              <div className="flex-1 grid grid-cols-2 sm:grid-cols-[1fr_1fr_60px_80px_100px] gap-3 items-center">
                 <div>
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-secondary/40 border border-border text-xs font-medium text-secondary-foreground">
                     {ch.channel_name}
@@ -153,7 +153,7 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                 </div>
                 <div>
                   <CurrencyInput value={ch.budget_value || 0} onChange={v => handleBudgetChange(idx, v)}
-                    placeholder="Budget R$" prefix="R$" className="text-xs" disabled={readOnly} />
+                    placeholder="Investimento R$" prefix="R$" className="text-xs" disabled={readOnly} />
                 </div>
                 <div className="text-center">
                   <span className="text-xs font-medium text-gray-500">{(ch.budget_percent || 0).toFixed(1)}%</span>
@@ -163,6 +163,11 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                     onChange={e => updateChannel(idx, 'tax_percent', parseFloat(e.target.value) || 0)} disabled={readOnly}
                     className="w-full h-9 border border-gray-200 rounded-md text-xs px-2 pr-6 focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
                   <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-semibold text-gray-700">
+                    R$ {((ch.budget_value || 0) * (1 - (ch.tax_percent || 0) / 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
                 </div>
               </div>
               <div className="flex items-center gap-1">
