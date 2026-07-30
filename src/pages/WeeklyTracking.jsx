@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Save } from 'lucide-react';
+import { Save, Trash2 } from 'lucide-react';
 
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
@@ -112,7 +112,21 @@ export default function WeeklyTracking() {
     rates = Array.isArray(plan.conversion_rates) && plan.conversion_rates.length
       ? plan.conversion_rates
       : [plan.lead_to_appointment_rate || 0.35, plan.appointment_to_show_rate || 0.7, plan.show_to_sale_rate || 0.35];
-    consolidated = calculateConsolidated(plan.channels, rates, plan.average_ticket || 5000);
+    // Usa valor líquido (após imposto) para investimento e leads
+    const netChannels = plan.channels.map(ch => {
+      const taxRate = (ch.tax_percent || 0) / 100;
+      const netFactor = 1 - taxRate;
+      return {
+        ...ch,
+        budget_value: (ch.budget_value || 0) * netFactor,
+        strategies: (ch.strategies || []).map(s => ({
+          ...s,
+          budget_value: (s.budget_value || 0) * netFactor,
+          adsets: (s.adsets || []).map(a => ({ ...a, budget_value: (a.budget_value || 0) * netFactor })),
+        })),
+      };
+    });
+    consolidated = calculateConsolidated(netChannels, rates, plan.average_ticket || 5000);
   }
 
   const funnelType = funnelTypes.find(ft => ft.id === plan?.funnel_type_id);
@@ -183,6 +197,21 @@ export default function WeeklyTracking() {
       return base44.entities.WeeklyActual.create({ ...data, plan_id: selectedPlanId, client_id: plan?.client_id });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['weeklyActuals'] }),
+  });
+
+  const clearMut = useMutation({
+    mutationFn: () => base44.entities.WeeklyActual.deleteMany({ plan_id: selectedPlanId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['weeklyActuals'] });
+      setWeekForm(f => ({
+        ...f,
+        investment_actual: 0,
+        leads_actual: 0,
+        appointments_actual: 0,
+        showups_actual: 0,
+        kpi_actuals: FUNNEL_KPIS.map(k => ({ label: k.label, value: 0 })),
+      }));
+    },
   });
 
   useEffect(() => {
@@ -341,9 +370,17 @@ export default function WeeklyTracking() {
                 <Label className="text-xs">Receita (R$)</Label>
                 <CurrencyInput value={getKpiVal('Receita')} onChange={v => setKpiVal('Receita', v || 0)} prefix="R$" className="mt-1" />
               </div>
-              <div className="flex items-end">
-                <Button onClick={() => saveMut.mutate(weekForm)} className="w-full gap-2 bg-primary hover:bg-primary/90" disabled={saveMut.isPending}>
+              <div className="flex items-end gap-2">
+                <Button onClick={() => saveMut.mutate(weekForm)} className="flex-1 gap-2 bg-primary hover:bg-primary/90" disabled={saveMut.isPending}>
                   <Save className="w-4 h-4" /> {saveMut.isPending ? 'Salvando...' : 'Salvar'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => { if (confirm('Deseja limpar todos os dados realizados deste plano?')) clearMut.mutate(); }}
+                  disabled={clearMut.isPending || actuals.length === 0}
+                  className="gap-2 text-red-600 border-red-200 hover:bg-red-50"
+                >
+                  <Trash2 className="w-4 h-4" /> Limpar
                 </Button>
               </div>
             </div>

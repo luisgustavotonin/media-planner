@@ -63,7 +63,7 @@ export default function MonthlyFunnelSummary({ meta, real, stageLabels, dayFract
                 const metaVal = meta[stage.key] || 0;
                 const realVal = real[stage.key] || 0;
                 const propMeta = metaVal * effectiveFraction;
-                const achievement = propMeta > 0 ? (realVal / propMeta) * 100 : 0;
+                const achievement = propMeta > 0 ? ((realVal - propMeta) / propMeta) * 100 : 0;
                 return (
                   <tr key={stage.key} className="hover:bg-gray-50/30">
                     <td className="py-3 px-4 font-medium text-gray-900">{stage.label}</td>
@@ -71,13 +71,10 @@ export default function MonthlyFunnelSummary({ meta, real, stageLabels, dayFract
                     <td className="py-3 px-4 text-right font-semibold text-gray-900">{stage.fmt(realVal)}</td>
                     <td className="py-3 px-4 text-right">
                       <span className={`inline-flex items-center gap-1 text-sm font-medium ${
-                        achievement >= 100 ? 'text-green-600' :
-                        achievement >= 80 ? 'text-amber-600' :
-                        achievement > 0 ? 'text-red-500' : 'text-gray-300'
+                        achievement >= 0 ? 'text-green-600' : 'text-red-500'
                       }`}>
-                        {achievement >= 100 ? <TrendingUp className="w-3.5 h-3.5" /> :
-                         achievement > 0 ? <TrendingDown className="w-3.5 h-3.5" /> : null}
-                        {achievement.toFixed(0)}%
+                        {achievement >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                        {achievement > 0 ? '+' : ''}{achievement.toFixed(0)}%
                       </span>
                       {viewMode === 'proportional' && dayFraction < 1 && metaVal > 0 && (
                         <span className="block text-[10px] text-gray-400 mt-0.5">Meta mês: {stage.fmt(metaVal)}</span>
