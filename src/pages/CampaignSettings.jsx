@@ -163,6 +163,22 @@ function ChannelsTab() {
 // ── Formulário de Objetivo ──
 function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [], funnelTypes = [] }) {
   const [form, setForm] = useState(initial);
+  const [activeFormulaIdx, setActiveFormulaIdx] = useState(null);
+
+  const insertVar = (v) => {
+    const idx = activeFormulaIdx != null ? activeFormulaIdx : 0;
+    if (!(form.calculated_metrics || [])[idx]) return;
+    const current = form.calculated_metrics[idx].formula || '';
+    const prefix = current && !current.endsWith(' ') ? current + ' ' : current;
+    updateCalcMetric(idx, 'formula', prefix + v);
+  };
+
+  const availableVars = [...new Set([
+    'investimento', 'investimento_liquido',
+    ...(form.type === 'performance' ? ['vendas', 'leads', 'ticket_medio'] : []),
+    ...(form.kpis || []).filter(k => k.label).map(k => sanitizeVar(k.label)),
+    ...(form.calculated_metrics || []).filter(m => m.label).map(m => sanitizeVar(m.label)),
+  ])];
 
   const toggleChannel = (ch) => setForm(f => {
     const list = f.channels || [];
@@ -270,14 +286,13 @@ function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [], funne
             <Plus className="w-3.5 h-3.5" /> Adicionar Métrica
           </button>
         </div>
-        <div className="flex flex-wrap gap-1 mb-2">
-          <span className="text-[10px] text-gray-400">Variáveis:</span>
-          {['investimento', 'investimento_liquido',
-            ...(form.type === 'performance' ? ['vendas', 'leads', 'ticket_medio'] : []),
-            ...(form.kpis || []).filter(k => k.label).map(k => sanitizeVar(k.label)),
-            ...(form.calculated_metrics || []).filter(m => m.label).map(m => sanitizeVar(m.label))
-          ].map((v, i) => (
-            <code key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-mono">{v}</code>
+        <div className="flex flex-wrap gap-1 mb-2 items-center">
+          <span className="text-[10px] text-gray-400">Variáveis (clique para inserir):</span>
+          {availableVars.map((v, i) => (
+            <button type="button" key={i} onClick={() => insertVar(v)}
+              className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-mono hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer">
+              {v}
+            </button>
           ))}
         </div>
         <div className="space-y-2">
@@ -295,7 +310,8 @@ function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [], funne
               </select>
               <input className="flex-1 border border-gray-200 rounded-md px-2.5 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary"
                 placeholder="investimento_liquido / cpm * 1000" value={metric.formula}
-                onChange={e => updateCalcMetric(i, 'formula', e.target.value)} />
+                onChange={e => updateCalcMetric(i, 'formula', e.target.value)}
+                onFocus={() => setActiveFormulaIdx(i)} />
               <button onClick={() => removeCalcMetric(i)} className="p-1 rounded hover:bg-red-50 text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
             </div>
           ))}
