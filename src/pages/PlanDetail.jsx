@@ -281,6 +281,8 @@ export default function PlanDetail() {
           investimento: g.investment,
           investimento_liquido: g.investment,
           leads: g.leads,
+          vendas: g.sales || 0,
+          receita: g.revenue || 0,
           ticket_medio: avgTicket || 0,
         };
         Object.values(g.kpis).forEach(k => {
