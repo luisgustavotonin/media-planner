@@ -257,9 +257,11 @@ export default function PlanDetail() {
         } else {
           // Performance: calcula leads, vendas e receita pelo funil
           if (kpiValue > 0) {
-            const campLeads = campBudget / kpiValue;
-            g.leads += campLeads;
-            const campRates = camp.funnel_rates?.length ? camp.funnel_rates : (activeRates.length > 0 ? activeRates : null);
+          const campLeads = campBudget / kpiValue;
+          g.leads += campLeads;
+          const percentKpis = (camp.kpi_values || []).filter(kv => kv.unit === 'percentual' && kv.value > 0);
+          const kpiRates = percentKpis.map(kv => kv.value);
+          const campRates = kpiRates.length > 0 ? kpiRates : (camp.funnel_rates?.length ? camp.funnel_rates : (activeRates.length > 0 ? activeRates : null));
             if (campRates && campRates.length > 0) {
               const campStages = [campLeads];
               for (let i = 0; i < campRates.length; i++) {
