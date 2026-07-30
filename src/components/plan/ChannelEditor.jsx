@@ -8,6 +8,7 @@ import { Trash2, ChevronDown, ChevronUp, Plus, X } from 'lucide-react';
 import CurrencyInput from '../ui-custom/CurrencyInput';
 import PercentInput from '../ui-custom/PercentInput';
 import ChannelStrategies from './ChannelStrategies';
+import ChannelBadge from '../ui-custom/ChannelBadge';
 
 // Modal para adicionar canal (apenas nome + budget + imposto)
 function AddChannelModal({ channels, onAdd, onClose }) {
@@ -147,9 +148,7 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
             <div className="flex items-center gap-3 p-4">
               <div className="flex-1 grid grid-cols-2 sm:grid-cols-[1fr_1fr_60px_80px_100px] gap-3 items-center">
                 <div>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-secondary/40 border border-border text-xs font-medium text-secondary-foreground">
-                    {ch.channel_name}
-                  </span>
+                  <ChannelBadge channel={ch.channel_name} />
                 </div>
                 <div>
                   <CurrencyInput value={ch.budget_value || 0} onChange={v => handleBudgetChange(idx, v)}
