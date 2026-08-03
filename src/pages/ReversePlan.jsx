@@ -612,22 +612,13 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                             </div>
 
                             {(row.conversion_rates || []).length > 0 && (row.benchmark_rates || []).length > 0 && (
-                              <div className="mt-4 pt-3 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                  <p className="text-[11px] font-semibold text-primary mb-1">Projeção (cliente)</p>
-                                  <FunnelVisual
-                                    stages={buildFunnelStages(row.conversion_rates, row.funnel_stage_labels)}
-                                    funnelName="Projeção"
-                                  />
-                                </div>
-                                <div>
-                                  <p className="text-[11px] font-semibold text-gray-500 mb-1">Benchmark</p>
-                                  <FunnelVisual
-                                    stages={buildFunnelStages(row.benchmark_rates, row.funnel_stage_labels)}
-                                    funnelName="Benchmark"
-                                    accent="benchmark"
-                                  />
-                                </div>
+                              <div className="mt-4 pt-3 border-t border-gray-100">
+                                <p className="text-[11px] font-semibold text-gray-500 mb-1">Comparativo do Funil — Benchmark x Projeção</p>
+                                <FunnelVisual
+                                  stages={buildFunnelStages(row.conversion_rates, row.funnel_stage_labels)}
+                                  benchmarkStages={buildFunnelStages(row.benchmark_rates, row.funnel_stage_labels)}
+                                  funnelName={row.objective_name}
+                                />
                               </div>
                             )}
                           </div>

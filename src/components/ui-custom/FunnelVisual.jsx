@@ -1,13 +1,9 @@
 import React from 'react';
 
-export default function FunnelVisual({ stages, benchmarkStages, funnelName, accent = 'primary' }) {
+export default function FunnelVisual({ stages, benchmarkStages, funnelName }) {
   if (!stages || stages.length === 0) return null;
 
   const hasBenchmark = benchmarkStages && benchmarkStages.length === stages.length;
-  const isBenchmark = accent === 'benchmark';
-  const barColor = isBenchmark ? 'bg-gray-400' : 'bg-primary';
-  const valColor = isBenchmark ? 'text-gray-500' : 'text-primary';
-  const trackColor = isBenchmark ? 'bg-gray-50' : 'bg-gray-100';
   const fmt = (v) => Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
   const fmtPct = (v) => {
     const sign = v >= 0 ? '+' : '';
@@ -58,15 +54,15 @@ export default function FunnelVisual({ stages, benchmarkStages, funnelName, acce
                 {/* Bars column */}
                 <div className="flex-1 space-y-1">
                   {/* Projeção bar — value follows the tip */}
-                  <div className={`relative h-5 ${trackColor} rounded-sm overflow-visible`}>
-                    <div className={`absolute inset-0 ${trackColor} rounded-sm`}></div>
-                    <div className={`absolute top-0 left-0 h-full ${barColor} rounded-sm transition-all duration-300`} style={{ width: `${Math.max(valW, 2)}%` }}>
+                  <div className="relative h-5 bg-gray-100 rounded-sm overflow-visible">
+                    <div className="absolute inset-0 bg-gray-100 rounded-sm"></div>
+                    <div className="absolute top-0 left-0 h-full bg-primary rounded-sm transition-all duration-300" style={{ width: `${Math.max(valW, 2)}%` }}>
                       {valFull && (
                         <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-white tabular-nums">{fmt(val)}</span>
                       )}
                     </div>
                     {!valFull && (
-                      <span className={`absolute top-1/2 -translate-y-1/2 text-[9px] font-bold ${valColor} tabular-nums whitespace-nowrap`} style={{ left: `calc(${Math.max(valW, 2)}% + 4px)` }}>{fmt(val)}</span>
+                      <span className="absolute top-1/2 -translate-y-1/2 text-[9px] font-bold text-primary tabular-nums whitespace-nowrap" style={{ left: `calc(${Math.max(valW, 2)}% + 4px)` }}>{fmt(val)}</span>
                     )}
                   </div>
                   {/* Benchmark bar — value follows the tip */}
