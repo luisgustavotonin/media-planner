@@ -139,9 +139,9 @@ export default function Benchmarks() {
             : ['Lead→Agend.', 'Agend.→Comparec.', 'Comparec.→Venda'];
 
           return (
-            <div key={key} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-50 bg-gray-50/50">
-                <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">{group.label}</span>
+            <div key={key} className="bg-white rounded-xl border border-border overflow-hidden shadow-sm">
+              <div className="px-4 py-3 border-b border-border bg-secondary">
+                <span className="text-xs font-semibold text-secondary-foreground uppercase tracking-wider">{group.label}</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">

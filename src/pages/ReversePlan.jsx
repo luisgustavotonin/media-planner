@@ -480,7 +480,35 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
   };
 
   const handleDistChange = (idx, field, value) => {
-    setDistribution(d => d.map((r, i) => i === idx ? { ...r, [field]: Number(value) } : r));
+    if (field !== 'percent') {
+      setDistribution(d => d.map((r, i) => i === idx ? { ...r, [field]: Number(value) } : r));
+      setResult(null);
+      return;
+    }
+    // Redistribuição automática: o canal editado fica com o valor informado,
+    // os demais repartem o restante (100 - v) proporcionalmente (ou em partes iguais).
+    setDistribution(d => {
+      const v = Math.max(0, Math.min(100, Number(value) || 0));
+      const others = d.filter((_, i) => i !== idx);
+      const othersSum = others.reduce((s, r) => s + (Number(r.percent) || 0), 0);
+      const remainder = 100 - v;
+      let alloc;
+      if (others.length === 0) {
+        alloc = [];
+      } else if (othersSum > 0) {
+        alloc = others.map(r => Math.round(((Number(r.percent) || 0) / othersSum) * remainder));
+      } else {
+        const each = Math.floor(remainder / others.length);
+        alloc = others.map(() => each);
+      }
+      const diff = remainder - alloc.reduce((s, x) => s + x, 0);
+      if (alloc.length) alloc[alloc.length - 1] += diff;
+      return d.map((r, i) => {
+        if (i === idx) return { ...r, percent: v };
+        const oi = i < idx ? i : i - 1;
+        return { ...r, percent: Math.max(0, alloc[oi] || 0) };
+      });
+    });
     setResult(null);
   };
 
