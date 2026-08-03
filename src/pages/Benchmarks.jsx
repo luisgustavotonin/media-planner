@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../components/ui-custom/PageHeader';
@@ -7,16 +7,27 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import PercentInput from '../components/ui-custom/PercentInput';
+import ChannelBadge from '../components/ui-custom/ChannelBadge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Pencil, Trash2, Plus } from 'lucide-react';
 
-const EMPTY_FORM = { segment_label: '', funnel_type_id: '', funnel_type_name: '', conversion_rates: [], meta_default_cpl: 0, google_default_cpl: 0 };
+const EMPTY_FORM = {
+  funnel_type_id: '',
+  funnel_type_name: '',
+  channel_name: '',
+  objective_id: '',
+  objective_name: '',
+  segment: 'general',
+  segment_label: '',
+  conversion_rates: [],
+  default_cpl: 0,
+};
 
 export default function Benchmarks() {
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
-  const [editing, setEditing] = useState(null); // null = novo
+  const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
@@ -24,11 +35,20 @@ export default function Benchmarks() {
     queryKey: ['benchmarks'],
     queryFn: () => base44.entities.Benchmark.list(),
   });
-
   const { data: funnelTypes = [] } = useQuery({
     queryKey: ['funnelTypes'],
     queryFn: () => base44.entities.FunnelType.list(),
   });
+  const { data: channels = [] } = useQuery({
+    queryKey: ['channels'],
+    queryFn: () => base44.entities.Channel.list(),
+  });
+  const { data: objectives = [] } = useQuery({
+    queryKey: ['campaign-objectives'],
+    queryFn: () => base44.entities.CampaignObjective.list(),
+  });
+
+  const activeChannels = useMemo(() => channels.filter(c => c.is_active), [channels]);
 
   const saveMut = useMutation({
     mutationFn: ({ id, data }) => id
@@ -43,13 +63,22 @@ export default function Benchmarks() {
   });
 
   const selectedFunnel = funnelTypes.find(f => f.id === form.funnel_type_id);
-  // Pares de conversão baseados nas etapas do funil selecionado
   const convPairs = selectedFunnel?.stages?.length >= 2
     ? selectedFunnel.stages.slice(0, -1).map((s, i) => ({
         label: `${s.label} → ${selectedFunnel.stages[i + 1].label}`,
         index: i,
       }))
     : [];
+
+  // Objetivos aplicáveis ao canal selecionado que usam o funil selecionado
+  const objectivesForForm = useMemo(() => {
+    if (!form.funnel_type_id) return [];
+    return objectives
+      .filter(o => o.is_active !== false)
+      .filter(o => !form.channel_name || !o.channels?.length || o.channels.includes(form.channel_name))
+      .filter(o => !o.funnel_type_id || o.funnel_type_id === form.funnel_type_id)
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'));
+  }, [objectives, form.funnel_type_id, form.channel_name]);
 
   const openNew = () => {
     setEditing(null);
@@ -59,7 +88,7 @@ export default function Benchmarks() {
 
   const openEdit = (b) => {
     setEditing(b);
-    setForm({ ...b });
+    setForm({ ...EMPTY_FORM, ...b });
     setEditOpen(true);
   };
 
@@ -70,8 +99,19 @@ export default function Benchmarks() {
       ...f,
       funnel_type_id: funnelId,
       funnel_type_name: ft?.name || '',
+      objective_id: '',
+      objective_name: '',
       conversion_rates: Array(numPairs).fill(0),
     }));
+  };
+
+  const handleChannelChange = (channelName) => {
+    setForm(f => ({ ...f, channel_name: channelName, objective_id: '', objective_name: '' }));
+  };
+
+  const handleObjectiveChange = (objId) => {
+    const obj = objectives.find(o => o.id === objId);
+    setForm(f => ({ ...f, objective_id: objId, objective_name: obj?.name || '' }));
   };
 
   const setRate = (i, v) => {
@@ -84,7 +124,7 @@ export default function Benchmarks() {
 
   const handleSave = () => {
     const { id, created_date, updated_date, created_by, created_by_id, ...data } = form;
-    // Sync legacy fields from first 3 rates for backward compat
+    // Sync legacy fields for backward compat
     data.lead_to_appointment_rate = data.conversion_rates?.[0] || 0;
     data.appointment_to_show_rate = data.conversion_rates?.[1] || 0;
     data.show_to_sale_rate = data.conversion_rates?.[2] || 0;
@@ -93,7 +133,7 @@ export default function Benchmarks() {
 
   const fmtPct = v => v != null && v > 0 ? `${(v * 100).toFixed(0)}%` : '—';
 
-  // Group benchmarks by funnel
+  // Agrupa por funil → depois por canal → depois por objetivo/segmento
   const byFunnel = {};
   benchmarks.forEach(b => {
     const key = b.funnel_type_id || '__legacy__';
@@ -106,7 +146,7 @@ export default function Benchmarks() {
     <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
       <PageHeader
         title="Benchmarks"
-        description="Taxas de conversão e CPL padrão por funil e segmento."
+        description="Taxas de conversão e CPL por funil + canal + objetivo + segmento."
         actions={
           <Button onClick={openNew} className="gap-2 bg-primary hover:bg-primary/90 h-9 text-xs">
             <Plus className="w-4 h-4" /> Novo Benchmark
@@ -116,10 +156,9 @@ export default function Benchmarks() {
 
       <div className="space-y-6">
         {Object.entries(byFunnel).map(([key, group]) => {
-          // Detect funnel stage pairs for column headers
           const ft = funnelTypes.find(f => f.id === key);
           const pairs = ft?.stages?.length >= 2
-            ? ft.stages.slice(0, -1).map((s, i) => `${s.label}→${ft.stages[i+1].label}`)
+            ? ft.stages.slice(0, -1).map((s, i) => `${s.label}→${ft.stages[i + 1].label}`)
             : ['Lead→Agend.', 'Agend.→Comparec.', 'Comparec.→Venda'];
 
           return (
@@ -131,12 +170,13 @@ export default function Benchmarks() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-100">
+                      <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Canal</th>
                       <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Objetivo</th>
+                      <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Segmento</th>
                       {pairs.map((p, i) => (
                         <th key={i} className="text-center py-3 px-3 text-xs font-medium text-gray-500">{p}</th>
                       ))}
-                      <th className="text-center py-3 px-3 text-xs font-medium text-gray-500">CPL Meta</th>
-                      <th className="text-center py-3 px-3 text-xs font-medium text-gray-500">CPL Google</th>
+                      <th className="text-center py-3 px-3 text-xs font-medium text-gray-500">CPL</th>
                       <th className="py-3 px-3 w-20"></th>
                     </tr>
                   </thead>
@@ -147,12 +187,19 @@ export default function Benchmarks() {
                         : [b.lead_to_appointment_rate, b.appointment_to_show_rate, b.show_to_sale_rate];
                       return (
                         <tr key={b.id} className="hover:bg-gray-50/50">
-                          <td className="py-3 px-4 font-medium text-gray-900">{b.segment_label || b.segment || '—'}</td>
+                          <td className="py-3 px-4">
+                            {b.channel_name
+                              ? <ChannelBadge channel={b.channel_name} />
+                              : <span className="text-xs text-gray-400">—</span>}
+                          </td>
+                          <td className="py-3 px-4 font-medium text-gray-900">{b.objective_name || b.objective_id || '—'}</td>
+                          <td className="py-3 px-4 text-gray-600">{b.segment_label || b.segment || '—'}</td>
                           {pairs.map((_, i) => (
                             <td key={i} className="py-3 px-3 text-center text-gray-600">{fmtPct(rates[i])}</td>
                           ))}
-                          <td className="py-3 px-3 text-center text-gray-600">{b.meta_default_cpl ? `R$${b.meta_default_cpl}` : '—'}</td>
-                          <td className="py-3 px-3 text-center text-gray-600">{b.google_default_cpl ? `R$${b.google_default_cpl}` : '—'}</td>
+                          <td className="py-3 px-3 text-center text-gray-600">
+                            {(b.default_cpl || b.meta_default_cpl || b.google_default_cpl) ? `R$${b.default_cpl || b.meta_default_cpl || b.google_default_cpl}` : '—'}
+                          </td>
                           <td className="py-3 px-3">
                             <div className="flex items-center gap-1 justify-end">
                               <button onClick={() => openEdit(b)} className="p-1.5 rounded-md hover:bg-gray-100">
@@ -184,11 +231,11 @@ export default function Benchmarks() {
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editing ? `Editar — ${form.segment_label}` : 'Novo Benchmark'}</DialogTitle>
+            <DialogTitle>{editing ? `Editar Benchmark` : 'Novo Benchmark'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div>
-              <Label className="text-xs">Funil associado</Label>
+              <Label className="text-xs">Funil</Label>
               <Select value={form.funnel_type_id} onValueChange={handleFunnelChange}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione o funil..." /></SelectTrigger>
                 <SelectContent>
@@ -198,11 +245,40 @@ export default function Benchmarks() {
             </div>
 
             <div>
-              <Label className="text-xs">Nome do Objetivo</Label>
+              <Label className="text-xs">Canal</Label>
+              <Select value={form.channel_name || undefined} onValueChange={handleChannelChange}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione o canal..." /></SelectTrigger>
+                <SelectContent>
+                  {activeChannels.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-xs">Objetivo do canal</Label>
+              <Select
+                value={form.objective_id || undefined}
+                onValueChange={handleObjectiveChange}
+                disabled={!form.funnel_type_id || !form.channel_name || objectivesForForm.length === 0}
+              >
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione o objetivo..." /></SelectTrigger>
+                <SelectContent>
+                  {objectivesForForm.map(o => (
+                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.funnel_type_id && form.channel_name && objectivesForForm.length === 0 && (
+                <p className="text-[11px] text-amber-600 mt-1">Nenhum objetivo cadastrado para este canal/funil. Configure em Config. Campanhas.</p>
+              )}
+            </div>
+
+            <div>
+              <Label className="text-xs">Segmento (especialidade)</Label>
               <Input
                 value={form.segment_label || ''}
-                onChange={e => setForm(f => ({ ...f, segment_label: e.target.value }))}
-                placeholder="Ex: Implantes, Estética..."
+                onChange={e => setForm(f => ({ ...f, segment_label: e.target.value, segment: e.target.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_') || 'general' }))}
+                placeholder="Ex: Implantes, Estética, Geral..."
                 className="mt-1"
               />
             </div>
@@ -225,20 +301,21 @@ export default function Benchmarks() {
               </>
             )}
 
-            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider pt-1">CPL Padrão (R$)</h4>
-            <div className="grid grid-cols-2 gap-3">
-              {[{ key: 'meta_default_cpl', label: 'Meta' }, { key: 'google_default_cpl', label: 'Google' }].map(ch => (
-                <div key={ch.key}>
-                  <Label className="text-xs">{ch.label}</Label>
-                  <CurrencyInput value={form[ch.key] || 0} onChange={v => setForm(f => ({ ...f, [ch.key]: v }))} prefix="R$" className="mt-1" />
-                </div>
-              ))}
+            <div>
+              <Label className="text-xs">CPL Padrão (R$)</Label>
+              <CurrencyInput
+                value={form.default_cpl || 0}
+                onChange={v => setForm(f => ({ ...f, default_cpl: v }))}
+                prefix="R$"
+                className="mt-1"
+                placeholder="CPL deste canal/objetivo"
+              />
             </div>
 
             <Button
               onClick={handleSave}
               className="w-full bg-primary hover:bg-primary/90"
-              disabled={saveMut.isPending || !form.funnel_type_id || !form.segment_label}
+              disabled={saveMut.isPending || !form.funnel_type_id || !form.channel_name || !form.objective_id || !form.segment_label}
             >
               {saveMut.isPending ? 'Salvando...' : editing ? 'Salvar Alterações' : 'Criar Benchmark'}
             </Button>

@@ -13,18 +13,10 @@ import PercentInput from '../components/ui-custom/PercentInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Target, DollarSign, Users, TrendingDown, Calculator, Plus, Trash2, Info, Save, ArrowLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { findBenchmark, getCplFromBenchmark, getRatesFromBenchmark } from '@/lib/benchmarkLookup';
 
 const GENERIC_RATE_LABELS = ['Lead → Agend.', 'Agend. → Compar.', 'Compar. → Venda'];
 const GENERIC_STAGE_LABELS = ['Leads', 'Agendamentos', 'Comparecimentos', 'Vendas'];
-
-// Busca CPL padrão de um canal a partir do benchmark do segmento
-function getCplForChannel(channelName, benchmark) {
-  if (!benchmark) return 0;
-  const name = (channelName || '').toLowerCase();
-  if (name === 'google') return benchmark.google_default_cpl || 0;
-  // Meta, TikTok, YouTube, etc. usam o CPL do Meta como referência
-  return benchmark.meta_default_cpl || 0;
-}
 
 // ── Lista: cliente → planejamentos reversos ──
 function PlanList({ records, clients, onSelect, onNew }) {
@@ -325,19 +317,21 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
   );
   const selectedClient = clients.find(c => c.id === selectedClientId);
 
-  // Benchmark do segmento do cliente (para defaults de CPL)
-  const clientBenchmark = benchmarks.find(b => b.segment === selectedClient?.specialty)
-    || benchmarks.find(b => b.segment === 'general');
-
   // Resolve os dados de um objetivo para uma linha (taxas, ticket, labels, CPL)
+  // Benchmark vem da chave: funil + canal + objetivo + segmento
   const resolveObjectiveForRow = (objectiveId, channelName) => {
     const obj = objectives.find(o => o.id === objectiveId);
     if (!obj) return {};
     const funnelType = obj.funnel_type_id ? funnelTypes.find(f => f.id === obj.funnel_type_id) : null;
     const stageLabels = funnelType?.stages?.length >= 2 ? funnelType.stages.map(s => s.label) : null;
-    const funnelBenchmark = benchmarks.find(b => b.funnel_type_id === obj.funnel_type_id && b.segment === selectedClient?.specialty)
-      || benchmarks.find(b => b.funnel_type_id === obj.funnel_type_id && b.segment === 'general');
-    let rates = funnelBenchmark?.conversion_rates?.length > 0 ? [...funnelBenchmark.conversion_rates] : [];
+    const bm = findBenchmark({
+      benchmarks,
+      funnelTypeId: obj.funnel_type_id,
+      channelName,
+      objectiveId,
+      segment: selectedClient?.specialty,
+    });
+    let rates = getRatesFromBenchmark(bm);
     if (rates.length === 0) rates = [0.3, 0.5, 0.5];
     return {
       objective_name: obj.name,
@@ -346,7 +340,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
       funnel_stage_labels: stageLabels,
       conversion_rates: rates,
       average_ticket: selectedClient?.average_ticket || 0,
-      expected_cpl: getCplForChannel(channelName, clientBenchmark),
+      expected_cpl: getCplFromBenchmark(bm),
     };
   };
 
@@ -361,7 +355,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
         objective_id: '',
         objective_name: '',
         percent: i === activeChannels.length - 1 ? 100 - equal * (activeChannels.length - 1) : equal,
-        expected_cpl: getCplForChannel(ch.name, clientBenchmark),
+        expected_cpl: 0,
         tax_percent: 0,
         conversion_rates: [],
         average_ticket: 0,
@@ -383,7 +377,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
       return {
         ...r,
         channel_name: channelName,
-        expected_cpl: getCplForChannel(channelName, clientBenchmark),
+        expected_cpl: 0,
         objective_id: stillApplies ? r.objective_id : '',
         objective_name: stillApplies ? r.objective_name : '',
         conversion_rates: stillApplies ? r.conversion_rates : [],

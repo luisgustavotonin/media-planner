@@ -5,6 +5,7 @@ import { Trash2, Plus, ChevronDown, ChevronRight, Layers } from 'lucide-react';
 import CurrencyInput from '../ui-custom/CurrencyInput';
 import PercentInput from '../ui-custom/PercentInput';
 import FunnelVisual from '../ui-custom/FunnelVisual';
+import { findBenchmark, getCplFromBenchmark, getRatesFromBenchmark } from '@/lib/benchmarkLookup';
 
 const fmtBRL = (n) => `R$ ${(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtDaily = (budget, days) => days > 0 ? fmtBRL(budget / days) : fmtBRL(0);
@@ -87,14 +88,14 @@ function CampaignKpis({ campaign, objectives, onChange, readOnly }) {
 }
 
 // Componente que renderiza o seletor de funil e as taxas de conversão da campanha
-function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnly, taxPercent = 0, benchmarks = [], segment = '', channelName = '' }) {
+function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnly, taxPercent = 0, benchmarks = [], segment = '', channelName = '', objectives = [] }) {
   const funnelType = funnelTypes.find(ft => ft.id === funnelTypeId);
   const stages = funnelType?.stages || [];
   if (!funnelType || stages.length < 2) return null;
 
-  const benchmark = benchmarks.find(b => b.funnel_type_id === funnelTypeId && b.segment === segment)
-    || benchmarks.find(b => b.funnel_type_id === funnelTypeId);
-  const benchmarkRates = benchmark?.conversion_rates || [];
+  const objectiveId = objectives.find(o => o.name === campaign.objective)?.id || '';
+  const benchmark = findBenchmark({ benchmarks, funnelTypeId, channelName, objectiveId, segment });
+  const benchmarkRates = getRatesFromBenchmark(benchmark);
 
   // Calcula valores das etapas — projeção usa KPIs da campanha; benchmark usa CPL de referência
   // O budget da campanha já é o valor a ser distribuído (sem desconto de imposto)
@@ -107,8 +108,8 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
     ? percentualKpis.map(kv => kv.value)
     : (campaign.funnel_rates?.length ? campaign.funnel_rates : benchmarkRates);
 
-  // CPL de referência do benchmark (Meta ou Google)
-  const bmCpl = channelName === 'Google' ? benchmark?.google_default_cpl : benchmark?.meta_default_cpl;
+  // CPL de referência do benchmark (default_cpl por canal/objetivo/segmento)
+  const bmCpl = getCplFromBenchmark(benchmark);
 
   const stagesWithValues = [];
   for (let i = 0; i < stages.length; i++) {
@@ -236,12 +237,10 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
     const newKpiValues = syncKpiValues(campaign, v, objectives);
     const obj = objectives.find(o => o.name === v);
     const funnelTypeId = obj?.funnel_type_id || '';
-    const ft = funnelTypes.find(f => f.id === funnelTypeId);
-    const st = ft?.stages || [];
-    const bm = benchmarks.find(b => b.funnel_type_id === funnelTypeId && b.segment === segment)
-      || benchmarks.find(b => b.funnel_type_id === funnelTypeId);
-    const rates = bm?.conversion_rates?.length ? bm.conversion_rates : [bm?.lead_to_appointment_rate || 0.35, bm?.appointment_to_show_rate || 0.7, bm?.show_to_sale_rate || 0.35];
-    const bmCpl = channelName === 'Google' ? bm?.google_default_cpl : bm?.meta_default_cpl;
+    const bm = findBenchmark({ benchmarks, funnelTypeId, channelName, objectiveId: obj?.id, segment });
+    let rates = getRatesFromBenchmark(bm);
+    if (rates.length === 0) rates = [0.35, 0.7, 0.35];
+    const bmCpl = getCplFromBenchmark(bm);
     const updatedKpiValues = newKpiValues.map(kv => {
       const label = (kv.label || '').toLowerCase();
       if (label.includes('ticket')) return { ...kv, value: averageTicket || 0 };
@@ -331,7 +330,7 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
 
       {/* Funil da campanha — no rodapé do card, vem do objetivo */}
       {effectiveFunnelTypeId && (
-        <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} taxPercent={taxPercent} benchmarks={benchmarks} segment={segment} channelName={channelName} />
+        <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} taxPercent={taxPercent} benchmarks={benchmarks} segment={segment} channelName={channelName} objectives={objectives} />
       )}
     </div>
   );
@@ -351,12 +350,10 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
     const newKpiValues = syncKpiValues(campaign, v, objectives);
     const obj = objectives.find(o => o.name === v);
     const funnelTypeId = obj?.funnel_type_id || '';
-    const ft = funnelTypes.find(f => f.id === funnelTypeId);
-    const st = ft?.stages || [];
-    const bm = benchmarks.find(b => b.funnel_type_id === funnelTypeId && b.segment === segment)
-      || benchmarks.find(b => b.funnel_type_id === funnelTypeId);
-    const rates = bm?.conversion_rates?.length ? bm.conversion_rates : [bm?.lead_to_appointment_rate || 0.35, bm?.appointment_to_show_rate || 0.7, bm?.show_to_sale_rate || 0.35];
-    const bmCpl = bm?.google_default_cpl;
+    const bm = findBenchmark({ benchmarks, funnelTypeId, channelName, objectiveId: obj?.id, segment });
+    let rates = getRatesFromBenchmark(bm);
+    if (rates.length === 0) rates = [0.35, 0.7, 0.35];
+    const bmCpl = getCplFromBenchmark(bm);
     const updatedKpiValues = newKpiValues.map(kv => {
       const label = (kv.label || '').toLowerCase();
       if (label.includes('ticket')) return { ...kv, value: averageTicket || 0 };
@@ -427,7 +424,7 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
 
       {/* Funil da campanha — no rodapé do card, vem do objetivo */}
       {effectiveFunnelTypeId && (
-        <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} taxPercent={taxPercent} benchmarks={benchmarks} segment={segment} channelName={channelName} />
+        <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} taxPercent={taxPercent} benchmarks={benchmarks} segment={segment} channelName={channelName} objectives={objectives} />
       )}
     </div>
   );
