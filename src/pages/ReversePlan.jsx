@@ -11,24 +11,11 @@ import { Label } from '@/components/ui/label';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import PercentInput from '../components/ui-custom/PercentInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Target, DollarSign, Users, TrendingDown, Calculator, Plus, Trash2, Info, Save, ArrowLeft, ChevronRight } from 'lucide-react';
+import { Target, DollarSign, Users, TrendingDown, Calculator, Plus, Trash2, Info, Save, ArrowLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
-const CHANNEL_OPTIONS = ['Meta', 'Google', 'TikTok', 'YouTube', 'LinkedIn', 'Outro'];
 const GENERIC_RATE_LABELS = ['Lead → Agend.', 'Agend. → Compar.', 'Compar. → Venda'];
-
-// Constrói o array de etapas para o FunnelVisual a partir do resultado e labels do funil
-function buildFunnelVisualStages(result, stageLabels) {
-  if (!result) return [];
-  const stageValues = result.stage_values || [];
-  if (stageValues.length === 0) return [];
-
-  if (stageLabels && stageLabels.length === stageValues.length) {
-    return stageLabels.map((label, i) => ({ label, value: stageValues[i] }));
-  }
-  const genericLabels = ['Leads', 'Agendamentos', 'Comparecimentos', 'Vendas'];
-  return stageValues.map((v, i) => ({ label: genericLabels[i] || `Etapa ${i + 1}`, value: v }));
-}
+const GENERIC_STAGE_LABELS = ['Leads', 'Agendamentos', 'Comparecimentos', 'Vendas'];
 
 // Busca CPL padrão de um canal a partir do benchmark do segmento
 function getCplForChannel(channelName, benchmark) {
@@ -145,12 +132,21 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
   const fmtPct = v => `${(v * 100).toFixed(1)}%`;
   const result = record.result;
 
-  const stageLabels = record.funnel_stage_labels || null;
-  const funnelVisualStages = buildFunnelVisualStages(result, stageLabels);
-
-  const conversionLabels = stageLabels && stageLabels.length >= 2
-    ? stageLabels.slice(0, -1).map((l, i) => `${l} → ${stageLabels[i + 1]}`)
-    : null;
+  const rowFunnelStages = (ch) => {
+    const values = ch.stage_values || [];
+    if (!values.length) return [];
+    const labels = ch.funnel_stage_labels;
+    if (labels && labels.length === values.length) {
+      return labels.map((l, i) => ({ label: l, value: values[i] }));
+    }
+    return values.map((v, i) => ({ label: GENERIC_STAGE_LABELS[i] || `Etapa ${i + 1}`, value: v }));
+  };
+  const rowConvLabels = (ch) => {
+    const labels = ch.funnel_stage_labels;
+    return labels && labels.length >= 2
+      ? labels.slice(0, -1).map((l, i) => `${l} → ${labels[i + 1]}`)
+      : GENERIC_RATE_LABELS;
+  };
 
   const deleteMutation = useMutation({
     mutationFn: () => base44.entities.ReversePlanRecord.delete(record.id),
@@ -178,23 +174,34 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
         </Button>
       </div>
 
-      {record.conversion_rates?.length > 0 && record.average_ticket > 0 && (
+      {result?.channel_budgets?.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
           <div className="flex items-center gap-2 mb-3">
             <Info className="w-4 h-4 text-secondary-foreground" />
-            <span className="text-xs font-semibold text-secondary-foreground">Dados do Funil</span>
+            <span className="text-xs font-semibold text-secondary-foreground">Dados do Funil por Canal</span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-xs">
-            <div>
-              <p className="text-gray-400">Ticket Médio</p>
-              <p className="font-semibold text-gray-800">{fmt(record.average_ticket)}</p>
-            </div>
-            {record.conversion_rates.map((r, i) => {
-              const label = conversionLabels?.[i] || `Taxa ${i + 1}`;
+          <div className="space-y-3">
+            {result.channel_budgets.map((ch, i) => {
+              const conv = rowConvLabels(ch);
               return (
-                <div key={i}>
-                  <p className="text-gray-400">{label}</p>
-                  <p className="font-semibold text-gray-800">{fmtPct(r)}</p>
+                <div key={i} className="pb-3 border-b border-gray-50 last:border-0 last:pb-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ChannelBadge channel={ch.channel_name} />
+                    <span className="text-xs text-gray-400">·</span>
+                    <span className="text-xs font-medium text-gray-600">{ch.objective_name || '—'}</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-xs pl-1">
+                    <div>
+                      <p className="text-gray-400">Ticket Médio</p>
+                      <p className="font-semibold text-gray-800">{fmt(ch.average_ticket || 0)}</p>
+                    </div>
+                    {(ch.conversion_rates || []).map((r, ri) => (
+                      <div key={ri}>
+                        <p className="text-gray-400">{conv[ri] || `Taxa ${ri + 1}`}</p>
+                        <p className="font-semibold text-gray-800">{fmtPct(r)}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               );
             })}
@@ -216,29 +223,42 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
             <StatCard label="Meta de Receita" value={fmt(record.target_revenue)} icon={TrendingDown} color="green" />
           </div>
 
-          {funnelVisualStages.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">Projeção do Funil</h3>
-              <FunnelVisual stages={funnelVisualStages} />
+          {result.channel_budgets?.filter(ch => ch.stage_values?.length > 0).length > 0 && (
+            <div className="mb-5">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Projeção do Funil por Canal</h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {result.channel_budgets.filter(ch => ch.stage_values?.length > 0).map((ch, i) => (
+                  <div key={i} className="bg-white rounded-xl border border-gray-100 p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ChannelBadge channel={ch.channel_name} />
+                      <span className="text-xs text-gray-400">·</span>
+                      <span className="text-xs font-medium text-gray-600">{ch.objective_name}</span>
+                    </div>
+                    <FunnelVisual stages={rowFunnelStages(ch)} />
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
           {result.channel_budgets?.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
               <div className="px-6 py-4 border-b border-gray-50">
-                <h3 className="text-sm font-semibold text-gray-900">Orçamento por Canal</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Resultado por Canal</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-gray-50/50 border-b border-gray-100">
                       <th className="text-left py-2.5 px-4 font-medium text-gray-500">Canal</th>
-                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Distribuição</th>
-                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">KPI</th>
-                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Leads Nec.</th>
-                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Budget Nec.</th>
+                      <th className="text-left py-2.5 px-4 font-medium text-gray-500">Objetivo</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">%</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">CPL</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Leads</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Vendas</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Budget</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Imposto</th>
-                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Total c/ Imposto</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Total c/ Imp.</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">ROAS</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">CAC</th>
                     </tr>
@@ -247,12 +267,14 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
                     {result.channel_budgets.map((ch, i) => (
                       <tr key={i}>
                         <td className="py-2.5 px-4"><ChannelBadge channel={ch.channel_name} /></td>
+                        <td className="py-2.5 px-4 text-gray-600">{ch.objective_name || '—'}</td>
                         <td className="py-2.5 px-4 text-right">{ch.percent}%</td>
                         <td className="py-2.5 px-4 text-right">R${ch.expected_cpl}</td>
                         <td className="py-2.5 px-4 text-right">{ch.required_leads.toLocaleString()}</td>
+                        <td className="py-2.5 px-4 text-right">{ch.required_sales?.toLocaleString()}</td>
                         <td className="py-2.5 px-4 text-right font-semibold">{fmt(ch.required_budget)}</td>
                         <td className="py-2.5 px-4 text-right">{ch.tax_value ? fmt(ch.tax_value) : '—'}</td>
-                        <td className="py-2.5 px-4 text-right font-semibold">{ch.total_with_tax ? fmt(ch.total_with_tax) : fmt(ch.required_budget)}</td>
+                        <td className="py-2.5 px-4 text-right font-semibold">{fmt(ch.total_with_tax)}</td>
                         <td className="py-2.5 px-4 text-right">{ch.roas ? `${ch.roas.toFixed(2)}x` : '—'}</td>
                         <td className="py-2.5 px-4 text-right">{ch.cac ? fmt(ch.cac) : '—'}</td>
                       </tr>
@@ -260,13 +282,12 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
                   </tbody>
                   <tfoot>
                     <tr className="bg-gray-50 border-t border-gray-200 font-semibold">
-                      <td className="py-3 px-4">Total</td>
-                      <td className="py-3 px-4 text-right">100%</td>
-                      <td></td>
+                      <td className="py-3 px-4" colSpan={4}>Total</td>
                       <td className="py-3 px-4 text-right">{result.required_leads.toLocaleString()}</td>
+                      <td className="py-3 px-4 text-right">{result.required_sales?.toLocaleString()}</td>
                       <td className="py-3 px-4 text-right">{fmt(result.total_investment)}</td>
                       <td className="py-3 px-4 text-right">{result.total_tax ? fmt(result.total_tax) : '—'}</td>
-                      <td className="py-3 px-4 text-right font-semibold">{result.total_with_tax ? fmt(result.total_with_tax) : fmt(result.total_investment)}</td>
+                      <td className="py-3 px-4 text-right font-semibold">{fmt(result.total_with_tax)}</td>
                       <td className="py-3 px-4 text-right">{result.total_roas ? `${result.total_roas.toFixed(2)}x` : '—'}</td>
                       <td className="py-3 px-4 text-right">{result.total_cac ? fmt(result.total_cac) : '—'}</td>
                     </tr>
@@ -287,101 +308,132 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
   const queryClient = useQueryClient();
 
   const [selectedClientId, setSelectedClientId] = useState('');
-  const [selectedObjectiveId, setSelectedObjectiveId] = useState('');
   const [title, setTitle] = useState('');
   const [targetRevenue, setTargetRevenue] = useState(0);
   const [distribution, setDistribution] = useState([]);
-  const [conversionRates, setConversionRates] = useState([]);
-  const [editedTicket, setEditedTicket] = useState(0);
   const [result, setResult] = useState(null);
+  const [expandedRows, setExpandedRows] = useState({});
 
-  const updateRate = (i, v) => {
-    setConversionRates(rs => rs.map((x, j) => j === i ? v : x));
-    setResult(null);
-  };
-  const updateTicket = (v) => { setEditedTicket(v || 0); setResult(null); };
+  const { data: channels = [] } = useQuery({
+    queryKey: ['channels'],
+    queryFn: () => base44.entities.Channel.list(),
+  });
+  const activeChannels = channels.filter(c => c.is_active);
 
   const sortedClients = [...clients].sort((a, b) =>
     (a.clinic_name || '').localeCompare(b.clinic_name || '', 'pt-BR')
   );
   const selectedClient = clients.find(c => c.id === selectedClientId);
-  const selectedObjective = objectives.find(o => o.id === selectedObjectiveId);
-
-  // Busca o funnelType do objetivo selecionado
-  const funnelType = selectedObjective?.funnel_type_id
-    ? funnelTypes.find(f => f.id === selectedObjective.funnel_type_id)
-    : null;
-  const funnelStages = funnelType?.stages || [];
-  const stageLabels = funnelStages.length >= 2 ? funnelStages.map(s => s.label) : null;
-
-  // Labels de conversão
-  const conversionLabels = stageLabels && stageLabels.length >= 2
-    ? stageLabels.slice(0, -1).map((l, i) => `${l} → ${stageLabels[i + 1]}`)
-    : GENERIC_RATE_LABELS;
 
   // Benchmark do segmento do cliente (para defaults de CPL)
   const clientBenchmark = benchmarks.find(b => b.segment === selectedClient?.specialty)
     || benchmarks.find(b => b.segment === 'general');
 
-  useEffect(() => {
-    setSelectedObjectiveId('');
-    setDistribution([]);
-    setConversionRates([]);
-    setEditedTicket(0);
-    setTargetRevenue(0);
-    setResult(null);
-  }, [selectedClientId]);
-
-  useEffect(() => {
-    if (!selectedObjective) {
-      setDistribution([]);
-      setConversionRates([]);
-      setEditedTicket(0);
-      setResult(null);
-      return;
-    }
-
-    // Taxas de conversão do benchmark (associado ao funil + segmento do cliente)
-    const funnelBenchmark = benchmarks.find(b =>
-      b.funnel_type_id === funnelType?.id && b.segment === selectedClient?.specialty
-    ) || benchmarks.find(b =>
-      b.funnel_type_id === funnelType?.id && b.segment === 'general'
-    );
-    let rates = funnelBenchmark?.conversion_rates?.length > 0
-      ? [...funnelBenchmark.conversion_rates]
-      : [];
+  // Resolve os dados de um objetivo para uma linha (taxas, ticket, labels, CPL)
+  const resolveObjectiveForRow = (objectiveId, channelName) => {
+    const obj = objectives.find(o => o.id === objectiveId);
+    if (!obj) return {};
+    const funnelType = obj.funnel_type_id ? funnelTypes.find(f => f.id === obj.funnel_type_id) : null;
+    const stageLabels = funnelType?.stages?.length >= 2 ? funnelType.stages.map(s => s.label) : null;
+    const funnelBenchmark = benchmarks.find(b => b.funnel_type_id === obj.funnel_type_id && b.segment === selectedClient?.specialty)
+      || benchmarks.find(b => b.funnel_type_id === obj.funnel_type_id && b.segment === 'general');
+    let rates = funnelBenchmark?.conversion_rates?.length > 0 ? [...funnelBenchmark.conversion_rates] : [];
     if (rates.length === 0) rates = [0.3, 0.5, 0.5];
-    setConversionRates(rates);
+    return {
+      objective_name: obj.name,
+      objective_type: obj.type,
+      funnel_type_id: obj.funnel_type_id || '',
+      funnel_stage_labels: stageLabels,
+      conversion_rates: rates,
+      average_ticket: selectedClient?.average_ticket || 0,
+      expected_cpl: getCplForChannel(channelName, clientBenchmark),
+    };
+  };
 
-    // Ticket médio padrão do cliente
-    setEditedTicket(selectedClient?.average_ticket || 0);
-
-    // Pré-popula distribuição com canais do objetivo (se definidos), split igual
-    // CPL vem do benchmark do segmento do cliente
-    const objChannels = selectedObjective.channels?.length > 0 ? selectedObjective.channels : [];
-    if (objChannels.length > 0) {
-      const equal = Math.round(100 / objChannels.length);
-      setDistribution(objChannels.map((ch, i) => ({
-        channel_name: ch,
-        percent: i === objChannels.length - 1 ? 100 - equal * (objChannels.length - 1) : equal,
-        expected_cpl: getCplForChannel(ch, clientBenchmark),
+  // Pré-popula com os canais ativos (split igual) ao selecionar cliente
+  useEffect(() => {
+    if (!selectedClientId) { setDistribution([]); setTitle(''); setTargetRevenue(0); setResult(null); return; }
+    setTitle(''); setTargetRevenue(0); setResult(null);
+    if (activeChannels.length > 0) {
+      const equal = Math.round(100 / activeChannels.length);
+      setDistribution(activeChannels.map((ch, i) => ({
+        channel_name: ch.name,
+        objective_id: '',
+        objective_name: '',
+        percent: i === activeChannels.length - 1 ? 100 - equal * (activeChannels.length - 1) : equal,
+        expected_cpl: getCplForChannel(ch.name, clientBenchmark),
         tax_percent: 0,
+        conversion_rates: [],
+        average_ticket: 0,
+        funnel_stage_labels: null,
       })));
     } else {
-      setDistribution([{ channel_name: 'Meta', percent: 100, expected_cpl: getCplForChannel('Meta', clientBenchmark), tax_percent: 0 }]);
+      setDistribution([]);
     }
-    setResult(null);
-  }, [selectedObjectiveId, clientBenchmark]);
+  }, [selectedClientId, activeChannels.length]);
 
-  const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
-  const canCalculate = selectedObjectiveId && targetRevenue > 0 && distribution.length > 0 && editedTicket > 0;
+  const objectivesForChannel = (channelName) =>
+    objectives.filter(o => o.is_active !== false && (!o.channels?.length || o.channels.includes(channelName)));
 
-  const handleDistChange = (idx, field, value) => {
-    setDistribution(d => d.map((ch, i) => i === idx ? { ...ch, [field]: Number(value) } : ch));
+  const setChannelForRow = (idx, channelName) => {
+    setDistribution(d => d.map((r, i) => {
+      if (i !== idx) return r;
+      const obj = r.objective_id ? objectives.find(o => o.id === r.objective_id) : null;
+      const stillApplies = obj && (!obj.channels?.length || obj.channels.includes(channelName));
+      return {
+        ...r,
+        channel_name: channelName,
+        expected_cpl: getCplForChannel(channelName, clientBenchmark),
+        objective_id: stillApplies ? r.objective_id : '',
+        objective_name: stillApplies ? r.objective_name : '',
+        conversion_rates: stillApplies ? r.conversion_rates : [],
+        average_ticket: stillApplies ? r.average_ticket : 0,
+        funnel_stage_labels: stillApplies ? r.funnel_stage_labels : null,
+      };
+    }));
     setResult(null);
   };
 
-  const funnelVisualStages = buildFunnelVisualStages(result, stageLabels);
+  const setObjectiveForRow = (idx, objectiveId) => {
+    setDistribution(d => d.map((r, i) => {
+      if (i !== idx) return r;
+      const resolved = resolveObjectiveForRow(objectiveId, r.channel_name);
+      return { ...r, objective_id: objectiveId, ...resolved };
+    }));
+    setResult(null);
+  };
+
+  const handleDistChange = (idx, field, value) => {
+    setDistribution(d => d.map((r, i) => i === idx ? { ...r, [field]: Number(value) } : r));
+    setResult(null);
+  };
+
+  const updateRowRate = (idx, ri, v) => {
+    setDistribution(d => d.map((r, i) => i === idx ? { ...r, conversion_rates: (r.conversion_rates || []).map((x, j) => j === ri ? v : x) } : r));
+    setResult(null);
+  };
+  const updateRowTicket = (idx, v) => {
+    setDistribution(d => d.map((r, i) => i === idx ? { ...r, average_ticket: v || 0 } : r));
+    setResult(null);
+  };
+
+  const addChannel = () => {
+    setDistribution(d => [...d, {
+      channel_name: '', objective_id: '', objective_name: '',
+      percent: 0, expected_cpl: 0, tax_percent: 0,
+      conversion_rates: [], average_ticket: 0, funnel_stage_labels: null,
+    }]);
+    setResult(null);
+  };
+
+  const toggleRowExpand = (idx) => setExpandedRows(e => ({ ...e, [idx]: !e[idx] }));
+
+  const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
+  const totalPercent = distribution.reduce((s, r) => s + (Number(r.percent) || 0), 0);
+  const canCalculate = targetRevenue > 0
+    && distribution.length > 0
+    && Math.abs(totalPercent - 100) < 0.01
+    && distribution.every(r => r.channel_name && r.objective_id && r.expected_cpl > 0 && r.average_ticket > 0 && (r.conversion_rates?.length || 0) > 0);
 
   const saveMutation = useMutation({
     mutationFn: (data) => base44.entities.ReversePlanRecord.create(data),
@@ -394,18 +446,26 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
 
   const handleSave = () => {
     const cname = selectedClient?.clinic_name || '';
-    const calc = calculateReversePlan(targetRevenue, editedTicket, conversionRates, distribution);
+    const calc = calculateReversePlan(targetRevenue, distribution);
+    const firstRow = distribution[0] || {};
     saveMutation.mutate({
       client_id: selectedClientId,
       client_name: cname,
       title: title || `Planejamento — ${cname}`,
       target_revenue: targetRevenue,
-      average_ticket: editedTicket,
-      conversion_rates: conversionRates,
-      funnel_stage_labels: stageLabels,
+      average_ticket: firstRow.average_ticket || 0,
+      conversion_rates: firstRow.conversion_rates || [],
+      funnel_stage_labels: firstRow.funnel_stage_labels || null,
       distribution,
       result: calc,
     });
+  };
+
+  const rowConversionLabels = (row) => {
+    const labels = row.funnel_stage_labels;
+    return labels && labels.length >= 2
+      ? labels.slice(0, -1).map((l, i) => `${l} → ${labels[i + 1]}`)
+      : GENERIC_RATE_LABELS;
   };
 
   return (
@@ -417,7 +477,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
           </button>
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Novo Planejamento Reverso</h2>
-            <p className="text-sm text-gray-500">Calcule o investimento necessário para atingir sua meta</p>
+            <p className="text-sm text-gray-500">Cada canal tem seu próprio objetivo e suas próprias metas</p>
           </div>
         </div>
         {result && (
@@ -449,54 +509,6 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
         </div>
 
         {selectedClientId && (
-          <div className="mb-5">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">2. Selecione o Objetivo</p>
-            {objectives.length === 0 ? (
-              <p className="text-sm text-gray-400">Nenhum objetivo cadastrado.</p>
-            ) : (
-              <Select value={selectedObjectiveId} onValueChange={setSelectedObjectiveId}>
-                <SelectTrigger className="max-w-xs"><SelectValue placeholder="Selecione um objetivo..." /></SelectTrigger>
-                <SelectContent>
-                  {objectives.map(obj => (
-                    <SelectItem key={obj.id} value={obj.id}>
-                      {obj.name} {obj.type === 'branding' ? '(Branding)' : '(Performance)'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-        )}
-
-        {/* Dados do Funil — dinâmico com os labels reais das etapas */}
-        {selectedObjective && editedTicket > 0 && (
-          <div className="mb-5 p-4 bg-secondary/40 rounded-lg border border-border">
-            <div className="flex items-center gap-2 mb-3">
-              <Info className="w-4 h-4 text-secondary-foreground" />
-              <span className="text-xs font-semibold text-secondary-foreground">Dados do Funil (editável)</span>
-              {funnelType && (
-                <span className="ml-auto text-[10px] font-medium px-2 py-0.5 rounded-full bg-secondary/60 text-secondary-foreground">
-                  {funnelType.name}
-                </span>
-              )}
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-xs">
-              <div>
-                <p className="text-gray-400 mb-1">Ticket Médio</p>
-                <CurrencyInput value={editedTicket} onChange={updateTicket} prefix="R$" className="text-xs h-9" />
-              </div>
-              {conversionRates.map((r, i) => (
-                <div key={i}>
-                  <p className="text-gray-400 mb-1">{conversionLabels[i] || `Taxa ${i + 1}`}</p>
-                  <PercentInput value={r} onChange={v => updateRate(i, v)} className="text-xs" />
-                </div>
-              ))}
-            </div>
-            <p className="text-[11px] text-gray-500 mt-3">Os valores padrão vêm do funil e do cliente. Edite para simular cenários diferentes.</p>
-          </div>
-        )}
-
-        {selectedObjectiveId && (
           <>
             <div className="mb-5">
               <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Meta de Receita (R$)</Label>
@@ -506,41 +518,100 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
             </div>
 
             <div className="mb-4">
-              <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2 block">Distribuição por Canal</Label>
-              {distribution.length > 0 && (
-                <div className="space-y-2 mb-3">
-                  <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_1fr_32px] gap-3 text-[10px] text-gray-400 font-medium uppercase tracking-wider px-1">
-                    <span>Canal</span><span>% do Budget</span><span>CPL (R$)</span><span>Imposto %</span><span></span>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Distribuição por Canal</Label>
+                <span className={`text-[11px] font-medium ${Math.abs(totalPercent - 100) < 0.01 ? 'text-green-600' : 'text-red-500'}`}>
+                  Total: {totalPercent}%
+                </span>
+              </div>
+              <p className="text-[11px] text-gray-400 mb-3">Selecione um objetivo para cada canal. As taxas e o ticket vêm do funil do objetivo — edite para simular cenários.</p>
+
+              {activeChannels.length === 0 ? (
+                <p className="text-sm text-gray-400 py-3">Nenhum canal ativo cadastrado. Cadastre canais em Config. Campanhas.</p>
+              ) : (
+                <div className="space-y-2">
+                  <div className="hidden lg:grid grid-cols-[1.2fr_1.4fr_0.8fr_1fr_0.8fr_32px_32px] gap-2 text-[10px] text-gray-400 font-medium uppercase tracking-wider px-1">
+                    <span>Canal</span><span>Objetivo</span><span>% Budget</span><span>CPL (R$)</span><span>Imposto %</span><span></span><span></span>
                   </div>
-                  {distribution.map((ch, idx) => (
-                    <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_1fr_32px] gap-2 sm:gap-3 items-center">
-                      <Select value={ch.channel_name} onValueChange={v => handleDistChange(idx, 'channel_name', v)}>
-                        <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {CHANNEL_OPTIONS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <CurrencyInput value={ch.percent} onChange={v => handleDistChange(idx, 'percent', v)} className="text-xs" placeholder="%" />
-                      <CurrencyInput value={ch.expected_cpl} onChange={v => handleDistChange(idx, 'expected_cpl', v)} prefix="R$" className="text-xs" placeholder="CPL" />
-                      <PercentInput value={ch.tax_percent || 0} onChange={v => handleDistChange(idx, 'tax_percent', v)} className="text-xs h-9" />
-                      <button onClick={() => { setDistribution(d => d.filter((_, i) => i !== idx)); setResult(null); }} className="p-1.5 rounded-md hover:bg-red-50 text-red-400">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                  {distribution.map((row, idx) => {
+                    const isExpanded = expandedRows[idx];
+                    const convLabels = rowConversionLabels(row);
+                    const hasObjective = !!row.objective_id;
+                    return (
+                      <div key={idx} className="border border-gray-100 rounded-lg overflow-hidden">
+                        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1.4fr_0.8fr_1fr_0.8fr_32px_32px] gap-2 items-center p-2 bg-gray-50/40">
+                          <Select value={row.channel_name || undefined} onValueChange={v => setChannelForRow(idx, v)}>
+                            <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Canal..." /></SelectTrigger>
+                            <SelectContent>
+                              {activeChannels.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <Select value={row.objective_id || 'none'} onValueChange={v => setObjectiveForRow(idx, v === 'none' ? '' : v)} disabled={!row.channel_name}>
+                            <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione um objetivo..." /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">— Nenhum —</SelectItem>
+                              {objectivesForChannel(row.channel_name).map(obj => (
+                                <SelectItem key={obj.id} value={obj.id}>
+                                  {obj.name} ({obj.type === 'branding' ? 'Branding' : 'Performance'})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <CurrencyInput value={row.percent} onChange={v => handleDistChange(idx, 'percent', v)} className="text-xs" placeholder="%" />
+                          <CurrencyInput value={row.expected_cpl} onChange={v => handleDistChange(idx, 'expected_cpl', v)} prefix="R$" className="text-xs" placeholder="CPL" />
+                          <PercentInput value={row.tax_percent || 0} onChange={v => handleDistChange(idx, 'tax_percent', v)} className="text-xs h-9" />
+                          <button onClick={() => toggleRowExpand(idx)} disabled={!hasObjective}
+                            className={`p-1.5 rounded-md ${hasObjective ? 'hover:bg-gray-100 text-gray-400' : 'text-gray-200 cursor-not-allowed'}`} title="Editar funil">
+                            {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                          </button>
+                          <button onClick={() => { setDistribution(d => d.filter((_, i) => i !== idx)); setResult(null); }}
+                            className="p-1.5 rounded-md hover:bg-red-50 text-red-400">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        {hasObjective && isExpanded && (
+                          <div className="px-3 py-3 bg-secondary/30 border-t border-gray-100">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Info className="w-3.5 h-3.5 text-secondary-foreground" />
+                              <span className="text-[11px] font-semibold text-secondary-foreground">Dados do Funil — {row.objective_name}</span>
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-xs">
+                              <div>
+                                <p className="text-gray-400 mb-1">Ticket Médio</p>
+                                <CurrencyInput value={row.average_ticket} onChange={v => updateRowTicket(idx, v)} prefix="R$" className="text-xs h-9" />
+                              </div>
+                              {(row.conversion_rates || []).map((r, ri) => (
+                                <div key={ri}>
+                                  <p className="text-gray-400 mb-1">{convLabels[ri] || `Taxa ${ri + 1}`}</p>
+                                  <PercentInput value={r} onChange={v => updateRowRate(idx, ri, v)} className="text-xs" />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
+
               <div className="flex flex-wrap gap-3 mt-3">
-                <Button variant="outline" onClick={() => { setDistribution(d => [...d, { channel_name: 'Meta', percent: 0, expected_cpl: 0, tax_percent: 0 }]); setResult(null); }} className="gap-2 text-sm">
+                <Button variant="outline" onClick={addChannel} className="gap-2 text-sm">
                   <Plus className="w-4 h-4" /> Adicionar Canal
                 </Button>
                 <Button
-                  onClick={() => setResult(calculateReversePlan(targetRevenue, editedTicket, conversionRates, distribution))}
+                  onClick={() => setResult(calculateReversePlan(targetRevenue, distribution))}
                   className="gap-2 bg-primary hover:bg-primary/90"
                   disabled={!canCalculate}
                 >
                   <Calculator className="w-4 h-4" /> Calcular
                 </Button>
+                {!canCalculate && distribution.length > 0 && (
+                  <span className="text-[11px] text-gray-400 self-center">
+                    {Math.abs(totalPercent - 100) >= 0.01 ? 'A soma dos % deve ser 100.' : 'Selecione um objetivo em cada canal.'}
+                  </span>
+                )}
               </div>
             </div>
           </>
@@ -556,29 +627,24 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
             <StatCard label="Meta de Receita" value={fmt(targetRevenue)} icon={TrendingDown} color="green" />
           </div>
 
-          {funnelVisualStages.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">Projeção do Funil</h3>
-              <FunnelVisual stages={funnelVisualStages} />
-            </div>
-          )}
-
           {result.channel_budgets?.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
               <div className="px-6 py-4 border-b border-gray-50">
-                <h3 className="text-sm font-semibold text-gray-900">Orçamento por Canal</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Resultado por Canal</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-gray-50/50 border-b border-gray-100">
                       <th className="text-left py-2.5 px-4 font-medium text-gray-500">Canal</th>
-                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Distribuição</th>
+                      <th className="text-left py-2.5 px-4 font-medium text-gray-500">Objetivo</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">%</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">CPL</th>
-                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Leads Nec.</th>
-                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Budget Nec.</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Leads</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Vendas</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Budget</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Imposto</th>
-                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Total c/ Imposto</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Total c/ Imp.</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">ROAS</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">CAC</th>
                     </tr>
@@ -587,12 +653,14 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                     {result.channel_budgets.map((ch, i) => (
                       <tr key={i}>
                         <td className="py-2.5 px-4"><ChannelBadge channel={ch.channel_name} /></td>
+                        <td className="py-2.5 px-4 text-gray-600">{ch.objective_name || '—'}</td>
                         <td className="py-2.5 px-4 text-right">{ch.percent}%</td>
                         <td className="py-2.5 px-4 text-right">R${ch.expected_cpl}</td>
                         <td className="py-2.5 px-4 text-right">{ch.required_leads.toLocaleString()}</td>
+                        <td className="py-2.5 px-4 text-right">{ch.required_sales.toLocaleString()}</td>
                         <td className="py-2.5 px-4 text-right font-semibold">{fmt(ch.required_budget)}</td>
                         <td className="py-2.5 px-4 text-right">{ch.tax_value ? fmt(ch.tax_value) : '—'}</td>
-                        <td className="py-2.5 px-4 text-right font-semibold">{ch.total_with_tax ? fmt(ch.total_with_tax) : fmt(ch.required_budget)}</td>
+                        <td className="py-2.5 px-4 text-right font-semibold">{fmt(ch.total_with_tax)}</td>
                         <td className="py-2.5 px-4 text-right">{ch.roas ? `${ch.roas.toFixed(2)}x` : '—'}</td>
                         <td className="py-2.5 px-4 text-right">{ch.cac ? fmt(ch.cac) : '—'}</td>
                       </tr>
@@ -600,18 +668,41 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                   </tbody>
                   <tfoot>
                     <tr className="bg-gray-50 border-t border-gray-200 font-semibold">
-                      <td className="py-3 px-4">Total</td>
-                      <td className="py-3 px-4 text-right">100%</td>
-                      <td></td>
+                      <td className="py-3 px-4" colSpan={4}>Total</td>
                       <td className="py-3 px-4 text-right">{result.required_leads.toLocaleString()}</td>
+                      <td className="py-3 px-4 text-right">{result.required_sales.toLocaleString()}</td>
                       <td className="py-3 px-4 text-right">{fmt(result.total_investment)}</td>
                       <td className="py-3 px-4 text-right">{result.total_tax ? fmt(result.total_tax) : '—'}</td>
-                      <td className="py-3 px-4 text-right font-semibold">{result.total_with_tax ? fmt(result.total_with_tax) : fmt(result.total_investment)}</td>
+                      <td className="py-3 px-4 text-right font-semibold">{fmt(result.total_with_tax)}</td>
                       <td className="py-3 px-4 text-right">{result.total_roas ? `${result.total_roas.toFixed(2)}x` : '—'}</td>
                       <td className="py-3 px-4 text-right">{result.total_cac ? fmt(result.total_cac) : '—'}</td>
                     </tr>
                   </tfoot>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {/* Projeção do funil por canal (metrinhas separadas) */}
+          {result.channel_budgets?.filter(ch => ch.stage_values?.length > 0).length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Projeção do Funil por Canal</h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {result.channel_budgets.filter(ch => ch.stage_values?.length > 0).map((ch, i) => {
+                  const stages = (ch.funnel_stage_labels && ch.funnel_stage_labels.length === ch.stage_values.length)
+                    ? ch.funnel_stage_labels.map((l, k) => ({ label: l, value: ch.stage_values[k] }))
+                    : ch.stage_values.map((v, k) => ({ label: GENERIC_STAGE_LABELS[k] || `Etapa ${k + 1}`, value: v }));
+                  return (
+                    <div key={i} className="bg-white rounded-xl border border-gray-100 p-5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <ChannelBadge channel={ch.channel_name} />
+                        <span className="text-xs text-gray-400">·</span>
+                        <span className="text-xs font-medium text-gray-600">{ch.objective_name}</span>
+                      </div>
+                      <FunnelVisual stages={stages} />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

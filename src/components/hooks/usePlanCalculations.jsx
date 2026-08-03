@@ -202,60 +202,62 @@ export function calculateConsolidated(channels, conversionRates, averageTicket, 
   };
 }
 
-export function calculateReversePlan(targetRevenue, averageTicket, conversionRates, channelDistribution) {
-  const rates = conversionRates || [];
-  const finalRate = rates.reduce((acc, r) => acc * (r || 0), 1);
-  const requiredSales = averageTicket > 0 ? targetRevenue / averageTicket : 0;
-  const requiredLeads = finalRate > 0 ? requiredSales / finalRate : 0;
+export function calculateReversePlan(targetRevenue, rows) {
+  // Cada linha (row) carrega seu próprio objetivo, taxas de conversão, ticket médio, CPL e imposto.
+  // rows: [{ channel_name, objective_id, objective_name, percent, expected_cpl, tax_percent, conversion_rates, average_ticket, funnel_type_id, funnel_stage_labels }]
+  const rowResults = (rows || []).map(row => {
+    const rates = row.conversion_rates || [];
+    const finalRate = rates.reduce((acc, r) => acc * (r || 0), 1);
+    const rowRevenueTarget = targetRevenue * ((row.percent || 0) / 100);
+    const ticket = row.average_ticket || 0;
+    const requiredSales = ticket > 0 ? rowRevenueTarget / ticket : 0;
+    const requiredLeads = finalRate > 0 ? requiredSales / finalRate : 0;
 
-  // Calcula todas as etapas intermediárias dinamicamente (do topo para o fundo)
-  const stageValues = [Math.round(requiredLeads)];
-  let current = requiredLeads;
-  for (let i = 0; i < rates.length - 1; i++) {
-    current = current * (rates[i] || 0);
-    stageValues.push(Math.round(current));
-  }
-  stageValues.push(Math.round(requiredSales));
+    // Etapas do funil desta linha (do topo para o fundo)
+    const stageValues = [Math.round(requiredLeads)];
+    let current = requiredLeads;
+    for (let i = 0; i < rates.length - 1; i++) {
+      current = current * (rates[i] || 0);
+      stageValues.push(Math.round(current));
+    }
+    stageValues.push(Math.round(requiredSales));
 
-  const channelBudgets = channelDistribution.map(ch => {
-    const chLeads = requiredLeads * (ch.percent / 100);
-    const chBudget = chLeads * (ch.expected_cpl || 0);
-    const chTax = chBudget * (ch.tax_percent || 0);
+    const chBudget = requiredLeads * (row.expected_cpl || 0);
+    const chTax = chBudget * (row.tax_percent || 0);
     const chTotal = chBudget + chTax;
-    const chSales = requiredSales * (ch.percent / 100);
-    const chRevenue = chSales * averageTicket;
+    const chRevenue = requiredSales * ticket;
+
     return {
-      ...ch,
-      required_leads: Math.round(chLeads),
+      ...row,
+      required_sales: Math.round(requiredSales * 10) / 10,
+      required_leads: Math.round(requiredLeads),
+      stage_values: stageValues,
       required_budget: Math.round(chBudget),
       tax_value: Math.round(chTax),
       total_with_tax: Math.round(chTotal),
-      required_sales: Math.round(chSales * 10) / 10,
       revenue: Math.round(chRevenue),
       roas: chTotal > 0 ? Math.round((chRevenue / chTotal) * 100) / 100 : 0,
-      cac: chSales > 0 ? Math.round(chTotal / chSales) : 0,
+      cac: requiredSales > 0 ? Math.round(chTotal / requiredSales) : 0,
     };
   });
 
-  const totalInvestment = channelBudgets.reduce((sum, ch) => sum + ch.required_budget, 0);
-  const totalTax = channelBudgets.reduce((sum, ch) => sum + ch.tax_value, 0);
+  const totalInvestment = rowResults.reduce((s, r) => s + r.required_budget, 0);
+  const totalTax = rowResults.reduce((s, r) => s + r.tax_value, 0);
   const totalWithTax = totalInvestment + totalTax;
-  const totalRevenue = requiredSales * averageTicket;
+  const totalLeads = rowResults.reduce((s, r) => s + r.required_leads, 0);
+  const totalSales = rowResults.reduce((s, r) => s + r.required_sales, 0);
+  const totalRevenue = rowResults.reduce((s, r) => s + r.revenue, 0);
 
   return {
-    required_sales: Math.round(requiredSales * 10) / 10,
-    required_leads: Math.round(requiredLeads),
-    stage_values: stageValues, // array dinâmico com todas as etapas
-    // retrocompatibilidade
-    required_appointments: Math.round(requiredLeads * (rates[0] || 0)),
-    required_showups: Math.round(requiredLeads * (rates[0] || 0) * (rates[1] || 0)),
-    channel_budgets: channelBudgets,
-    total_investment: totalInvestment,
+    required_sales: Math.round(totalSales * 10) / 10,
+    required_leads: Math.round(totalLeads),
+    channel_budgets: rowResults,
+    total_investment: Math.round(totalInvestment),
     total_tax: Math.round(totalTax),
     total_with_tax: Math.round(totalWithTax),
     total_revenue: Math.round(totalRevenue),
     total_roas: totalWithTax > 0 ? Math.round((totalRevenue / totalWithTax) * 100) / 100 : 0,
-    total_cac: requiredSales > 0 ? Math.round(totalWithTax / requiredSales) : 0,
+    total_cac: totalSales > 0 ? Math.round(totalWithTax / totalSales) : 0,
   };
 }
 
