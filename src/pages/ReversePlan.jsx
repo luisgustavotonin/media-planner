@@ -355,6 +355,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
       benchmark_rates: benchmarkRates,
       average_ticket: selectedClient?.average_ticket || 0,
       expected_cpl: getCplFromBenchmark(bm),
+      benchmark_cpl: getCplFromBenchmark(bm),
     };
   };
 
@@ -478,8 +479,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
 
   // Monta as etapas do funil (volumes) a partir de taxas, usando base 100 leads,
   // para comparar projeção do cliente x benchmark no gráfico.
-  const buildFunnelStages = (rates, labels) => {
-    const base = 100;
+  const buildFunnelStages = (rates, labels, base = 100) => {
     const lbls = labels && labels.length >= 2 ? labels : GENERIC_STAGE_LABELS;
     const stages = [{ label: lbls[0], value: base }];
     let cur = base;
@@ -610,17 +610,6 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                                 </div>
                               ))}
                             </div>
-
-                            {(row.conversion_rates || []).length > 0 && (row.benchmark_rates || []).length > 0 && (
-                              <div className="mt-4 pt-3 border-t border-gray-100">
-                                <p className="text-[11px] font-semibold text-gray-500 mb-1">Comparativo do Funil — Benchmark x Projeção</p>
-                                <FunnelVisual
-                                  stages={buildFunnelStages(row.conversion_rates, row.funnel_stage_labels)}
-                                  benchmarkStages={buildFunnelStages(row.benchmark_rates, row.funnel_stage_labels)}
-                                  funnelName={row.objective_name}
-                                />
-                              </div>
-                            )}
                           </div>
                         )}
                       </div>
@@ -728,6 +717,11 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                   const stages = (ch.funnel_stage_labels && ch.funnel_stage_labels.length === ch.stage_values.length)
                     ? ch.funnel_stage_labels.map((l, k) => ({ label: l, value: ch.stage_values[k] }))
                     : ch.stage_values.map((v, k) => ({ label: GENERIC_STAGE_LABELS[k] || `Etapa ${k + 1}`, value: v }));
+                  const hasBench = (ch.benchmark_rates || []).length > 0 && (ch.benchmark_cpl || 0) > 0;
+                  const benchLead = hasBench ? ch.required_budget / ch.benchmark_cpl : (ch.stage_values[0] || 0);
+                  const benchmarkStages = hasBench
+                    ? buildFunnelStages(ch.benchmark_rates, ch.funnel_stage_labels, benchLead)
+                    : null;
                   return (
                     <div key={i} className="bg-white rounded-xl border border-gray-100 p-5">
                       <div className="flex items-center gap-2 mb-3">
@@ -735,7 +729,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                         <span className="text-xs text-gray-400">·</span>
                         <span className="text-xs font-medium text-gray-600">{ch.objective_name}</span>
                       </div>
-                      <FunnelVisual stages={stages} />
+                      <FunnelVisual stages={stages} benchmarkStages={benchmarkStages} />
                     </div>
                   );
                 })}
