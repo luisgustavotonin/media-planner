@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../components/ui-custom/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import PercentInput from '../components/ui-custom/PercentInput';
 import ChannelBadge from '../components/ui-custom/ChannelBadge';
@@ -124,6 +123,7 @@ export default function Benchmarks() {
 
   const handleSave = () => {
     const { id, created_date, updated_date, created_by, created_by_id, ...data } = form;
+    if (!data.segment_label) { data.segment_label = 'Geral'; data.segment = 'general'; }
     // Sync legacy fields for backward compat
     data.lead_to_appointment_rate = data.conversion_rates?.[0] || 0;
     data.appointment_to_show_rate = data.conversion_rates?.[1] || 0;
@@ -146,7 +146,7 @@ export default function Benchmarks() {
     <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
       <PageHeader
         title="Benchmarks"
-        description="Taxas de conversão e CPL por funil + canal + objetivo + segmento."
+        description="Taxas de conversão e CPL por funil + canal + objetivo."
         actions={
           <Button onClick={openNew} className="gap-2 bg-primary hover:bg-primary/90 h-9 text-xs">
             <Plus className="w-4 h-4" /> Novo Benchmark
@@ -172,7 +172,6 @@ export default function Benchmarks() {
                     <tr className="border-b border-gray-100">
                       <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Canal</th>
                       <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Objetivo</th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Segmento</th>
                       {pairs.map((p, i) => (
                         <th key={i} className="text-center py-3 px-3 text-xs font-medium text-gray-500">{p}</th>
                       ))}
@@ -193,7 +192,6 @@ export default function Benchmarks() {
                               : <span className="text-xs text-gray-400">—</span>}
                           </td>
                           <td className="py-3 px-4 font-medium text-gray-900">{b.objective_name || b.objective_id || '—'}</td>
-                          <td className="py-3 px-4 text-gray-600">{b.segment_label || b.segment || '—'}</td>
                           {pairs.map((_, i) => (
                             <td key={i} className="py-3 px-3 text-center text-gray-600">{fmtPct(rates[i])}</td>
                           ))}
@@ -273,16 +271,6 @@ export default function Benchmarks() {
               )}
             </div>
 
-            <div>
-              <Label className="text-xs">Segmento (especialidade)</Label>
-              <Input
-                value={form.segment_label || ''}
-                onChange={e => setForm(f => ({ ...f, segment_label: e.target.value, segment: e.target.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_') || 'general' }))}
-                placeholder="Ex: Implantes, Estética, Geral..."
-                className="mt-1"
-              />
-            </div>
-
             {convPairs.length > 0 && (
               <>
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider pt-1">Taxas de Conversão</h4>
@@ -315,7 +303,7 @@ export default function Benchmarks() {
             <Button
               onClick={handleSave}
               className="w-full bg-primary hover:bg-primary/90"
-              disabled={saveMut.isPending || !form.funnel_type_id || !form.channel_name || !form.objective_id || !form.segment_label}
+              disabled={saveMut.isPending || !form.funnel_type_id || !form.channel_name || !form.objective_id}
             >
               {saveMut.isPending ? 'Salvando...' : editing ? 'Salvar Alterações' : 'Criar Benchmark'}
             </Button>
@@ -330,7 +318,7 @@ export default function Benchmarks() {
             <DialogTitle>Excluir Benchmark</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-gray-600 mt-2">
-            Tem certeza que deseja excluir o benchmark <strong>{deleteConfirm?.segment_label}</strong>? Esta ação não pode ser desfeita.
+            Tem certeza que deseja excluir este benchmark? Esta ação não pode ser desfeita.
           </p>
           <div className="flex gap-2 mt-4">
             <Button variant="outline" className="flex-1" onClick={() => setDeleteConfirm(null)}>Cancelar</Button>
