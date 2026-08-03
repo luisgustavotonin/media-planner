@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { calculateReversePlan } from '../components/hooks/usePlanCalculations';
@@ -152,51 +152,14 @@ function PlanList({ records, clients, onSelect, onNew }) {
 }
 
 // ── Visualizar planejamento salvo (somente leitura) ──
-function PlanView({ record, clients, funnelTypes, objectives, benchmarks, onBack }) {
+function PlanView({ record, clients, funnelTypes, onBack }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const cname = clients.find(c => c.id === record.client_id)?.clinic_name || record.client_name || '—';
   const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
   const fmtPct = v => `${(v * 100).toFixed(1)}%`;
-
-  // Reprocessa o resultado a partir da distribution guardada, re-injetando os
-  // benchmarks atuais por canal. Garante que planos salvos num formato antigo
-  // (sem stage_values/benchmark_rates por canal) também exibam o funil.
-  const result = useMemo(() => {
-    if (!record.distribution?.length) return record.result;
-    const inferFunnelTypeId = () => {
-      const labels = record.funnel_stage_labels;
-      if (!labels?.length) return '';
-      const ft = funnelTypes.find(f =>
-        (f.stages || []).map(s => s.label).join('|') === labels.join('|')
-      );
-      return ft?.id || '';
-    };
-    const baseFunnelTypeId = inferFunnelTypeId();
-    const enriched = record.distribution.map(row => {
-      const rowFunnelTypeId =
-        row.funnel_type_id
-        || (row.objective_id ? objectives.find(o => o.id === row.objective_id)?.funnel_type_id : '')
-        || baseFunnelTypeId;
-      const bm = findBenchmark({ benchmarks, funnelTypeId: rowFunnelTypeId, channelName: row.channel_name });
-      const benchmarkRates = getRatesFromBenchmark(bm);
-      const benchmarkCpl = getCplFromBenchmark(bm);
-      return {
-        ...row,
-        conversion_rates: row.conversion_rates?.length
-          ? row.conversion_rates
-          : (benchmarkRates.length ? benchmarkRates : record.conversion_rates || []),
-        average_ticket: row.average_ticket || record.average_ticket || 0,
-        tax_percent: row.tax_percent || 0,
-        funnel_stage_labels: row.funnel_stage_labels || record.funnel_stage_labels || null,
-        benchmark_rates: benchmarkRates,
-        benchmark_cpl: benchmarkCpl,
-        objective_name: row.objective_name || '',
-      };
-    });
-    return calculateReversePlan(record.target_revenue, enriched);
-  }, [record, funnelTypes, objectives, benchmarks]);
+  const result = record.result;
 
   const rowFunnelStages = (ch) => {
     const values = ch.stage_values || [];
@@ -943,8 +906,6 @@ export default function ReversePlan() {
           record={selectedRecord}
           clients={clients}
           funnelTypes={funnelTypes}
-          objectives={objectives}
-          benchmarks={benchmarks}
           onBack={() => { setSelectedRecord(null); setView('list'); }}
         />
       )}
