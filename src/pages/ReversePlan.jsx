@@ -175,9 +175,25 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
             <p className="text-sm text-gray-500">{cname}</p>
           </div>
         </div>
-        <Button variant="outline" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending} className="text-red-500 border-red-200 hover:bg-red-50">
-          <Trash2 className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {result && (
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => exportReversePlanToPdf({
+                clientName: cname,
+                planTitle: record.title,
+                targetRevenue: record.target_revenue,
+                result,
+              })}
+            >
+              <FileDown className="w-4 h-4" /> Exportar PDF
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending} className="text-red-500 border-red-200 hover:bg-red-50">
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       {result?.channel_budgets?.length > 0 && (
@@ -813,7 +829,7 @@ export default function ReversePlan() {
           funnelTypes={funnelTypes}
           objectives={objectives}
           benchmarks={benchmarks}
-          onSave={() => setView('list')}
+          onSave={() => {}}
           onBack={() => setView('list')}
         />
       )}
