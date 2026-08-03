@@ -77,8 +77,47 @@ export default function FunnelTypes() {
   });
   const deleteMut = useMutation({
     mutationFn: id => base44.entities.FunnelType.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['funnelTypes'] }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['funnelTypes'] }); setDeleteTarget(null); setDeleteUsage(null); },
   });
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteUsage, setDeleteUsage] = useState(null);
+  const [checkingUsage, setCheckingUsage] = useState(false);
+
+  const checkUsage = async (funnelId) => {
+    setCheckingUsage(true);
+    setDeleteUsage(null);
+    try {
+      const [plans, objectives, benchmarks] = await Promise.all([
+        base44.entities.MediaPlan.filter({ funnel_type_id: funnelId }),
+        base44.entities.CampaignObjective.filter({ funnel_type_id: funnelId }),
+        base44.entities.Benchmark.filter({ funnel_type_id: funnelId }),
+      ]);
+      setDeleteUsage({
+        plans: plans.length,
+        objectives: objectives.length,
+        benchmarks: benchmarks.length,
+        inUse: plans.length > 0 || objectives.length > 0 || benchmarks.length > 0,
+      });
+    } catch (e) {
+      setDeleteUsage({ inUse: false, error: true });
+    }
+    setCheckingUsage(false);
+  };
+
+  const handleDeleteClick = (f) => {
+    setDeleteTarget(f);
+    checkUsage(f.id);
+  };
+
+  const confirmDelete = () => {
+    if (deleteTarget && deleteUsage && !deleteUsage.inUse) deleteMut.mutate(deleteTarget.id);
+  };
+
+  const deactivateFunnel = () => {
+    if (deleteTarget) base44.entities.FunnelType.update(deleteTarget.id, { is_active: false }).then(() => queryClient.invalidateQueries({ queryKey: ['funnelTypes'] }));
+    setDeleteTarget(null);
+    setDeleteUsage(null);
+  };
 
   const handleEdit = (f) => {
     setEditing(f);
@@ -149,7 +188,7 @@ export default function FunnelTypes() {
                 <button onClick={() => handleEdit(f)} className="p-1.5 rounded-md hover:bg-gray-100">
                   <Pencil className="w-3.5 h-3.5 text-gray-400" />
                 </button>
-                <button onClick={() => deleteMut.mutate(f.id)} className="p-1.5 rounded-md hover:bg-red-50">
+                <button onClick={() => handleDeleteClick(f)} className="p-1.5 rounded-md hover:bg-red-50">
                   <Trash2 className="w-3.5 h-3.5 text-red-400" />
                 </button>
               </div>
@@ -270,6 +309,47 @@ export default function FunnelTypes() {
               {editing ? 'Atualizar' : 'Criar Funil'}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) { setDeleteTarget(null); setDeleteUsage(null); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Excluir tipo de funil</DialogTitle>
+          </DialogHeader>
+          {checkingUsage && (
+            <div className="flex items-center gap-2 py-6 justify-center text-sm text-gray-500">
+              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              Verificando uso...
+            </div>
+          )}
+          {!checkingUsage && deleteUsage?.inUse && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-700">
+                O funil <strong>{deleteTarget?.name}</strong> está em uso e não pode ser excluído. Inative-o para remover das opções mantendo os registros existentes.
+              </p>
+              <div className="text-xs text-gray-500 space-y-1 bg-gray-50 rounded-lg p-3">
+                {deleteUsage.plans > 0 && <p>• {deleteUsage.plans} plano(s) de mídia</p>}
+                {deleteUsage.objectives > 0 && <p>• {deleteUsage.objectives} objetivo(s) de campanha</p>}
+                {deleteUsage.benchmarks > 0 && <p>• {deleteUsage.benchmarks} benchmark(s)</p>}
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => { setDeleteTarget(null); setDeleteUsage(null); }}>Cancelar</Button>
+                <Button onClick={deactivateFunnel} className="bg-primary hover:bg-primary/90">Inativar funil</Button>
+              </div>
+            </div>
+          )}
+          {!checkingUsage && deleteUsage && !deleteUsage.inUse && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-700">
+                Tem certeza que deseja excluir o funil <strong>{deleteTarget?.name}</strong>? Esta ação não pode ser desfeita.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => { setDeleteTarget(null); setDeleteUsage(null); }}>Cancelar</Button>
+                <Button onClick={confirmDelete} className="bg-red-500 hover:bg-red-600 text-white">Excluir</Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
