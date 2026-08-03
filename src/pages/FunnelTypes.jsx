@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { GitBranch, Plus, Pencil, Trash2, ChevronRight, GripVertical, X } from 'lucide-react';
+import { GitBranch, Plus, Pencil, Trash2, ChevronRight, GripVertical, X, Copy } from 'lucide-react';
 
 const METRIC_TYPES = [
   { value: 'quantidade', label: 'Quantidade', example: 'ex: curtidas, seguidores, leads' },
@@ -131,6 +131,16 @@ export default function FunnelTypes() {
     setOpen(true);
   };
 
+  const handleDuplicate = (f) => {
+    const data = {
+      name: `${f.name} (cópia)`,
+      description: f.description || '',
+      stages: (f.stages || []).map(s => ({ ...s, key: `stage_${Date.now()}_${Math.random().toString(36).slice(2, 7)}` })),
+      is_active: true,
+    };
+    createMut.mutate(data);
+  };
+
   const handleSubmit = () => {
     const data = { name: form.name, description: form.description, stages: form.stages, is_active: form.is_active };
     if (editing) updateMut.mutate({ id: editing.id, d: data });
@@ -187,6 +197,9 @@ export default function FunnelTypes() {
               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button onClick={() => handleEdit(f)} className="p-1.5 rounded-md hover:bg-gray-100">
                   <Pencil className="w-3.5 h-3.5 text-gray-400" />
+                </button>
+                <button onClick={() => handleDuplicate(f)} className="p-1.5 rounded-md hover:bg-gray-100" title="Duplicar">
+                  <Copy className="w-3.5 h-3.5 text-gray-400" />
                 </button>
                 <button onClick={() => handleDeleteClick(f)} className="p-1.5 rounded-md hover:bg-red-50">
                   <Trash2 className="w-3.5 h-3.5 text-red-400" />
