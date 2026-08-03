@@ -636,9 +636,10 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">CPL</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Leads</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Vendas</th>
-                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Budget</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Inv. Líquido</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">Imposto</th>
-                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Total c/ Imp.</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Inv. Bruto</th>
+                      <th className="text-right py-2.5 px-4 font-medium text-gray-500">Valor em Vendas</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">ROAS</th>
                       <th className="text-right py-2.5 px-4 font-medium text-gray-500">CAC</th>
                     </tr>
@@ -655,6 +656,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                         <td className="py-2.5 px-4 text-right font-semibold">{fmt(ch.required_budget)}</td>
                         <td className="py-2.5 px-4 text-right">{ch.tax_value ? fmt(ch.tax_value) : '—'}</td>
                         <td className="py-2.5 px-4 text-right font-semibold">{fmt(ch.total_with_tax)}</td>
+                        <td className="py-2.5 px-4 text-right font-semibold text-green-700">{fmt(ch.revenue)}</td>
                         <td className="py-2.5 px-4 text-right">{ch.roas ? `${ch.roas.toFixed(2)}x` : '—'}</td>
                         <td className="py-2.5 px-4 text-right">{ch.cac ? fmt(ch.cac) : '—'}</td>
                       </tr>
@@ -668,6 +670,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                       <td className="py-3 px-4 text-right">{fmt(result.total_investment)}</td>
                       <td className="py-3 px-4 text-right">{result.total_tax ? fmt(result.total_tax) : '—'}</td>
                       <td className="py-3 px-4 text-right font-semibold">{fmt(result.total_with_tax)}</td>
+                      <td className="py-3 px-4 text-right font-semibold text-green-700">{fmt(result.total_revenue)}</td>
                       <td className="py-3 px-4 text-right">{result.total_roas ? `${result.total_roas.toFixed(2)}x` : '—'}</td>
                       <td className="py-3 px-4 text-right">{result.total_cac ? fmt(result.total_cac) : '—'}</td>
                     </tr>
