@@ -203,59 +203,76 @@ export function calculateConsolidated(channels, conversionRates, averageTicket, 
 }
 
 export function calculateReversePlan(targetRevenue, rows) {
-  // Cada linha (row) carrega seu próprio objetivo, taxas de conversão, ticket médio, CPL e imposto.
-  // rows: [{ channel_name, objective_id, objective_name, percent, expected_cpl, tax_percent, conversion_rates, average_ticket, funnel_type_id, funnel_stage_labels }]
-  const rowResults = (rows || []).map(row => {
+  // O % de cada canal aloca o INVESTIMENTO BRUTO total (não a receita).
+  // Modelo: para cada canal, receita = gross * (pct/100) * finalRate * ticket / (CPL * (1+tax)).
+  // Somando: totalGross * K = targetRevenue  =>  totalGross = targetRevenue / K.
+  // Assim o % reflete exatamente a fatia do Inv. Bruto de cada canal.
+  const rows2 = rows || [];
+
+  const K = rows2.reduce((s, row) => {
     const rates = row.conversion_rates || [];
     const finalRate = rates.reduce((acc, r) => acc * (r || 0), 1);
-    const rowRevenueTarget = targetRevenue * ((row.percent || 0) / 100);
+    const cpl = row.expected_cpl || 0;
+    const tax = row.tax_percent || 0;
     const ticket = row.average_ticket || 0;
-    const requiredSales = ticket > 0 ? rowRevenueTarget / ticket : 0;
-    const requiredLeads = finalRate > 0 ? requiredSales / finalRate : 0;
+    if (cpl <= 0 || ticket <= 0 || finalRate <= 0) return s;
+    return s + ((row.percent || 0) / 100) * finalRate * ticket / (cpl * (1 + tax));
+  }, 0);
 
-    // Etapas do funil desta linha (do topo para o fundo)
-    const stageValues = [Math.round(requiredLeads)];
-    let current = requiredLeads;
+  const totalGross = K > 0 ? targetRevenue / K : 0;
+
+  const rowResults = rows2.map(row => {
+    const rates = row.conversion_rates || [];
+    const finalRate = rates.reduce((acc, r) => acc * (r || 0), 1);
+    const pct = (row.percent || 0) / 100;
+    const tax = row.tax_percent || 0;
+    const gross = totalGross * pct;            // Inv. Bruto = fatia % do investimento bruto total
+    const net = tax > 0 ? gross / (1 + tax) : gross;  // Inv. Líquido
+    const taxValue = gross - net;              // Imposto
+    const cpl = row.expected_cpl || 0;
+    const leads = cpl > 0 ? net / cpl : 0;
+    const sales = leads * finalRate;
+    const ticket = row.average_ticket || 0;
+    const revenue = sales * ticket;
+
+    // Etapas do funil (do topo para o fundo) — sempre inteiros
+    const stageValues = [Math.round(leads)];
+    let current = leads;
     for (let i = 0; i < rates.length - 1; i++) {
       current = current * (rates[i] || 0);
       stageValues.push(Math.round(current));
     }
-    stageValues.push(Math.round(requiredSales));
-
-    const chBudget = requiredLeads * (row.expected_cpl || 0);
-    const chTax = chBudget * (row.tax_percent || 0);
-    const chTotal = chBudget + chTax;
-    const chRevenue = requiredSales * ticket;
+    stageValues.push(Math.round(sales));
 
     return {
       ...row,
-      required_sales: Math.round(requiredSales * 10) / 10,
-      required_leads: Math.round(requiredLeads),
+      required_sales: Math.round(sales),
+      required_leads: Math.round(leads),
       stage_values: stageValues,
-      required_budget: Math.round(chBudget),
-      tax_value: Math.round(chTax),
-      total_with_tax: Math.round(chTotal),
-      revenue: Math.round(chRevenue),
-      roas: chTotal > 0 ? Math.round((chRevenue / chTotal) * 100) / 100 : 0,
-      cac: requiredSales > 0 ? Math.round(chTotal / requiredSales) : 0,
+      required_budget: Math.round(net),        // Inv. Líquido
+      tax_value: Math.round(taxValue),          // Imposto
+      total_with_tax: Math.round(gross),       // Inv. Bruto
+      revenue: Math.round(revenue),             // Valor em Vendas
+      roas: gross > 0 ? Math.round((revenue / gross) * 100) / 100 : 0,
+      cac: sales > 0 ? Math.round(gross / sales) : 0,
     };
   });
 
   const totalInvestment = rowResults.reduce((s, r) => s + r.required_budget, 0);
   const totalTax = rowResults.reduce((s, r) => s + r.tax_value, 0);
-  const totalWithTax = totalInvestment + totalTax;
+  const totalWithTax = rowResults.reduce((s, r) => s + r.total_with_tax, 0);
   const totalLeads = rowResults.reduce((s, r) => s + r.required_leads, 0);
   const totalSales = rowResults.reduce((s, r) => s + r.required_sales, 0);
   const totalRevenue = rowResults.reduce((s, r) => s + r.revenue, 0);
 
   return {
-    required_sales: Math.round(totalSales * 10) / 10,
-    required_leads: Math.round(totalLeads),
+    required_sales: totalSales,
+    required_leads: totalLeads,
     channel_budgets: rowResults,
-    total_investment: Math.round(totalInvestment),
-    total_tax: Math.round(totalTax),
-    total_with_tax: Math.round(totalWithTax),
-    total_revenue: Math.round(totalRevenue),
+    total_investment: totalInvestment,
+    total_tax: totalTax,
+    total_with_tax: totalWithTax,
+    total_revenue: totalRevenue,
     total_roas: totalWithTax > 0 ? Math.round((totalRevenue / totalWithTax) * 100) / 100 : 0,
     total_cac: totalSales > 0 ? Math.round(totalWithTax / totalSales) : 0,
   };

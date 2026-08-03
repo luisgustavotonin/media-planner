@@ -545,7 +545,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                     const hasObjective = !!row.objective_id;
                     return (
                       <div key={idx} className="border border-gray-100 rounded-lg overflow-hidden" style={{ borderLeft: `4px solid ${channelAccent(row.channel_name)}` }}>
-                        <div className={`grid grid-cols-1 lg:grid-cols-[1.2fr_1.4fr_0.8fr_1fr_0.8fr_32px_32px] gap-2 items-center p-2 transition-colors ${isExpanded ? 'bg-primary/10' : 'bg-gray-50/40'}`}>
+                        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1.4fr_0.8fr_1fr_0.8fr_32px_32px] gap-2 items-center p-2 transition-colors" style={{ backgroundColor: channelAccent(row.channel_name) + (isExpanded ? '22' : '12') }}>
                           <Select value={row.channel_name || undefined} onValueChange={v => setChannelForRow(idx, v)}>
                             <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Canal..." /></SelectTrigger>
                             <SelectContent>
