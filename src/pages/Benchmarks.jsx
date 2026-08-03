@@ -15,8 +15,6 @@ const EMPTY_FORM = {
   funnel_type_id: '',
   funnel_type_name: '',
   channel_name: '',
-  objective_id: '',
-  objective_name: '',
   segment: 'general',
   segment_label: '',
   conversion_rates: [],
@@ -42,10 +40,6 @@ export default function Benchmarks() {
     queryKey: ['channels'],
     queryFn: () => base44.entities.Channel.list(),
   });
-  const { data: objectives = [] } = useQuery({
-    queryKey: ['campaign-objectives'],
-    queryFn: () => base44.entities.CampaignObjective.list(),
-  });
 
   const activeChannels = useMemo(() => channels.filter(c => c.is_active), [channels]);
 
@@ -69,16 +63,6 @@ export default function Benchmarks() {
       }))
     : [];
 
-  // Objetivos aplicáveis ao canal selecionado que usam o funil selecionado
-  const objectivesForForm = useMemo(() => {
-    if (!form.funnel_type_id) return [];
-    return objectives
-      .filter(o => o.is_active !== false)
-      .filter(o => !form.channel_name || !o.channels?.length || o.channels.includes(form.channel_name))
-      .filter(o => !o.funnel_type_id || o.funnel_type_id === form.funnel_type_id)
-      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'));
-  }, [objectives, form.funnel_type_id, form.channel_name]);
-
   const openNew = () => {
     setEditing(null);
     setForm(EMPTY_FORM);
@@ -98,19 +82,12 @@ export default function Benchmarks() {
       ...f,
       funnel_type_id: funnelId,
       funnel_type_name: ft?.name || '',
-      objective_id: '',
-      objective_name: '',
       conversion_rates: Array(numPairs).fill(0),
     }));
   };
 
   const handleChannelChange = (channelName) => {
-    setForm(f => ({ ...f, channel_name: channelName, objective_id: '', objective_name: '' }));
-  };
-
-  const handleObjectiveChange = (objId) => {
-    const obj = objectives.find(o => o.id === objId);
-    setForm(f => ({ ...f, objective_id: objId, objective_name: obj?.name || '' }));
+    setForm(f => ({ ...f, channel_name: channelName }));
   };
 
   const setRate = (i, v) => {
@@ -146,7 +123,7 @@ export default function Benchmarks() {
     <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
       <PageHeader
         title="Benchmarks"
-        description="Taxas de conversão e CPL por funil + canal + objetivo."
+        description="Taxas de conversão e CPL por funil + canal."
         actions={
           <Button onClick={openNew} className="gap-2 bg-primary hover:bg-primary/90 h-9 text-xs">
             <Plus className="w-4 h-4" /> Novo Benchmark
@@ -171,7 +148,6 @@ export default function Benchmarks() {
                   <thead>
                     <tr className="border-b border-gray-100">
                       <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Canal</th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Objetivo</th>
                       {pairs.map((p, i) => (
                         <th key={i} className="text-center py-3 px-3 text-xs font-medium text-gray-500">{p}</th>
                       ))}
@@ -191,7 +167,6 @@ export default function Benchmarks() {
                               ? <ChannelBadge channel={b.channel_name} />
                               : <span className="text-xs text-gray-400">—</span>}
                           </td>
-                          <td className="py-3 px-4 font-medium text-gray-900">{b.objective_name || b.objective_id || '—'}</td>
                           {pairs.map((_, i) => (
                             <td key={i} className="py-3 px-3 text-center text-gray-600">{fmtPct(rates[i])}</td>
                           ))}
@@ -252,25 +227,6 @@ export default function Benchmarks() {
               </Select>
             </div>
 
-            <div>
-              <Label className="text-xs">Objetivo do canal</Label>
-              <Select
-                value={form.objective_id || undefined}
-                onValueChange={handleObjectiveChange}
-                disabled={!form.funnel_type_id || !form.channel_name || objectivesForForm.length === 0}
-              >
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione o objetivo..." /></SelectTrigger>
-                <SelectContent>
-                  {objectivesForForm.map(o => (
-                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.funnel_type_id && form.channel_name && objectivesForForm.length === 0 && (
-                <p className="text-[11px] text-amber-600 mt-1">Nenhum objetivo cadastrado para este canal/funil. Configure em Config. Campanhas.</p>
-              )}
-            </div>
-
             {convPairs.length > 0 && (
               <>
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider pt-1">Taxas de Conversão</h4>
@@ -303,7 +259,7 @@ export default function Benchmarks() {
             <Button
               onClick={handleSave}
               className="w-full bg-primary hover:bg-primary/90"
-              disabled={saveMut.isPending || !form.funnel_type_id || !form.channel_name || !form.objective_id}
+              disabled={saveMut.isPending || !form.funnel_type_id || !form.channel_name}
             >
               {saveMut.isPending ? 'Salvando...' : editing ? 'Salvar Alterações' : 'Criar Benchmark'}
             </Button>
