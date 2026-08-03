@@ -14,7 +14,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import PercentInput from '../components/ui-custom/PercentInput';
-import { Save, Users, DollarSign, TrendingUp, Target, ArrowLeft, FileDown, Trash2, Eye, MousePointer, Megaphone, Wallet, Radio, UserPlus, UserCheck, Repeat, MessageCircle, ShoppingBag, Calculator, Receipt, PhoneCall, CalendarCheck, Filter, Gauge, Sparkles, Activity, BarChart3, Image, Zap, Phone } from 'lucide-react';
+import { Save, Users, DollarSign, TrendingUp, Target, ArrowLeft, FileDown, Trash2, Eye, MousePointer, Megaphone, Wallet, Radio, UserPlus, UserCheck, Repeat, MessageCircle, ShoppingBag, Calculator, Receipt, PhoneCall, CalendarCheck, Filter, Gauge, Sparkles, Activity, BarChart3, Image, Zap, Phone, AlertTriangle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { exportPlanToPdf } from '../components/plan/PlanPdfExport';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -96,6 +97,7 @@ export default function PlanDetail() {
 
   const [localPlan, setLocalPlan] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   useEffect(() => {
     // Só sincroniza com o servidor se não houver edições locais em andamento
     if (plan && !isSaving) setLocalPlan(prev => prev === null ? { ...plan } : prev);
@@ -127,11 +129,7 @@ export default function PlanDetail() {
     }
   });
 
-  const handleDelete = () => {
-    if (window.confirm('Tem certeza que deseja deletar este plano de mídia? Esta ação não pode ser desfeita.')) {
-      deleteMut.mutate();
-    }
-  };
+  const handleDelete = () => setShowDeleteConfirm(true);
 
   if (isLoading || !localPlan) {
     return <div className="flex items-center justify-center h-64"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;

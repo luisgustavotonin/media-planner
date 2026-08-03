@@ -11,7 +11,8 @@ import { Label } from '@/components/ui/label';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import PercentInput from '../components/ui-custom/PercentInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Target, DollarSign, Users, TrendingDown, Calculator, Plus, Trash2, Info, Save, ArrowLeft, ChevronRight, ChevronDown, ChevronUp, FileDown } from 'lucide-react';
+import { Target, DollarSign, Users, TrendingDown, Calculator, Plus, Trash2, Info, Save, ArrowLeft, ChevronRight, ChevronDown, ChevronUp, FileDown, AlertTriangle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { findBenchmark, getCplFromBenchmark, getRatesFromBenchmark } from '@/lib/benchmarkLookup';
 import { exportReversePlanToPdf } from '../components/plan/ReversePlanPdfExport';
@@ -31,6 +32,27 @@ const CHANNEL_ACCENTS = {
   'Wix': '#000000',
 };
 const channelAccent = (name) => CHANNEL_ACCENTS[name] || '#f85d07';
+
+// ── Diálogo de confirmação de exclusão ──
+function ConfirmDeleteDialog({ open, onConfirm, onCancel, title = 'Excluir?', message = 'Esta ação não pode ser desfeita.' }) {
+  return (
+    <Dialog open={open} onOpenChange={v => !v && onCancel()}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-red-500" />
+            {title}
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-gray-600">{message}</p>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onCancel}>Cancelar</Button>
+          <Button variant="destructive" onClick={onConfirm}>Excluir</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 // ── Lista: cliente → planejamentos reversos ──
 function PlanList({ records, clients, onSelect, onNew }) {
@@ -133,6 +155,7 @@ function PlanList({ records, clients, onSelect, onNew }) {
 function PlanView({ record, clients, funnelTypes, onBack }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const cname = clients.find(c => c.id === record.client_id)?.clinic_name || record.client_name || '—';
   const fmt = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
   const fmtPct = v => `${(v * 100).toFixed(1)}%`;
@@ -163,8 +186,26 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
     },
   });
 
+  const buildFunnelStagesView = (rates, labels, base = 100) => {
+    const lbls = labels && labels.length >= 2 ? labels : GENERIC_STAGE_LABELS;
+    const stages = [{ label: lbls[0], value: Math.round(base) }];
+    let cur = base;
+    (rates || []).forEach((r, i) => {
+      cur = cur * (r || 0);
+      stages.push({ label: lbls[i + 1] || `Etapa ${i + 2}`, value: Math.round(cur) });
+    });
+    return stages;
+  };
+
   return (
     <div>
+      <ConfirmDeleteDialog
+        open={showDeleteConfirm}
+        title="Excluir planejamento?"
+        message="O planejamento será removido permanentemente. Esta ação não pode ser desfeita."
+        onConfirm={() => { setShowDeleteConfirm(false); deleteMutation.mutate(); }}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
@@ -190,7 +231,7 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
               <FileDown className="w-4 h-4" /> Exportar PDF
             </Button>
           )}
-          <Button variant="outline" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending} className="text-red-500 border-red-200 hover:bg-red-50">
+          <Button variant="outline" onClick={() => setShowDeleteConfirm(true)} disabled={deleteMutation.isPending} className="text-red-500 border-red-200 hover:bg-red-50">
             <Trash2 className="w-4 h-4" />
           </Button>
         </div>
@@ -249,16 +290,24 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
             <div className="mb-5">
               <h3 className="text-sm font-semibold text-gray-900 mb-3">Projeção do Funil por Canal</h3>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {result.channel_budgets.filter(ch => ch.stage_values?.length > 0).map((ch, i) => (
-                  <div key={i} className="bg-white rounded-xl border border-gray-100 p-5">
-                    <div className="flex items-center gap-2 mb-3">
-                      <ChannelBadge channel={ch.channel_name} />
-                      <span className="text-xs text-gray-400">·</span>
-                      <span className="text-xs font-medium text-gray-600">{ch.objective_name}</span>
+                {result.channel_budgets.filter(ch => ch.stage_values?.length > 0).map((ch, i) => {
+                  const stages = rowFunnelStages(ch);
+                  const hasBench = (ch.benchmark_rates || []).length > 0 && (ch.benchmark_cpl || 0) > 0;
+                  const benchLead = hasBench ? (ch.required_budget || 0) / ch.benchmark_cpl : (ch.stage_values[0] || 0);
+                  const benchmarkStages = hasBench
+                    ? buildFunnelStagesView(ch.benchmark_rates, ch.funnel_stage_labels, benchLead)
+                    : null;
+                  return (
+                    <div key={i} className="bg-white rounded-xl border border-gray-100 p-5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <ChannelBadge channel={ch.channel_name} />
+                        <span className="text-xs text-gray-400">·</span>
+                        <span className="text-xs font-medium text-gray-600">{ch.objective_name}</span>
+                      </div>
+                      <FunnelVisual stages={stages} benchmarkStages={benchmarkStages} />
                     </div>
-                    <FunnelVisual stages={rowFunnelStages(ch)} />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -335,6 +384,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
   const [distribution, setDistribution] = useState([]);
   const [result, setResult] = useState(null);
   const [expandedRows, setExpandedRows] = useState({});
+  const [deleteRowIdx, setDeleteRowIdx] = useState(null);
 
   const { data: channels = [] } = useQuery({
     queryKey: ['channels'],
@@ -509,6 +559,13 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
 
   return (
     <div>
+      <ConfirmDeleteDialog
+        open={deleteRowIdx !== null}
+        title="Remover canal?"
+        message="O canal será removido da distribuição. Esta ação não pode ser desfeita."
+        onConfirm={() => { setDistribution(d => d.filter((_, i) => i !== deleteRowIdx)); setResult(null); setDeleteRowIdx(null); }}
+        onCancel={() => setDeleteRowIdx(null)}
+      />
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
@@ -617,7 +674,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                             className={`p-1.5 rounded-md ${hasObjective ? 'hover:bg-gray-100 text-gray-400' : 'text-gray-200 cursor-not-allowed'}`} title="Editar funil">
                             {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                           </button>
-                          <button onClick={() => { setDistribution(d => d.filter((_, i) => i !== idx)); setResult(null); }}
+                          <button onClick={() => setDeleteRowIdx(idx)}
                             className="p-1.5 rounded-md hover:bg-red-50 text-red-400">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -749,7 +806,8 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                     ? ch.funnel_stage_labels.map((l, k) => ({ label: l, value: ch.stage_values[k] }))
                     : ch.stage_values.map((v, k) => ({ label: GENERIC_STAGE_LABELS[k] || `Etapa ${k + 1}`, value: v }));
                   const hasBench = (ch.benchmark_rates || []).length > 0 && (ch.benchmark_cpl || 0) > 0;
-                  const benchLead = hasBench ? ch.required_budget / ch.benchmark_cpl : (ch.stage_values[0] || 0);
+                  // benchLead = leads que o canal geraria com o benchmark CPL, sobre o mesmo budget líquido
+                  const benchLead = hasBench ? (ch.required_budget || 0) / ch.benchmark_cpl : 0;
                   const benchmarkStages = hasBench
                     ? buildFunnelStages(ch.benchmark_rates, ch.funnel_stage_labels, benchLead)
                     : null;

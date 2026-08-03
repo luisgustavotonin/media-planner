@@ -40,26 +40,21 @@ function buildFunnelStages(rates, labels, base) {
 }
 
 function drawHeader(doc, titulo, subtitulo, pageW) {
-  const headerH = 30;
+  const headerH = 26;
   doc.setFillColor(...C.marrom);
   doc.rect(0, 0, pageW, headerH, 'F');
   doc.setFillColor(...C.laranja);
   doc.rect(0, 0, 5, headerH, 'F');
 
-  doc.setTextColor(...C.laranja);
-  doc.setFontSize(7.5);
-  doc.setFont(undefined, 'bold');
-  doc.text('ESTUDO DA PARAMETRIZAÇÃO', 19, 9);
-
   doc.setTextColor(...C.linho);
   doc.setFontSize(15);
   doc.setFont(undefined, 'bold');
-  doc.text(safe(titulo), 19, 18);
+  doc.text(safe(titulo), 19, 14);
 
   doc.setFontSize(7.5);
   doc.setFont(undefined, 'normal');
   doc.setTextColor(...C.crema);
-  doc.text(safe(subtitulo), 19, 25);
+  doc.text(safe(subtitulo), 19, 21);
   return headerH;
 }
 
@@ -306,14 +301,23 @@ export async function exportReversePlanToPdf({ clientName, planTitle, targetReve
 
   const channelsWithFunnel = (result.channel_budgets || []).filter(ch => (ch.stage_values || []).length > 0);
   const colW = (pageW - marginL * 2 - 6) / 2;
+  let pairMaxY = y;
   channelsWithFunnel.forEach((ch, i) => {
-    const cx = marginL + (i % 2) * (colW + 6);
-    if (i > 0 && i % 2 === 0) { doc.addPage(); y = 14; }
+    const isLeft = i % 2 === 0;
+    const cx = marginL + (isLeft ? 0 : colW + 6);
+
+    // New page for every new pair (except the very first)
+    if (i > 0 && isLeft) {
+      doc.addPage();
+      y = 14;
+      pairMaxY = y;
+    }
+
     const stages = (ch.funnel_stage_labels && ch.funnel_stage_labels.length === ch.stage_values.length)
       ? ch.funnel_stage_labels.map((l, k) => ({ label: l, value: ch.stage_values[k] }))
       : ch.stage_values.map((v, k) => ({ label: GENERIC_STAGE_LABELS[k] || `Etapa ${k + 1}`, value: v }));
     const hasBench = (ch.benchmark_rates || []).length > 0 && (ch.benchmark_cpl || 0) > 0;
-    const benchLead = hasBench ? ch.required_budget / ch.benchmark_cpl : (ch.stage_values[0] || 0);
+    const benchLead = hasBench ? (ch.required_budget || 0) / ch.benchmark_cpl : 0;
     const benchmarkStages = hasBench
       ? buildFunnelStages(ch.benchmark_rates, ch.funnel_stage_labels, benchLead)
       : null;
@@ -322,7 +326,12 @@ export async function exportReversePlanToPdf({ clientName, planTitle, targetReve
       title: `${ch.channel_name}  |  ${ch.objective_name || ''}`,
       stages, benchmarkStages,
     });
-    if (i % 2 === 1) y = 14; else y = endY + 4;
+
+    pairMaxY = Math.max(pairMaxY, endY);
+    // After right column (or last odd channel), advance y past both columns
+    if (!isLeft || i === channelsWithFunnel.length - 1) {
+      y = pairMaxY + 4;
+    }
   });
 
   // Footer
