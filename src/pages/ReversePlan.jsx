@@ -344,6 +344,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
       objectiveId,
     });
     let rates = getRatesFromBenchmark(bm);
+    const benchmarkRates = [...rates];
     if (rates.length === 0) rates = [0.3, 0.5, 0.5];
     return {
       objective_name: obj.name,
@@ -351,6 +352,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
       funnel_type_id: obj.funnel_type_id || '',
       funnel_stage_labels: stageLabels,
       conversion_rates: rates,
+      benchmark_rates: benchmarkRates,
       average_ticket: selectedClient?.average_ticket || 0,
       expected_cpl: getCplFromBenchmark(bm),
     };
@@ -474,6 +476,20 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
       : GENERIC_RATE_LABELS;
   };
 
+  // Monta as etapas do funil (volumes) a partir de taxas, usando base 100 leads,
+  // para comparar projeção do cliente x benchmark no gráfico.
+  const buildFunnelStages = (rates, labels) => {
+    const base = 100;
+    const lbls = labels && labels.length >= 2 ? labels : GENERIC_STAGE_LABELS;
+    const stages = [{ label: lbls[0], value: base }];
+    let cur = base;
+    (rates || []).forEach((r, i) => {
+      cur = cur * (r || 0);
+      stages.push({ label: lbls[i + 1] || `Etapa ${i + 2}`, value: cur });
+    });
+    return stages;
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -594,6 +610,17 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                                 </div>
                               ))}
                             </div>
+
+                            {(row.conversion_rates || []).length > 0 && (row.benchmark_rates || []).length > 0 && (
+                              <div className="mt-4 pt-3 border-t border-gray-100">
+                                <p className="text-[11px] font-semibold text-gray-500 mb-1">Comparativo do Funil — Benchmark x Projeção</p>
+                                <FunnelVisual
+                                  stages={buildFunnelStages(row.conversion_rates, row.funnel_stage_labels)}
+                                  benchmarkStages={buildFunnelStages(row.benchmark_rates, row.funnel_stage_labels)}
+                                  funnelName={row.objective_name}
+                                />
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
