@@ -238,7 +238,9 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
   const isCampaignOver = maxCampaignBudget !== undefined && campaignBudget > maxCampaignBudget + 0.01;
   const isAdsetOver = adsetTotal > campaignBudget + 0.01;
   const currentObj = objectives.find(o => o.name === campaign.objective);
-  const effectiveFunnelTypeId = campaign.funnel_type_id || currentObj?.funnel_type_id || '';
+  // Se o funnel_type_id da campanha não existir mais (funil deletado), cai no funil do objetivo
+  const campaignFunnelStillExists = campaign.funnel_type_id && funnelTypes.some(ft => ft.id === campaign.funnel_type_id);
+  const effectiveFunnelTypeId = (campaignFunnelStillExists ? campaign.funnel_type_id : '') || currentObj?.funnel_type_id || '';
 
   const handleObjectiveChange = (v) => {
     const newKpiValues = syncKpiValues(campaign, v, objectives);
@@ -351,7 +353,9 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
   const updateParam = (field, val) => onChange({ ...campaign, params: { ...(campaign.params || {}), [field]: val } });
   const isOver = maxCampaignBudget !== undefined && (campaign.budget_value || 0) > maxCampaignBudget + 0.01;
   const currentObj = objectives.find(o => o.name === campaign.objective);
-  const effectiveFunnelTypeId = campaign.funnel_type_id || currentObj?.funnel_type_id || '';
+  // Se o funnel_type_id da campanha não existir mais (funil deletado), cai no funil do objetivo
+  const campaignFunnelStillExists = campaign.funnel_type_id && funnelTypes.some(ft => ft.id === campaign.funnel_type_id);
+  const effectiveFunnelTypeId = (campaignFunnelStillExists ? campaign.funnel_type_id : '') || currentObj?.funnel_type_id || '';
 
   const handleObjectiveChange = (v) => {
     const newKpiValues = syncKpiValues(campaign, v, objectives);
