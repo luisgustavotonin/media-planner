@@ -72,7 +72,9 @@ function CampaignKpis({ campaign, objectives, onChange, readOnly }) {
     const newKpiValues = displayKpis.map(k => k.label === label ? { ...k, value: val } : k);
     // Mantém kpi_value legado sincronizado com o primeiro KPI de moeda
     const costKpi = newKpiValues.find(kv => kv.unit === 'moeda');
-    onChange({ ...campaign, kpi_values: newKpiValues, kpi_value: costKpi?.value || campaign.kpi_value || 0 });
+    // Sincroniza funnel_rates com os KPIs percentuais editados (taxas de conversão do funil)
+    const percentualRates = newKpiValues.filter(kv => kv.unit === 'percentual').map(kv => kv.value);
+    onChange({ ...campaign, kpi_values: newKpiValues, kpi_value: costKpi?.value || campaign.kpi_value || 0, funnel_rates: percentualRates });
   };
 
   return (
@@ -102,11 +104,16 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
   const budget = campaign.budget_value || 0;
   const costKpi = (campaign.kpi_values || []).find(kv => kv.unit === 'moeda' && kv.value > 0 && !(kv.label || '').toLowerCase().includes('ticket'));
   const cpl = costKpi?.value || campaign.kpi_value || 0;
-  // KPIs percentuais (Tx de Agendamento, Tx de Comparecimento, etc.) são as taxas de conversão do funil
+  // KPIs percentuais (Tx de Agendamento, Tx de Comparecimento, etc.) são as taxas de conversão do funil.
+  // Mapeamos posição a posição: cada KPI percentual vira a taxa da transição correspondente.
+  // Se houver menos KPIs que transições, completamos com o benchmark (nunca com funnel_rates legado,
+  // que ficaria estático e ignoraria as edições do usuário).
   const percentualKpis = (campaign.kpi_values || []).filter(kv => kv.unit === 'percentual');
-  const rates = percentualKpis.length >= stages.length - 1
-    ? percentualKpis.map(kv => kv.value)
-    : (campaign.funnel_rates?.length ? campaign.funnel_rates : benchmarkRates);
+  const numRates = stages.length - 1;
+  const rates = [];
+  for (let i = 0; i < numRates; i++) {
+    rates.push(i < percentualKpis.length ? (percentualKpis[i].value || 0) : (benchmarkRates[i] || 0));
+  }
 
   // CPL de referência do benchmark (default_cpl por canal/objetivo/segmento)
   const bmCpl = getCplFromBenchmark(benchmark);
