@@ -11,9 +11,10 @@ import { Label } from '@/components/ui/label';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import PercentInput from '../components/ui-custom/PercentInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Target, DollarSign, Users, TrendingDown, Calculator, Plus, Trash2, Info, Save, ArrowLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { Target, DollarSign, Users, TrendingDown, Calculator, Plus, Trash2, Info, Save, ArrowLeft, ChevronRight, ChevronDown, ChevronUp, FileDown } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { findBenchmark, getCplFromBenchmark, getRatesFromBenchmark } from '@/lib/benchmarkLookup';
+import { exportReversePlanToPdf } from '../components/plan/ReversePlanPdfExport';
 
 const GENERIC_RATE_LABELS = ['Lead → Agend.', 'Agend. → Compar.', 'Compar. → Venda'];
 const GENERIC_STAGE_LABELS = ['Leads', 'Agendamentos', 'Comparecimentos', 'Vendas'];
@@ -481,11 +482,11 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
   // para comparar projeção do cliente x benchmark no gráfico.
   const buildFunnelStages = (rates, labels, base = 100) => {
     const lbls = labels && labels.length >= 2 ? labels : GENERIC_STAGE_LABELS;
-    const stages = [{ label: lbls[0], value: base }];
+    const stages = [{ label: lbls[0], value: Math.round(base) }];
     let cur = base;
     (rates || []).forEach((r, i) => {
       cur = cur * (r || 0);
-      stages.push({ label: lbls[i + 1] || `Etapa ${i + 2}`, value: cur });
+      stages.push({ label: lbls[i + 1] || `Etapa ${i + 2}`, value: Math.round(cur) });
     });
     return stages;
   };
@@ -503,9 +504,23 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
           </div>
         </div>
         {result && (
-          <Button onClick={handleSave} disabled={saveMutation.isPending} className="gap-2 bg-primary hover:bg-primary/90">
-            <Save className="w-4 h-4" /> Salvar
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => exportReversePlanToPdf({
+                clientName: selectedClient?.clinic_name,
+                planTitle: title,
+                targetRevenue,
+                result,
+              })}
+              variant="outline"
+              className="gap-2"
+            >
+              <FileDown className="w-4 h-4" /> Exportar PDF
+            </Button>
+            <Button onClick={handleSave} disabled={saveMutation.isPending} className="gap-2 bg-primary hover:bg-primary/90">
+              <Save className="w-4 h-4" /> Salvar
+            </Button>
+          </div>
         )}
       </div>
 
