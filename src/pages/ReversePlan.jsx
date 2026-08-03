@@ -18,6 +18,19 @@ import { findBenchmark, getCplFromBenchmark, getRatesFromBenchmark } from '@/lib
 const GENERIC_RATE_LABELS = ['Lead → Agend.', 'Agend. → Compar.', 'Compar. → Venda'];
 const GENERIC_STAGE_LABELS = ['Leads', 'Agendamentos', 'Comparecimentos', 'Vendas'];
 
+// Cor de destaque por canal para separar as caixas visualmente
+const CHANNEL_ACCENTS = {
+  'Google': '#4285F4',
+  'Meta': '#0866FF',
+  'Instagram': '#E1306C',
+  'TikTok': '#111111',
+  'YouTube': '#FF0000',
+  'LinkedIn': '#0A66C2',
+  'Outlook': '#0078D4',
+  'Wix': '#000000',
+};
+const channelAccent = (name) => CHANNEL_ACCENTS[name] || '#f85d07';
+
 // ── Lista: cliente → planejamentos reversos ──
 function PlanList({ records, clients, onSelect, onNew }) {
   const [selectedClientId, setSelectedClientId] = useState('');
@@ -531,8 +544,8 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                     const convLabels = rowConversionLabels(row);
                     const hasObjective = !!row.objective_id;
                     return (
-                      <div key={idx} className="border border-gray-100 rounded-lg overflow-hidden">
-                        <div className={`grid grid-cols-1 lg:grid-cols-[1.2fr_1.4fr_0.8fr_1fr_0.8fr_32px_32px] gap-2 items-center p-2 transition-colors ${isExpanded ? 'bg-primary/10 border-b border-primary/20' : 'bg-gray-50/40'}`}>
+                      <div key={idx} className="border border-gray-100 rounded-lg overflow-hidden" style={{ borderLeft: `4px solid ${channelAccent(row.channel_name)}` }}>
+                        <div className={`grid grid-cols-1 lg:grid-cols-[1.2fr_1.4fr_0.8fr_1fr_0.8fr_32px_32px] gap-2 items-center p-2 transition-colors ${isExpanded ? 'bg-primary/10' : 'bg-gray-50/40'}`}>
                           <Select value={row.channel_name || undefined} onValueChange={v => setChannelForRow(idx, v)}>
                             <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Canal..." /></SelectTrigger>
                             <SelectContent>
