@@ -142,21 +142,39 @@ function drawTable(doc, { startY, headers, rows, colWidths, pageW, marginL }) {
 }
 
 // Funil comparativo: projeção (laranja) x benchmark (cinza) com delta por etapa
+// Layout em "quadradinho": painel branco com cabeçalho, legend e barras que não
+// ultrapassam a borda — valor dentro da barra quando cheia, fora caso contrário.
 function drawComparisonFunnel(doc, { x, y, w, title, stages, benchmarkStages }) {
   const hasBench = benchmarkStages && benchmarkStages.length === stages.length;
   const fmtV = (v) => fmtN(v);
 
-  // Cabeçalho do card
-  doc.setFillColor(...C.linho);
+  const labelW = 13;
+  const deltaW = hasBench ? 13 : 0;
+  const barX = x + labelW + 2;
+  const barAreaW = w - labelW - 2 - deltaW - 3;
+  const stageH = 8.5;
+  const gap = 3.5;
+  const headerH = 9;
+  const legendH = 6;
+
+  const totalH = headerH + legendH + stages.length * (stageH + gap) + 3;
+
+  // Painel branco (quadradinho)
+  doc.setFillColor(...C.branco);
   doc.setDrawColor(...C.crema);
-  doc.roundedRect(x, y, w, 9, 1.5, 1.5, 'FD');
+  doc.roundedRect(x, y, w, totalH, 2, 2, 'FD');
+
+  // Cabeçalho
+  doc.setFillColor(...C.linho);
+  doc.roundedRect(x, y, w, headerH, 2, 2, 'F');
+  doc.rect(x, y + headerH - 3, w, 3, 'F');
   doc.setFontSize(7);
   doc.setFont(undefined, 'bold');
   doc.setTextColor(...C.marrom);
   doc.text(safe(title), x + 3, y + 6);
 
   // Legenda
-  let ly = y + 13;
+  let ly = y + headerH + 4;
   doc.setFontSize(5.5);
   doc.setFont(undefined, 'normal');
   doc.setFillColor(...C.laranja);
@@ -168,18 +186,15 @@ function drawComparisonFunnel(doc, { x, y, w, title, stages, benchmarkStages }) 
     doc.rect(x + 24, ly - 2, 3, 3, 'F');
     doc.text('Benchmark', x + 29, ly + 0.5);
     doc.setTextColor(...C.savana);
-    doc.text('Delta', x + w - 12, ly + 0.5);
+    doc.text('Delta', x + w - 3, ly + 0.5, { align: 'right' });
   }
-  ly += 5;
+  ly += legendH;
 
   const maxVal = Math.max(
     ...stages.map(s => s.value || 0),
     ...(hasBench ? benchmarkStages.map(s => s.value || 0) : [0]),
     1
   );
-  const barAreaW = hasBench ? w - 18 : w - 6;
-  const stageH = 8;
-  const gap = 3;
 
   stages.forEach((stage, i) => {
     const val = stage.value || 0;
@@ -187,32 +202,44 @@ function drawComparisonFunnel(doc, { x, y, w, title, stages, benchmarkStages }) 
     const sy = ly + i * (stageH + gap);
     const valW = (val / maxVal) * barAreaW;
     const bmW = hasBench ? (bm / maxVal) * barAreaW : 0;
+    const valFull = valW >= barAreaW * 0.78;
+    const bmFull = bmW >= barAreaW * 0.78;
 
     doc.setFontSize(5.5);
     doc.setFont(undefined, 'normal');
     doc.setTextColor(...C.marrom);
-    doc.text(safe(stage.label), x + 1, sy + 3);
+    doc.text(safe(stage.label), x + 2, sy + 3);
 
     // Barra projeção
     doc.setFillColor(...C.cinzaBenchLight);
-    doc.roundedRect(x + 16, sy, barAreaW, 3, 0.8, 0.8, 'F');
+    doc.roundedRect(barX, sy, barAreaW, 3, 0.8, 0.8, 'F');
     doc.setFillColor(...C.laranja);
-    doc.roundedRect(x + 16, sy, Math.max(valW, 2), 3, 0.8, 0.8, 'F');
-    doc.setTextColor(...C.marrom);
+    doc.roundedRect(barX, sy, Math.max(valW, 1.5), 3, 0.8, 0.8, 'F');
     doc.setFontSize(5.5);
     doc.setFont(undefined, 'bold');
-    doc.text(fmtV(val), x + 16 + Math.max(valW, 2) + 1.5, sy + 2.5);
+    if (valFull) {
+      doc.setTextColor(255, 255, 255);
+      doc.text(fmtV(val), barX + Math.max(valW, 1.5) - 1.5, sy + 2.5, { align: 'right' });
+    } else {
+      doc.setTextColor(...C.marrom);
+      doc.text(fmtV(val), barX + Math.max(valW, 1.5) + 1, sy + 2.5);
+    }
 
     // Barra benchmark
     if (hasBench) {
       doc.setFillColor(245, 245, 245);
-      doc.roundedRect(x + 16, sy + 3.5, barAreaW, 2.6, 0.6, 0.6, 'F');
+      doc.roundedRect(barX, sy + 3.5, barAreaW, 2.6, 0.6, 0.6, 'F');
       doc.setFillColor(...C.cinzaBench);
-      doc.roundedRect(x + 16, sy + 3.5, Math.max(bmW, 2), 2.6, 0.6, 0.6, 'F');
-      doc.setTextColor(...C.savana);
+      doc.roundedRect(barX, sy + 3.5, Math.max(bmW, 1.5), 2.6, 0.6, 0.6, 'F');
       doc.setFontSize(5);
       doc.setFont(undefined, 'normal');
-      doc.text(fmtV(bm), x + 16 + Math.max(bmW, 2) + 1.5, sy + 5.5);
+      if (bmFull) {
+        doc.setTextColor(255, 255, 255);
+        doc.text(fmtV(bm), barX + Math.max(bmW, 1.5) - 1.5, sy + 5.5, { align: 'right' });
+      } else {
+        doc.setTextColor(...C.savana);
+        doc.text(fmtV(bm), barX + Math.max(bmW, 1.5) + 1, sy + 5.5);
+      }
 
       // Delta
       const delta = bm > 0 ? ((val - bm) / bm) * 100 : 0;
@@ -220,11 +247,11 @@ function drawComparisonFunnel(doc, { x, y, w, title, stages, benchmarkStages }) 
       doc.setFont(undefined, 'bold');
       doc.setTextColor(...(delta >= 0 ? C.verde : C.vermelho));
       const sign = delta >= 0 ? '+' : '';
-      doc.text(`${sign}${delta.toFixed(1)}%`, x + w - 2, sy + 4, { align: 'right' });
+      doc.text(`${sign}${delta.toFixed(1)}%`, x + w - 3, sy + 4, { align: 'right' });
     }
   });
 
-  return ly + stages.length * (stageH + gap) + 4;
+  return y + totalH;
 }
 
 export async function exportReversePlanToPdf({ clientName, planTitle, targetRevenue, result }) {
