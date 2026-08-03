@@ -141,7 +141,7 @@ export default function Benchmarks() {
           return (
             <div key={key} className="bg-white rounded-xl border border-border overflow-hidden shadow-sm">
               <div className="px-4 py-3 border-b border-border bg-secondary">
-                <span className="text-xs font-semibold text-secondary-foreground uppercase tracking-wider">{group.label}</span>
+                <span className="text-xs font-semibold text-secondary-foreground uppercase tracking-wider">{ft?.name || group.label}</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
