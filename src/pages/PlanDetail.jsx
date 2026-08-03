@@ -315,6 +315,23 @@ export default function PlanDetail() {
 
   return (
     <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full">
+      <Dialog open={showDeleteConfirm} onOpenChange={v => !v && setShowDeleteConfirm(false)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+              Excluir plano de mídia?
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600">O plano de mídia será removido permanentemente. Esta ação não pode ser desfeita.</p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => { setShowDeleteConfirm(false); deleteMut.mutate(); }} disabled={deleteMut.isPending}>
+              {deleteMut.isPending ? 'Excluindo...' : 'Excluir'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="mb-6">
         <Link to={createPageUrl('MediaPlans')} className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 mb-4">
           <ArrowLeft className="w-3 h-3" /> Voltar aos Planos

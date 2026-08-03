@@ -8,9 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
-import { Building2, Plus, Search, MapPin, Phone, Mail, Pencil, Trash2 } from 'lucide-react';
+import { Building2, Plus, Search, MapPin, Phone, Mail, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 
 const ESPECIALIDADES = [
   { value: 'implants', label: 'Implantes' },
@@ -33,6 +33,7 @@ export default function Clients() {
   const [form, setForm] = useState(emptyClient);
   const [search, setSearch] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data: allClients = [], isLoading } = useQuery({
     queryKey: ['clients'],
@@ -52,7 +53,7 @@ export default function Clients() {
   });
   const deleteMut = useMutation({
     mutationFn: id => base44.entities.Client.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['clients'] }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['clients'] }); setDeleteTarget(null); },
   });
 
   const filtered = allClients.filter(c => c.clinic_name?.toLowerCase().includes(search.toLowerCase()));
@@ -124,7 +125,7 @@ export default function Clients() {
                   <button onClick={() => handleEdit(client)} className="p-1.5 rounded-md hover:bg-gray-100">
                     <Pencil className="w-3.5 h-3.5 text-gray-400" />
                   </button>
-                  <button onClick={() => deleteMut.mutate(client.id)} className="p-1.5 rounded-md hover:bg-red-50">
+                  <button onClick={() => setDeleteTarget(client)} className="p-1.5 rounded-md hover:bg-red-50">
                     <Trash2 className="w-3.5 h-3.5 text-red-400" />
                   </button>
                 </div>
@@ -216,6 +217,26 @@ export default function Clients() {
               {editing ? 'Atualizar Cliente' : 'Criar Cliente'}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+              Excluir cliente?
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600">
+            O cliente <strong>{deleteTarget?.clinic_name}</strong> será removido permanentemente. Esta ação não pode ser desfeita.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => deleteMut.mutate(deleteTarget.id)} disabled={deleteMut.isPending}>
+              {deleteMut.isPending ? 'Excluindo...' : 'Excluir'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
