@@ -318,7 +318,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
   const selectedClient = clients.find(c => c.id === selectedClientId);
 
   // Resolve os dados de um objetivo para uma linha (taxas, ticket, labels, CPL)
-  // Benchmark vem da chave: funil + canal + objetivo + segmento
+  // Benchmark vem da chave: funil + canal + objetivo
   const resolveObjectiveForRow = (objectiveId, channelName) => {
     const obj = objectives.find(o => o.id === objectiveId);
     if (!obj) return {};
@@ -329,7 +329,6 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
       funnelTypeId: obj.funnel_type_id,
       channelName,
       objectiveId,
-      segment: selectedClient?.specialty,
     });
     let rates = getRatesFromBenchmark(bm);
     if (rates.length === 0) rates = [0.3, 0.5, 0.5];

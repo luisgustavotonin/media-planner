@@ -1,62 +1,28 @@
 // Helper compartilhado para lookup de benchmarks.
-// Chave do benchmark: funil + canal + objetivo + segmento (com fallbacks em cascata).
+// Chave do benchmark: funil + canal + objetivo (segmento foi descontinuado).
 
 // Encontra o benchmark mais específico disponível.
 // Ordem de precedência:
-//   1) funil + canal + objetivo + segmento (exato)
-//   2) funil + canal + objetivo (sem segmento)
-//   3) funil + canal + segmento (sem objetivo)
-//   4) funil + canal (sem objetivo nem segmento)
-//   5) legado: funil + segmento (sem canal/objetivo)
-export function findBenchmark({ benchmarks = [], funnelTypeId, channelName, objectiveId, segment } = {}) {
+//   1) funil + canal + objetivo (exato)
+//   2) funil + canal (sem objetivo)
+//   3) legado: funil (sem canal)
+export function findBenchmark({ benchmarks = [], funnelTypeId, channelName, objectiveId } = {}) {
   if (!benchmarks.length) return null;
-  const match = (b) => {
-    if (funnelTypeId && b.funnel_type_id !== funnelTypeId) return false;
-    if (channelName && (b.channel_name || '') !== channelName) return false;
-    if (objectiveId && (b.objective_id || '') !== objectiveId) return false;
-    if (segment !== undefined && (b.segment || '') !== segment) return false;
-    return true;
-  };
-  // 1 — exato
+  // 1 — funil + canal + objetivo (exato)
   let b = benchmarks.find(x =>
     x.funnel_type_id === funnelTypeId &&
-    (x.channel_name || '') === channelName &&
-    (x.objective_id || '') === objectiveId &&
-    (x.segment || '') === segment
+    (x.channel_name || '') === (channelName || '') &&
+    (x.objective_id || '') === (objectiveId || '')
   );
   if (b) return b;
-  // 2 — sem segmento
+  // 2 — funil + canal (sem objetivo)
   b = benchmarks.find(x =>
     x.funnel_type_id === funnelTypeId &&
-    (x.channel_name || '') === channelName &&
-    (x.objective_id || '') === objectiveId &&
-    !x.segment
-  );
-  if (b) return b;
-  // 3 — sem objetivo
-  b = benchmarks.find(x =>
-    x.funnel_type_id === funnelTypeId &&
-    (x.channel_name || '') === channelName &&
-    (x.segment || '') === segment &&
+    (x.channel_name || '') === (channelName || '') &&
     !x.objective_id
   );
   if (b) return b;
-  // 4 — só funil + canal
-  b = benchmarks.find(x =>
-    x.funnel_type_id === funnelTypeId &&
-    (x.channel_name || '') === channelName &&
-    !x.objective_id &&
-    !x.segment
-  );
-  if (b) return b;
-  // 5 — legado: funil + segmento (sem canal)
-  b = benchmarks.find(x =>
-    x.funnel_type_id === funnelTypeId &&
-    !x.channel_name &&
-    (x.segment || '') === segment
-  );
-  if (b) return b;
-  // 6 — legado: só funil
+  // 3 — legado: só funil (sem canal)
   b = benchmarks.find(x => x.funnel_type_id === funnelTypeId && !x.channel_name);
   return b || null;
 }
