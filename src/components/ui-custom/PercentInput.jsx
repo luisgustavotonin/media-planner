@@ -8,7 +8,8 @@ export default function PercentInput({ value, onChange, className, disabled }) {
   const toDisplay = (v) => {
     if (v === '' || v === null || v === undefined) return '';
     const num = typeof v === 'number' ? v * 100 : parseFloat(v) * 100;
-    return isNaN(num) ? '' : parseFloat(num.toFixed(4)).toString().replace('.', ',');
+    if (isNaN(num) || num === 0) return '';
+    return parseFloat(num.toFixed(4)).toString().replace('.', ',');
   };
 
   const [display, setDisplay] = useState(toDisplay(value));
@@ -29,7 +30,8 @@ export default function PercentInput({ value, onChange, className, disabled }) {
 
   const handleBlur = () => {
     const parsed = parseFloat(display.replace(',', '.'));
-    if (!isNaN(parsed)) setDisplay(parseFloat(parsed.toFixed(2)).toString().replace('.', ','));
+    if (isNaN(parsed)) return;
+    setDisplay(parsed === 0 ? '' : parseFloat(parsed.toFixed(2)).toString().replace('.', ','));
   };
 
   return (

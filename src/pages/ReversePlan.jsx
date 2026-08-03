@@ -535,7 +535,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
             <div className="mb-5">
               <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Meta de Receita (R$)</Label>
               <div className="mt-2 max-w-xs">
-                <CurrencyInput value={targetRevenue} onChange={v => setTargetRevenue(v || 0)} prefix="R$" />
+                <CurrencyInput value={targetRevenue} onChange={v => setTargetRevenue(v || 0)} prefix="R$" placeholder="0" />
               </div>
             </div>
 
@@ -601,7 +601,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-xs">
                               <div>
                                 <p className="text-gray-400 mb-1">Ticket Médio</p>
-                                <CurrencyInput value={row.average_ticket} onChange={v => updateRowTicket(idx, v)} prefix="R$" className="text-xs h-9" />
+                                <CurrencyInput value={row.average_ticket} onChange={v => updateRowTicket(idx, v)} prefix="R$" className="text-xs h-9" placeholder="0" />
                               </div>
                               {(row.conversion_rates || []).map((r, ri) => (
                                 <div key={ri}>

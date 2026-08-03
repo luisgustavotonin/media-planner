@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 function formatDisplay(value) {
   if (value === '' || value === null || value === undefined) return '';
   const num = typeof value === 'string' ? parseFloat(value.replace(/\./g, '').replace(',', '.')) : value;
-  if (isNaN(num)) return '';
+  if (isNaN(num) || num === 0) return '';
   return num.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
@@ -29,11 +29,23 @@ export default function CurrencyInput({ value, onChange, className, placeholder,
   }, [value]);
 
   const handleChange = (e) => {
-    const raw = e.target.value;
-    // Permite digitar livremente: só números e vírgula
-    const filtered = raw.replace(/[^\d,]/g, '');
-    setDisplay(filtered);
-    const parsed = parseValue(filtered);
+    // Máscara dinâmica: só dígitos e uma vírgula, formatando milhares ao digitar
+    let raw = e.target.value.replace(/[^\d,]/g, '');
+    const commaIdx = raw.indexOf(',');
+    if (commaIdx !== -1) {
+      raw = raw.slice(0, commaIdx + 1) + raw.slice(commaIdx + 1).replace(/,/g, '');
+    }
+    const [intRaw, decRaw] = raw.split(',');
+    const intNum = parseInt(intRaw || '0', 10);
+    let newDisplay;
+    if (decRaw !== undefined) {
+      newDisplay = (intNum > 0 ? intNum.toLocaleString('pt-BR') : '0') + ',' + decRaw;
+    } else {
+      newDisplay = intNum > 0 ? intNum.toLocaleString('pt-BR') : '';
+      if (raw.endsWith(',')) newDisplay += ',';
+    }
+    setDisplay(newDisplay);
+    const parsed = parseValue(newDisplay);
     onChange(parsed === '' ? 0 : parsed);
   };
 
