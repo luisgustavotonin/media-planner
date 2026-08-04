@@ -48,8 +48,21 @@ export default function Clients() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['clients'] }); setOpen(false); },
   });
   const updateMut = useMutation({
-    mutationFn: ({ id, d }) => base44.entities.Client.update(id, d),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['clients'] }); setOpen(false); setEditing(null); },
+    mutationFn: async ({ id, d }) => {
+      await base44.entities.Client.update(id, d);
+      // Propaga o novo nome da clínica para os campos desnormalizados
+      const newName = d.clinic_name;
+      if (newName) {
+        await base44.entities.MediaPlan.updateMany({ client_id: id }, { $set: { client_name: newName } });
+        await base44.entities.ReversePlanRecord.updateMany({ client_id: id }, { $set: { client_name: newName } });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['plans'] });
+      queryClient.invalidateQueries({ queryKey: ['reverse-plans'] });
+      setOpen(false); setEditing(null);
+    },
   });
   const deleteMut = useMutation({
     mutationFn: id => base44.entities.Client.delete(id),
