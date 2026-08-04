@@ -358,7 +358,7 @@ export default function PlanDetail() {
               <Button
                 variant="outline"
                 className="gap-2 h-9 text-xs"
-                onClick={() => exportPlanToPdf({ localPlan, consolidated, totalInvestment, funnelStages, conversionPairs, getRate })}
+                onClick={() => exportPlanToPdf({ localPlan, consolidated, totalInvestment, funnelStages, conversionPairs, getRate, brandingGroups, performanceGroups })}
               >
                 <FileDown className="w-4 h-4" /> Exportar PDF
               </Button>

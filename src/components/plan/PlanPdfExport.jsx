@@ -152,24 +152,24 @@ function drawTable(doc, { startY, headers, rows, colWidths, pageW, marginL = 14,
 }
 
 // ── Gráfico funil vertical (barras verticais decrescentes, estilo UI) ─────────
-function drawFunnelChart(doc, { x, y, w, h, stages, values, pageW, marginL }) {
+function drawFunnelChart(doc, { x, y, w, h, stages, values, pageW, marginL, title = 'Funil de Conversão', compact = false }) {
   if (!stages || stages.length === 0) return y;
 
   const maxVal = Math.max(...values, 1);
-  const chartH = 52; // altura da área de barras
+  const chartH = compact ? 38 : 52; // altura da área de barras
   const footerH = 16; // área das taxas de conversão abaixo
   let cy = y;
 
   // Título
-  doc.setFontSize(9);
+  doc.setFontSize(compact ? 8 : 9);
   doc.setFont(undefined, 'bold');
   doc.setTextColor(...C.marrom);
-  doc.text('Funil de Conversão', marginL, cy);
+  doc.text(safe(title), x, cy);
   doc.setDrawColor(...C.laranja);
   doc.setLineWidth(0.5);
-  doc.line(marginL, cy + 1.5, marginL + 55, cy + 1.5);
+  doc.line(x, cy + 1.5, x + (compact ? 40 : 55), cy + 1.5);
   doc.setLineWidth(0.2);
-  cy += 7;
+  cy += compact ? 6 : 7;
 
   const n = stages.length;
   const gap = 3;
@@ -477,7 +477,137 @@ function drawMetaPage(doc, { metaCh, titulo, pageW, pageH, marginL }) {
 }
 
 // ── EXPORT PRINCIPAL ──────────────────────────────────────────────────────────
-export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment, funnelStages, conversionPairs, getRate }) {
+// ── Formatação de cards por unidade ────────────────────────────────────────────
+function fmtCard(value, unit, label) {
+  if (typeof value !== 'number' || !isFinite(value)) return '-';
+  if (unit === 'percentual') return (value * 100).toFixed(1) + '%';
+  if (unit === 'moeda') return 'R$' + Math.round(value).toLocaleString('pt-BR');
+  if (label && label.toLowerCase().includes('frequ')) return value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+  return Math.round(value).toLocaleString('pt-BR');
+}
+
+// ── Linha de cards (resumo por objetivo) ───────────────────────────────────────
+function drawCardsRow(doc, { cards, y, pageW, marginL, cardH = 14, accent = C.laranja }) {
+  const perRow = Math.min(cards.length, 6);
+  if (perRow === 0) return y;
+  const gap = 2.5;
+  const cardW = (pageW - marginL * 2 - (perRow - 1) * gap) / perRow;
+  cards.slice(0, 6).forEach((c, i) => {
+    const cx = marginL + i * (cardW + gap);
+    doc.setFillColor(...C.linho);
+    doc.setDrawColor(...C.crema);
+    doc.roundedRect(cx, y, cardW, cardH, 2, 2, 'FD');
+    doc.setFillColor(...accent);
+    doc.roundedRect(cx, y, cardW, 2.5, 1, 1, 'F');
+    doc.rect(cx, y + 1.2, cardW, 1.3, 'F');
+    doc.setFontSize(6);
+    doc.setTextColor(...C.savana);
+    doc.setFont(undefined, 'normal');
+    doc.text(safe(c.label), cx + 3, y + 6.5);
+    doc.setFontSize(9.5);
+    doc.setTextColor(...C.marrom);
+    doc.setFont(undefined, 'bold');
+    doc.text(safe(c.value), cx + 3, y + 12);
+  });
+  return y + cardH + 4;
+}
+
+function buildGroupCards(data, type) {
+  const cards = [{ label: 'Investimento', value: 'R$' + Math.round(data.investment || 0).toLocaleString('pt-BR') }];
+  if (data.calculatedCards && data.calculatedCards.length) {
+    data.calculatedCards.forEach(c => cards.push({ label: c.label, value: fmtCard(c.value, c.unit, c.label) }));
+  } else if (type === 'branding') {
+    const frequency = data.reach > 0 ? data.impressions / data.reach : 0;
+    if (data.impressions > 0) cards.push({ label: 'Impressões', value: Math.round(data.impressions).toLocaleString('pt-BR') });
+    if (data.reach > 0) cards.push({ label: 'Alcance', value: Math.round(data.reach).toLocaleString('pt-BR') });
+    if (frequency > 0) cards.push({ label: 'Frequência', value: frequency.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) });
+    if (data.clicks > 0) cards.push({ label: 'Cliques', value: Math.round(data.clicks).toLocaleString('pt-BR') });
+  } else {
+    if (data.leads > 0) cards.push({ label: 'Leads', value: Math.round(data.leads).toLocaleString('pt-BR') });
+    if (data.sales > 0) cards.push({ label: 'Vendas', value: Math.round(data.sales).toLocaleString('pt-BR') });
+    if (data.revenue > 0) cards.push({ label: 'Receita', value: 'R$' + Math.round(data.revenue).toLocaleString('pt-BR') });
+  }
+  return cards;
+}
+
+function drawSectionTitle(doc, text, y, color, marginL) {
+  doc.setFontSize(9);
+  doc.setFont(undefined, 'bold');
+  doc.setTextColor(...C.marrom);
+  doc.text(safe(text), marginL, y);
+  doc.setDrawColor(...color);
+  doc.setLineWidth(0.5);
+  doc.line(marginL, y + 1.5, marginL + 45, y + 1.5);
+  doc.setLineWidth(0.2);
+  return y + 6;
+}
+
+// ── Página: resumo por objetivo (branding + performance) ───────────────────────
+function drawObjectiveCardsPage(doc, { brandingGroups, performanceGroups, pageW, pageH, marginL, titulo }) {
+  const bEntries = Object.entries(brandingGroups || {});
+  const pEntries = Object.entries(performanceGroups || {});
+  if (bEntries.length === 0 && pEntries.length === 0) return;
+
+  doc.addPage();
+  const headerH = drawHeader(doc, titulo, 'Resumo por Objetivo — Branding & Performance', pageW);
+  let y = headerH + 8;
+
+  if (bEntries.length) {
+    y = drawSectionTitle(doc, 'Branding', y, C.amareloStage, marginL);
+    for (const [name, data] of bEntries) {
+      if (y > pageH - 25) { doc.addPage(); y = drawSectionTitle(doc, 'Branding (cont.)', 14, C.amareloStage, marginL); }
+      doc.setFontSize(7);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(...C.savana);
+      const chs = data.channels && data.channels.size ? '  ·  ' + Array.from(data.channels).join(', ') : '';
+      doc.text(safe(name) + chs, marginL, y);
+      y += 4;
+      y = drawCardsRow(doc, { cards: buildGroupCards(data, 'branding'), y, pageW, marginL, accent: C.amareloStage });
+      y += 2;
+    }
+  }
+
+  if (pEntries.length) {
+    y = drawSectionTitle(doc, 'Performance', y, C.azulMeta, marginL);
+    for (const [name, data] of pEntries) {
+      if (y > pageH - 25) { doc.addPage(); y = drawSectionTitle(doc, 'Performance (cont.)', 14, C.azulMeta, marginL); }
+      doc.setFontSize(7);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(...C.savana);
+      const chs = data.channels && data.channels.size ? '  ·  ' + Array.from(data.channels).join(', ') : '';
+      doc.text(safe(name) + chs, marginL, y);
+      y += 4;
+      y = drawCardsRow(doc, { cards: buildGroupCards(data, 'performance'), y, pageW, marginL, accent: C.azulMeta });
+      y += 2;
+    }
+  }
+}
+
+// ── Página: funis por canal ────────────────────────────────────────────────────
+function drawChannelFunnelsPage(doc, { channelResults, funnelStageLabels, pageW, pageH, marginL, titulo }) {
+  const perf = (channelResults || []).filter(ch => {
+    const sv = ch.metrics?.stageValues;
+    return sv && sv.length > 1 && sv.some(v => v > 0);
+  });
+  if (perf.length === 0) return;
+  doc.addPage();
+  const headerH = drawHeader(doc, titulo, 'Funil de Conversão por Canal', pageW);
+  const topY = headerH + 6;
+  const colGap = 8;
+  const colW = (pageW - marginL * 2 - colGap) / 2;
+  const rightX = marginL + colW + colGap;
+  let leftY = topY, rightY = topY, col = 0;
+  for (const ch of perf) {
+    const x = col === 0 ? marginL : rightX;
+    const startY = col === 0 ? leftY : rightY;
+    if (startY > pageH - 85) { doc.addPage(); leftY = topY; rightY = topY; col = 0; continue; }
+    const values = funnelStageLabels.map((_, i) => Math.round(ch.metrics.stageValues?.[i] || 0));
+    const endY = drawFunnelChart(doc, { x, y: startY, w: colW, h: 60, stages: funnelStageLabels, values, pageW, marginL, title: ch.channel_name || 'Canal', compact: true });
+    if (col === 0) { leftY = endY; col = 1; } else { rightY = endY; col = 0; }
+  }
+}
+
+export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment, funnelStages, conversionPairs, getRate, brandingGroups, performanceGroups }) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -628,6 +758,10 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
   ]);
 
   drawTable(doc, { startY: y, headers: tableHeaders, rows: tableRows, colWidths, pageW, marginL });
+
+  // ── Páginas extras: cards por objetivo e funis por canal ──
+  drawObjectiveCardsPage(doc, { brandingGroups, performanceGroups, pageW, pageH, marginL, titulo });
+  drawChannelFunnelsPage(doc, { channelResults: consolidated.channelResults, funnelStageLabels, pageW, pageH, marginL, titulo });
 
   // ── Footer em todas as páginas ─────────────────
   const pageCount = doc.internal.getNumberOfPages();
