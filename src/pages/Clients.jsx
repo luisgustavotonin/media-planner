@@ -49,12 +49,25 @@ export default function Clients() {
   });
   const updateMut = useMutation({
     mutationFn: async ({ id, d }) => {
+      // Captura o nome antigo antes de atualizar
+      const oldClient = await base44.entities.Client.get(id);
+      const oldName = oldClient?.clinic_name || '';
       await base44.entities.Client.update(id, d);
-      // Propaga o novo nome da clínica para os campos desnormalizados
       const newName = d.clinic_name;
-      if (newName) {
+      if (newName && newName !== oldName) {
+        // MediaPlan: atualiza o client_name desnormalizado
         await base44.entities.MediaPlan.updateMany({ client_id: id }, { $set: { client_name: newName } });
-        await base44.entities.ReversePlanRecord.updateMany({ client_id: id }, { $set: { client_name: newName } });
+        // ReversePlanRecord: atualiza client_name e títulos gerados automaticamente
+        const records = await base44.entities.ReversePlanRecord.filter({ client_id: id });
+        if (records.length) {
+          const oldPattern = `Planejamento — ${oldName}`;
+          const updates = records.map(r => ({
+            id: r.id,
+            client_name: newName,
+            title: r.title === oldPattern ? `Planejamento — ${newName}` : r.title,
+          }));
+          await base44.entities.ReversePlanRecord.bulkUpdate(updates);
+        }
       }
     },
     onSuccess: () => {
