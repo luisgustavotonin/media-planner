@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { useAuth } from './components/hooks/useAuth';
-import { Menu, X, ChevronRight, ChevronDown, LogOut, Briefcase } from 'lucide-react';
+import { usePermissions } from '@/hooks/usePermissions';
+import { Menu, X, ChevronRight, ChevronDown, LogOut, Briefcase, Clock, Lock } from 'lucide-react';
 import { APP_MODULES } from '@/lib/appModules';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
@@ -11,12 +11,12 @@ const mainNav = APP_MODULES.filter(m => m.group === 'Operacional');
 const adminNav = APP_MODULES.filter(m => m.group === 'Administrativo');
 
 export default function Layout({ children, currentPageName }) {
-  const { user, loading } = useAuth();
+  const { user, loading, isApproved, isAdmin, status, canView, allowedPages } = usePermissions();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const role = user?.role || 'user';
 
-  const filteredMain = mainNav.filter(item => item.roles.includes(role));
-  const filteredAdmin = adminNav.filter(item => item.roles.includes(role));
+  const filteredMain = mainNav.filter(item => item.roles.includes(role) && canView(item.key));
+  const filteredAdmin = adminNav.filter(item => item.roles.includes(role) && canView(item.key));
   const [adminOpen, setAdminOpen] = useState(() => filteredAdmin.some(item => item.page === currentPageName));
 
   if (loading) {
@@ -29,6 +29,34 @@ export default function Layout({ children, currentPageName }) {
       </div>
     );
   }
+
+  // Usuário não aprovado: bloqueia o acesso ao sistema
+  if (!isApproved && !isAdmin) {
+    const msg = status === 'SEM_VINCULO'
+      ? 'Você ainda não possui acesso a nenhum cliente. Solicite ao administrador que vincule você a um cliente e aprove seu acesso.'
+      : status === 'INATIVO'
+        ? 'Seu acesso está inativo. Entre em contato com o administrador.'
+        : 'Seu acesso está pendente de aprovação. Aguarde o administrador aprovar seu vínculo para acessar o sistema.';
+    return (
+      <div className="flex items-center justify-center h-screen bg-background px-6">
+        <div className="max-w-md text-center">
+          <div className="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
+            <Clock className="w-7 h-7 text-amber-600" />
+          </div>
+          <h1 className="text-lg font-semibold text-[#312b1d] mb-2">Acesso pendente</h1>
+          <p className="text-sm text-[#7e6951] mb-6">{msg}</p>
+          <button
+            onClick={() => base44.auth.logout()}
+            className="text-sm text-[#f85d07] hover:underline font-medium"
+          >
+            Sair
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const pageAllowed = isAdmin || allowedPages.includes(currentPageName);
 
   return (
     <div className="flex h-screen bg-background">
@@ -144,7 +172,17 @@ export default function Layout({ children, currentPageName }) {
         </header>
 
         <div className="flex-1 overflow-y-auto">
-          {children}
+          {pageAllowed ? children : (
+            <div className="flex items-center justify-center h-full px-6 py-16">
+              <div className="max-w-md text-center">
+                <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
+                  <Lock className="w-7 h-7 text-red-500" />
+                </div>
+                <h1 className="text-lg font-semibold text-[#312b1d] mb-2">Acesso restrito</h1>
+                <p className="text-sm text-[#7e6951]">Seu perfil não tem permissão para acessar esta página. Solicite acesso ao administrador.</p>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>
