@@ -66,7 +66,7 @@ export default function Layout({ children, currentPageName }) {
                   }`}
                 >
                   <item.icon className={`w-4 h-4 ${isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground/50'}`} />
-                  {item.name}
+                  {item.label}
                   {isActive && <ChevronRight className="w-3 h-3 ml-auto text-sidebar-primary" />}
                 </Link>
               );
@@ -98,7 +98,7 @@ export default function Layout({ children, currentPageName }) {
                           }`}
                         >
                           <item.icon className={`w-4 h-4 ${isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground/40'}`} />
-                          {item.name}
+                          {item.label}
                         </Link>
                       );
                     })}
