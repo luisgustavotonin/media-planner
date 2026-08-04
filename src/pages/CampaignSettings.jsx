@@ -12,6 +12,20 @@ import { sanitizeVar } from '@/lib/formulaEvaluator';
 const UNIT_LABELS = { numero: 'Número', moeda: 'Moeda (R$)', percentual: 'Percentual (%)' };
 const UNIT_SHORT = { numero: 'nº', moeda: 'R$', percentual: '%' };
 
+const TYPE_META = {
+  performance: { label: 'Performance (Funil)', short: 'Performance', desc: 'Passa pelo funil de vendas (leads → agendamento → venda). Medido por investimento.' },
+  branding: { label: 'Branding (Awareness)', short: 'Branding', desc: 'Não passa pelo funil de vendas — apenas métricas de eficiência (CPM, CTR, etc.). Medido por investimento.' },
+  reativacao: { label: 'Reativação de Base', short: 'Reativação', desc: 'Reativação de clientes inativos. Medido por quantidade de clientes (meta), com cálculo reverso via taxas de conversão e ticket médio.' },
+  resgate: { label: 'Resgate', short: 'Resgate', desc: 'Resgate de clientes. Medido por quantidade de clientes (meta), com cálculo reverso via taxas de conversão e ticket médio.' },
+};
+const QUANTITY_BASED_TYPES = ['reativacao', 'resgate'];
+const TYPE_BADGE = {
+  performance: 'bg-primary/10 text-primary border border-primary/20',
+  branding: 'bg-secondary/60 text-secondary-foreground border border-border',
+  reativacao: 'bg-amber-50 text-amber-700 border border-amber-200',
+  resgate: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+};
+
 const PRESET_CHANNELS = ['Meta', 'Google', 'TikTok', 'YouTube', 'LinkedIn'];
 const PRESET_OBJECTIVES = [
   {
@@ -176,6 +190,7 @@ function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [], funne
   const availableVars = [...new Set([
     'investimento', 'investimento_liquido',
     ...(form.type === 'performance' ? ['vendas', 'leads', 'ticket_medio'] : []),
+    ...(QUANTITY_BASED_TYPES.includes(form.type) ? ['meta_clientes', 'clientes', 'ticket_medio'] : []),
     ...(form.kpis || []).filter(k => k.label).map(k => sanitizeVar(k.label)),
     ...(form.calculated_metrics || []).filter(m => m.label).map(m => sanitizeVar(m.label)),
   ])];
@@ -206,27 +221,25 @@ function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [], funne
         </div>
         <div>
           <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Tipo do Objetivo</Label>
-          <div className="flex gap-2 mt-1.5">
-            <button type="button" onClick={() => setField('type', 'performance')}
-              className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium border transition-all ${form.type === 'performance' ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
-              Performance (Funil)
-            </button>
-            <button type="button" onClick={() => setField('type', 'branding')}
-              className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium border transition-all ${form.type === 'branding' ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
-              Branding (Awareness)
-            </button>
+          <div className="grid grid-cols-2 gap-2 mt-1.5">
+            {Object.entries(TYPE_META).map(([key, meta]) => (
+              <button key={key} type="button" onClick={() => setField('type', key)}
+                className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all text-center ${form.type === key ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                {meta.label}
+              </button>
+            ))}
           </div>
           <p className="text-[10px] text-gray-400 mt-1">
-            {form.type === 'branding' ? 'Não passa pelo funil de vendas — apenas métricas de eficiência (CPM, CTR, etc.).' : 'Passa pelo funil de vendas (leads → agendamento → venda).'}
+            {TYPE_META[form.type]?.desc}
           </p>
         </div>
       </div>
       <div>
         <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Funil Associado</Label>
         <p className="text-[10px] text-gray-400 mb-2">
-          {form.type === 'performance'
-            ? 'Selecione o funil que este objetivo usa. Ao escolher este objetivo numa campanha, o funil e suas taxas vêm automaticamente do benchmark.'
-            : 'Selecione o funil de etapas deste objetivo (ex: Impressões → Cliques → Engajamentos). Opcional para branding.'}
+          {form.type === 'branding'
+            ? 'Selecione o funil de etapas deste objetivo (ex: Impressões → Cliques → Engajamentos). Opcional para branding.'
+            : 'Selecione o funil que este objetivo usa. Ao escolher este objetivo numa campanha, o funil e suas taxas vêm automaticamente do benchmark.'}
         </p>
         <Select value={form.funnel_type_id || 'none'} onValueChange={v => setField('funnel_type_id', v === 'none' ? '' : v)}>
           <SelectTrigger className="w-full h-10 text-sm"><SelectValue placeholder="Selecione um funil..." /></SelectTrigger>
@@ -514,8 +527,8 @@ function ObjectivesTab() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-semibold text-gray-900">{obj.name}</p>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${obj.type === 'branding' ? 'bg-secondary/60 text-secondary-foreground border border-border' : 'bg-primary/10 text-primary border border-primary/20'}`}>
-                        {obj.type === 'branding' ? 'Branding' : 'Performance'}
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${TYPE_BADGE[obj.type] || TYPE_BADGE.performance}`}>
+                        {TYPE_META[obj.type]?.short || obj.type}
                       </span>
                       {!obj.is_active && <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">Inativo</span>}
                     </div>
