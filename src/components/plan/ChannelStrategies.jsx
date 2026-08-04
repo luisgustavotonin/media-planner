@@ -11,6 +11,14 @@ const fmtBRL = (n) => `R$ ${(n || 0).toLocaleString('pt-BR', { minimumFractionDi
 const fmtDaily = (budget, days) => days > 0 ? fmtBRL(budget / days) : fmtBRL(0);
 const QUANTITY_BASED_TYPES = ['reativacao', 'resgate'];
 
+const isQuantityChannel = (strategies, objectives) => {
+  if (!strategies || strategies.length === 0) return false;
+  return strategies.every(camp => {
+    const obj = objectives.find(o => o.name === camp.objective);
+    return obj && QUANTITY_BASED_TYPES.includes(obj.type);
+  });
+};
+
 // Retorna info do objetivo: tipo e lista de KPIs
 function getObjectiveInfo(objectiveName, objectives) {
   const obj = objectives.find(o => o.name === objectiveName);
@@ -474,6 +482,8 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, 
   const netBudget = (channelBudget || 0) * (1 - (taxPercent || 0) / 100);
   const totalAllocated = strategies.reduce((s, c) => s + (c.budget_value || 0), 0);
   const remaining = netBudget - totalAllocated;
+  const qty = isQuantityChannel(strategies, objectives);
+  const fmtVal = (v) => qty ? Math.round(v).toLocaleString('pt-BR') : fmtBRL(v);
 
   const addCampaign = () => {
     if (readOnly) return;
@@ -494,7 +504,7 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, 
         <span className="text-xs font-semibold text-gray-700">Campanhas Google</span>
         <div className="flex items-center gap-3">
           <span className={`text-[11px] font-medium ${remaining < -0.01 ? 'text-red-500' : 'text-gray-400'}`}>
-            Alocado {fmtBRL(totalAllocated)} de {fmtBRL(netBudget)} · Restante {fmtBRL(remaining)}
+            Alocado {fmtVal(totalAllocated)} de {fmtVal(netBudget)}{qty ? ' clientes' : ''} · Restante {fmtVal(remaining)}
           </span>
           {!readOnly && (
             <Button variant="outline" size="sm" onClick={addCampaign} className="h-7 text-[11px] gap-1">
@@ -504,7 +514,7 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, 
         </div>
       </div>
       {remaining < -0.01 && (
-        <p className="text-[11px] text-red-500 font-medium">⚠ A soma das campanhas excede o budget líquido do canal.</p>
+        <p className="text-[11px] text-red-500 font-medium">{qty ? '⚠ A soma das metas excede a meta total do canal.' : '⚠ A soma das campanhas excede o budget líquido do canal.'}</p>
       )}
       {strategies.length === 0 && (
         <p className="text-[11px] text-gray-400 py-1">Nenhuma campanha adicionada.</p>
@@ -533,6 +543,8 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
   const netBudget = (channelBudget || 0) * (1 - (taxPercent || 0) / 100);
   const totalAllocated = strategies.reduce((s, camp) => s + (camp.budget_value || 0), 0);
   const remaining = netBudget - totalAllocated;
+  const qty = isQuantityChannel(strategies, objectives);
+  const fmtVal = (v) => qty ? Math.round(v).toLocaleString('pt-BR') : fmtBRL(v);
 
   const addCampaign = () => {
     if (readOnly) return;
@@ -561,7 +573,7 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
         <span className="text-xs font-semibold text-gray-700">Campanhas</span>
         <div className="flex items-center gap-3">
           <span className={`text-[11px] font-medium ${remaining < -0.01 ? 'text-red-500' : 'text-gray-400'}`}>
-            Alocado {fmtBRL(totalAllocated)} de {fmtBRL(netBudget)} · Restante {fmtBRL(remaining)}
+            Alocado {fmtVal(totalAllocated)} de {fmtVal(netBudget)}{qty ? ' clientes' : ''} · Restante {fmtVal(remaining)}
           </span>
           {!readOnly && (
             <Button variant="outline" size="sm" onClick={addCampaign} className="h-7 text-[11px] gap-1">
@@ -571,7 +583,7 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
         </div>
       </div>
       {remaining < -0.01 && (
-        <p className="text-[11px] text-red-500 font-medium">⚠ A soma das campanhas excede o budget líquido do canal.</p>
+        <p className="text-[11px] text-red-500 font-medium">{qty ? '⚠ A soma das metas excede a meta total do canal.' : '⚠ A soma das campanhas excede o budget líquido do canal.'}</p>
       )}
       {strategies.length === 0 && (
         <p className="text-[11px] text-gray-400 py-1">Nenhuma campanha adicionada. Selecione um objetivo para ver os KPIs disponíveis.</p>
