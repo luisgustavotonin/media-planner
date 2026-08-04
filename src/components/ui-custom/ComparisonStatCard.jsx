@@ -32,7 +32,7 @@ export default function ComparisonStatCard({
   const down = hasPrev && diff < 0;
 
   return (
-    <div className="bg-card rounded-xl border border-border p-4 sm:p-5 hover:shadow-sm transition-shadow min-h-[110px] flex flex-col justify-between">
+    <div className="bg-card rounded-xl border border-border p-5 sm:p-6 hover:shadow-sm transition-shadow min-h-[124px] flex flex-col justify-between">
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-1 min-w-0 flex-1">
           <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider truncate">{label}</p>
@@ -44,21 +44,23 @@ export default function ComparisonStatCard({
           </div>
         )}
       </div>
-      <div className="mt-3 flex items-center gap-1.5 text-[11px] leading-none">
+      <div className="mt-3 flex flex-col gap-0.5 text-[11px] leading-tight">
         {hasPrev ? (
           <>
-            {flat ? (
-              <Minus className="w-3 h-3 text-muted-foreground" />
-            ) : up ? (
-              <ArrowUp className="w-3 h-3 text-emerald-500" />
-            ) : down ? (
-              <ArrowDown className="w-3 h-3 text-rose-500" />
-            ) : null}
-            <span className={`font-medium ${flat ? 'text-muted-foreground' : up ? 'text-emerald-600' : 'text-rose-600'}`}>
-              {pct !== null ? `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%` : 'novo'}
-            </span>
-            <span className="text-muted-foreground/70 truncate">
-              · {previousLabel}: {formatValue(previousValue)}
+            <div className="flex items-center gap-1.5">
+              {flat ? (
+                <Minus className="w-3 h-3 text-muted-foreground" />
+              ) : up ? (
+                <ArrowUp className="w-3 h-3 text-emerald-500" />
+              ) : down ? (
+                <ArrowDown className="w-3 h-3 text-rose-500" />
+              ) : null}
+              <span className={`font-medium ${flat ? 'text-muted-foreground' : up ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {pct !== null ? `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%` : 'novo'}
+              </span>
+            </div>
+            <span className="text-muted-foreground/60 pl-[18px]">
+              {previousLabel}: {formatValue(previousValue)}
             </span>
           </>
         ) : (

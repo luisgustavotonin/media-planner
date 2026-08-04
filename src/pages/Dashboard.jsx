@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import PageHeader from '../components/ui-custom/PageHeader';
 import ComparisonStatCard from '../components/ui-custom/ComparisonStatCard';
 import EmptyState from '../components/ui-custom/EmptyState';
-import { Building2, Target, DollarSign, Users, TrendingUp, Calendar } from 'lucide-react';
+import { Building2, Target, DollarSign, Users, TrendingUp, Calendar, Wallet } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { calculateConsolidated } from '../components/hooks/usePlanCalculations';
 
@@ -20,6 +20,7 @@ function calcPlanMetrics(plan, objectives = []) {
   return {
     leads: consolidated.totals.total_leads || 0,
     sales: consolidated.totals.total_sales || 0,
+    revenue: consolidated.totals.total_revenue || 0,
     investment,
   };
 }
@@ -27,8 +28,8 @@ function calcPlanMetrics(plan, objectives = []) {
 function sumMetrics(plans, objectives) {
   return plans.reduce((acc, p) => {
     const m = calcPlanMetrics(p, objectives);
-    return { investment: acc.investment + m.investment, leads: acc.leads + m.leads, sales: acc.sales + m.sales };
-  }, { investment: 0, leads: 0, sales: 0 });
+    return { investment: acc.investment + m.investment, leads: acc.leads + m.leads, sales: acc.sales + m.sales, revenue: acc.revenue + m.revenue };
+  }, { investment: 0, leads: 0, sales: 0, revenue: 0 });
 }
 
 export default function Dashboard() {
@@ -126,7 +127,7 @@ export default function Dashboard() {
           description="Selecione outro mês ou crie um novo plano de mídia."
         />
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           <ComparisonStatCard
             label="Clientes"
             value={clientsThisMonth}
@@ -166,6 +167,14 @@ export default function Dashboard() {
             formatValue={fmtInt}
             icon={TrendingUp}
             color="orange"
+          />
+          <ComparisonStatCard
+            label="Valor das Vendas"
+            value={cur.revenue}
+            previousValue={prev.revenue}
+            formatValue={fmtCurrency}
+            icon={Wallet}
+            color="rose"
           />
         </div>
       )}
