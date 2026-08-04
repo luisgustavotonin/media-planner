@@ -13,8 +13,8 @@ const UNIT_LABELS = { numero: 'Número', moeda: 'Moeda (R$)', percentual: 'Perce
 const UNIT_SHORT = { numero: 'nº', moeda: 'R$', percentual: '%' };
 
 const TYPE_META = {
-  performance: { label: 'Performance (Funil)', short: 'Performance', desc: 'Passa pelo funil de vendas (leads → agendamento → venda). Medido por investimento.' },
-  branding: { label: 'Branding (Awareness)', short: 'Branding', desc: 'Não passa pelo funil de vendas — apenas métricas de eficiência (CPM, CTR, etc.). Medido por investimento.' },
+  performance: { label: 'Performance', short: 'Performance', desc: 'Passa pelo funil de vendas (leads → agendamento → venda). Medido por investimento.' },
+  branding: { label: 'Branding', short: 'Branding', desc: 'Não passa pelo funil de vendas — apenas métricas de eficiência (CPM, CTR, etc.). Medido por investimento.' },
   reativacao: { label: 'Reativação de Base', short: 'Reativação', desc: 'Reativação de clientes inativos. Medido por quantidade de clientes (meta), com cálculo reverso via taxas de conversão e ticket médio.' },
   resgate: { label: 'Resgate', short: 'Resgate', desc: 'Resgate de clientes. Medido por quantidade de clientes (meta), com cálculo reverso via taxas de conversão e ticket médio.' },
 };

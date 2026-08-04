@@ -30,6 +30,7 @@ const SEGMENTOS = {
   pediatric: 'Odontopediatria', other: 'Outros',
 };
 const STATUS_PT = { draft: 'Rascunho', active: 'Ativo', completed: 'Concluído' };
+const QUANTITY_BASED_TYPES = ['reativacao', 'resgate'];
 
 const formatCardValue = (value, unit, label) => {
   if (unit === 'percentual') return `${(value * 100).toFixed(1)}%`;
@@ -196,6 +197,10 @@ export default function PlanDetail() {
     const obj = objectives.find(o => o.name === camp.objective);
     return obj?.type === 'branding';
   }));
+  const hasQuantityCampaigns = channels.some(ch => (ch.strategies || []).some(camp => {
+    const obj = objectives.find(o => o.name === camp.objective);
+    return obj && QUANTITY_BASED_TYPES.includes(obj.type);
+  }));
   const valorAlocado = channels.reduce((s, ch) => s + (ch.strategies || []).reduce((cs, camp) => cs + (camp.budget_value || 0), 0), 0);
   const saldoDisponivel = netInvestment - valorAlocado;
   const performanceInvestment = channels.reduce((s, ch) =>
@@ -204,15 +209,16 @@ export default function PlanDetail() {
       return obj?.type === 'performance';
     }).reduce((cs, camp) => cs + (camp.budget_value || 0), 0), 0);
 
-  const groupByObjective = (type) => {
+  const groupByObjective = (types) => {
+    const typeArr = Array.isArray(types) ? types : [types];
     const groups = {};
     channels.forEach(ch => {
       const taxRate = (ch.tax_percent || 0) / 100;
       (ch.strategies || []).forEach(camp => {
         const obj = objectives.find(o => o.name === camp.objective);
-        if ((obj?.type || 'performance') !== type) return;
+        if (!typeArr.includes(obj?.type || 'performance')) return;
         const key = camp.objective || 'Sem objetivo';
-        if (!groups[key]) groups[key] = { investment: 0, netInvestment: 0, impressions: 0, clicks: 0, reach: 0, leads: 0, sales: 0, revenue: 0, kpis: {}, objective: obj, channels: new Set() };
+        if (!groups[key]) groups[key] = { investment: 0, netInvestment: 0, impressions: 0, clicks: 0, reach: 0, leads: 0, sales: 0, revenue: 0, quantityMeta: 0, kpis: {}, objective: obj, channels: new Set() };
         const g = groups[key];
         g.channels.add(ch.channel_name);
         const campBudget = camp.budget_value || 0;
@@ -238,7 +244,7 @@ export default function PlanDetail() {
         const costKpi = kpiValues.find(kv => kv.unit === 'moeda' && kv.value > 0 && !(kv.label || '').toLowerCase().includes('ticket'));
         const costKpiLabel = (costKpi?.label || '').toLowerCase();
         const kpiValue = costKpi?.value || 0;
-        if (type === 'branding') {
+        if (obj?.type === 'branding') {
           let campImpressions = 0;
           if (kpiValue > 0) {
             if (costKpiLabel.includes('cpm') || costKpiLabel.includes('impress') || costKpiLabel.includes('mil')) {
@@ -251,6 +257,24 @@ export default function PlanDetail() {
           const freqKpi = kpiValues.find(kv => kv.unit === 'numero' && (kv.label || '').toLowerCase().includes('freq'));
           if (freqKpi && freqKpi.value > 0 && campImpressions > 0) {
             g.reach += campImpressions / freqKpi.value;
+          }
+        } else if (QUANTITY_BASED_TYPES.includes(obj?.type)) {
+          // Quantidade: meta = budget_value, cálculo reverso pelo funil
+          const meta = campBudget || 0;
+          const percentKpis = (camp.kpi_values || []).filter(kv => kv.unit === 'percentual' && kv.value > 0);
+          const kpiRates = percentKpis.map(kv => kv.value);
+          const campRates = kpiRates.length > 0 ? kpiRates : (camp.funnel_rates?.length ? camp.funnel_rates : (activeRates.length > 0 ? activeRates : null));
+          if (campRates && campRates.length > 0 && meta > 0) {
+            const numStages = campRates.length + 1;
+            const stagesArr = Array(numStages).fill(0);
+            stagesArr[numStages - 1] = meta;
+            for (let i = numStages - 2; i >= 0; i--) {
+              stagesArr[i] = stagesArr[i + 1] / (campRates[i] || 0);
+            }
+            g.quantityMeta += meta;
+            g.leads += stagesArr[0] || 0;
+            g.sales += meta;
+            g.revenue += meta * (ticketKpi?.value || avgTicket);
           }
         } else {
           // Performance: calcula leads, vendas e receita pelo funil
@@ -284,6 +308,8 @@ export default function PlanDetail() {
           vendas: g.sales || 0,
           receita: g.revenue || 0,
           ticket_medio: avgTicket || 0,
+          meta_clientes: g.quantityMeta || g.sales || 0,
+          clientes: g.quantityMeta || g.sales || 0,
         };
         Object.values(g.kpis).forEach(k => {
           const val = k.unit === 'numero' ? (k.count > 0 ? k.totalValue / k.count : 0) : (k.totalBudget > 0 ? k.totalValue / k.totalBudget : (k.count > 0 ? k.totalValue / k.count : 0));
@@ -296,6 +322,7 @@ export default function PlanDetail() {
   };
   const brandingGroups = groupByObjective('branding');
   const performanceGroups = groupByObjective('performance');
+  const quantityGroups = groupByObjective(QUANTITY_BASED_TYPES);
 
   const updateField = (field, value) => setLocalPlan(p => ({ ...p, [field]: value }));
   const handleSave = () => {
@@ -455,6 +482,46 @@ export default function PlanDetail() {
               <div key={objName} className="mb-4">
                 <div className="flex items-center gap-2 mb-2 ml-1 flex-wrap">
                   <span className="text-[10px] font-medium text-indigo-500/80">{objName}</span>
+                  {data.channels && Array.from(data.channels).map(chName => (
+                    <ChannelBadge key={chName} channel={chName} />
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+                  {cards.map((c, i) => <StatCard key={i} {...c} />)}
+                </div>
+              </div>
+            );
+          })}
+        </>
+      )}
+
+      {/* Quantidade — Reativação & Resgate */}
+      {hasQuantityCampaigns && (
+        <>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center">
+              <Users className="w-3.5 h-3.5 text-emerald-700" />
+            </div>
+            <span className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider">Reativação & Resgate</span>
+            <span className="text-[10px] text-emerald-500/60">·</span>
+            <span className="text-[10px] text-emerald-600/70">Baseado em quantidade de clientes</span>
+          </div>
+          {Object.entries(quantityGroups).map(([objName, data]) => {
+            const hasCalcMetrics = data.calculatedCards?.length > 0;
+            const calcCards = hasCalcMetrics ? data.calculatedCards.map(c => ({
+              label: c.label,
+              value: formatCardValue(c.value, c.unit, c.label),
+              icon: getMetricIcon(c.label),
+              color: c.unit === 'moeda' ? 'green' : c.unit === 'percentual' ? 'teal' : 'green',
+            })) : [];
+            const cards = [
+              { label: 'Meta de Clientes', value: Math.round(data.quantityMeta).toLocaleString('pt-BR'), icon: Users, color: 'green' },
+              ...calcCards,
+            ].filter(Boolean);
+            return (
+              <div key={objName} className="mb-4">
+                <div className="flex items-center gap-2 mb-2 ml-1 flex-wrap">
+                  <span className="text-[10px] font-medium text-emerald-600/80">{objName}</span>
                   {data.channels && Array.from(data.channels).map(chName => (
                     <ChannelBadge key={chName} channel={chName} />
                   ))}
