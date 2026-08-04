@@ -5,18 +5,21 @@ import { useAuth } from './components/hooks/useAuth';
 import { 
   LayoutDashboard, Building2, BarChart3, Target, 
   FlaskConical, CalendarDays, Settings, Menu, X, 
-  ChevronRight, LogOut, Activity, GitBranch, Megaphone
+  ChevronRight, ChevronDown, LogOut, Activity, GitBranch, Megaphone, Briefcase
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
 
-const navItems = [
+const mainNav = [
   { name: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'consultant', 'user'] },
-  { name: 'Clientes', page: 'Clients', icon: Building2, roles: ['admin', 'consultant', 'user'] },
   { name: 'Planos de Mídia', page: 'MediaPlans', icon: BarChart3, roles: ['admin', 'consultant', 'user', 'client'] },
   { name: 'Planejamento Reverso', page: 'ReversePlan', icon: Target, roles: ['admin', 'consultant', 'user'] },
   { name: 'Cenários', page: 'Scenarios', icon: FlaskConical, roles: ['admin', 'consultant', 'user'] },
   { name: 'Acomp. Semanal', page: 'WeeklyTracking', icon: CalendarDays, roles: ['admin', 'consultant', 'user'] },
+];
+
+const adminNav = [
+  { name: 'Clientes', page: 'Clients', icon: Building2, roles: ['admin', 'consultant', 'user'] },
   { name: 'Benchmarks', page: 'Benchmarks', icon: Settings, roles: ['admin', 'user', 'consultant'] },
   { name: 'Tipos de Funil', page: 'FunnelTypes', icon: GitBranch, roles: ['admin', 'user', 'consultant'] },
   { name: 'Config. Campanhas', page: 'CampaignSettings', icon: Megaphone, roles: ['admin', 'user', 'consultant'] },
@@ -27,7 +30,9 @@ export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const role = user?.role || 'user';
 
-  const filteredNav = navItems.filter(item => item.roles.includes(role));
+  const filteredMain = mainNav.filter(item => item.roles.includes(role));
+  const filteredAdmin = adminNav.filter(item => item.roles.includes(role));
+  const [adminOpen, setAdminOpen] = useState(() => filteredAdmin.some(item => item.page === currentPageName));
 
   if (loading) {
     return (
@@ -62,7 +67,7 @@ export default function Layout({ children, currentPageName }) {
 
           {/* Navigation */}
           <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-            {filteredNav.map(item => {
+            {filteredMain.map(item => {
               const isActive = currentPageName === item.page;
               return (
                 <Link
@@ -81,6 +86,41 @@ export default function Layout({ children, currentPageName }) {
                 </Link>
               );
             })}
+
+            {filteredAdmin.length > 0 && (
+              <div className="pt-2">
+                <button
+                  onClick={() => setAdminOpen(o => !o)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/50 transition-all"
+                >
+                  <Briefcase className="w-4 h-4 text-sidebar-foreground/50" />
+                  Administrativo
+                  <ChevronDown className={`w-3.5 h-3.5 ml-auto text-sidebar-foreground/40 transition-transform ${adminOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {adminOpen && (
+                  <div className="mt-0.5 ml-3 pl-3 border-l border-sidebar-border space-y-0.5">
+                    {filteredAdmin.map(item => {
+                      const isActive = currentPageName === item.page;
+                      return (
+                        <Link
+                          key={item.page}
+                          to={createPageUrl(item.page)}
+                          onClick={() => setSidebarOpen(false)}
+                          className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
+                            isActive
+                              ? 'bg-sidebar-accent text-sidebar-primary'
+                              : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+                          }`}
+                        >
+                          <item.icon className={`w-4 h-4 ${isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground/40'}`} />
+                          {item.name}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </nav>
 
           {/* User section */}
