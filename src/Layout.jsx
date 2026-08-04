@@ -56,7 +56,11 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
-  const pageAllowed = isAdmin || allowedPages.includes(currentPageName);
+  // Páginas de detalhe (ex: PlanDetail) não são módulos do menu — não há permissão
+  // de módulo pra checar, então liberam; o scoping por cliente fica a cargo da própria
+  // página. Só bloqueia páginas que SÃO módulos mas não têm permissão de visualização.
+  const modulePage = APP_MODULES.find(m => m.page === currentPageName);
+  const pageAllowed = isAdmin || !modulePage || canView(modulePage.key);
 
   return (
     <div className="flex h-screen bg-background">
