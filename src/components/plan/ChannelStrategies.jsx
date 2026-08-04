@@ -9,15 +9,6 @@ import { findBenchmark, getCplFromBenchmark, getRatesFromBenchmark } from '@/lib
 
 const fmtBRL = (n) => `R$ ${(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtDaily = (budget, days) => days > 0 ? fmtBRL(budget / days) : fmtBRL(0);
-const QUANTITY_BASED_TYPES = ['reativacao', 'resgate'];
-
-const isQuantityChannel = (strategies, objectives) => {
-  if (!strategies || strategies.length === 0) return false;
-  return strategies.every(camp => {
-    const obj = objectives.find(o => o.name === camp.objective);
-    return obj && QUANTITY_BASED_TYPES.includes(obj.type);
-  });
-};
 
 // Retorna info do objetivo: tipo e lista de KPIs
 function getObjectiveInfo(objectiveName, objectives) {
@@ -113,8 +104,6 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
   const budget = campaign.budget_value || 0;
   const costKpi = (campaign.kpi_values || []).find(kv => kv.unit === 'moeda' && kv.value > 0 && !(kv.label || '').toLowerCase().includes('ticket'));
   const cpl = costKpi?.value || campaign.kpi_value || 0;
-  const funnelObj = objectives.find(o => o.name === campaign.objective);
-  const isQuantity = funnelObj && QUANTITY_BASED_TYPES.includes(funnelObj.type);
   // KPIs percentuais (Tx de Agendamento, Tx de Comparecimento, etc.) são as taxas de conversão do funil.
   // Mapeamos posição a posição: cada KPI percentual vira a taxa da transição correspondente.
   // Se houver menos KPIs que transições, completamos com o benchmark (nunca com funnel_rates legado,
@@ -130,34 +119,20 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
   const bmCpl = getCplFromBenchmark(benchmark);
 
   const stagesWithValues = [];
-  if (isQuantity) {
-    // Cálculo reverso: última etapa = meta, sobe dividindo pelas taxas
-    const meta = budget || 0;
-    for (let i = stages.length - 1; i >= 0; i--) {
-      if (i === stages.length - 1) {
-        stagesWithValues[i] = { label: stages[i].label, value: meta };
-      } else {
-        const rate = rates[i] || 0;
-        const nextValue = stagesWithValues[i + 1].value;
-        stagesWithValues[i] = { label: stages[i].label, value: rate > 0 ? nextValue / rate : 0 };
-      }
-    }
-  } else {
-    for (let i = 0; i < stages.length; i++) {
-      if (i === 0) {
-        const value = (cpl > 0 && budget > 0) ? budget / cpl : 0;
-        stagesWithValues.push({ label: stages[i].label, value });
-      } else {
-        const rate = rates[i - 1] || 0;
-        const prevValue = stagesWithValues[i - 1].value;
-        stagesWithValues.push({ label: stages[i].label, value: prevValue * rate });
-      }
+  for (let i = 0; i < stages.length; i++) {
+    if (i === 0) {
+      const value = (cpl > 0 && budget > 0) ? budget / cpl : 0;
+      stagesWithValues.push({ label: stages[i].label, value });
+    } else {
+      const rate = rates[i - 1] || 0;
+      const prevValue = stagesWithValues[i - 1].value;
+      stagesWithValues.push({ label: stages[i].label, value: prevValue * rate });
     }
   }
 
   // Benchmark: usa CPL de referência do benchmark e taxas de benchmark
   const benchmarkStages = [];
-  if (!isQuantity && benchmarkRates.length > 0) {
+  if (benchmarkRates.length > 0) {
     for (let i = 0; i < stages.length; i++) {
       if (i === 0) {
         const value = (bmCpl > 0 && budget > 0) ? budget / bmCpl : (stagesWithValues[0]?.value || 0);
@@ -298,16 +273,10 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
             className="w-full h-8 border border-gray-200 rounded-md text-xs px-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
         </div>
         <div className="w-32 shrink-0">
-          <label className="text-[10px] text-gray-400 block mb-1">{currentObj && QUANTITY_BASED_TYPES.includes(currentObj.type) ? 'Meta de Clientes' : 'Valor da campanha'}</label>
-          {currentObj && QUANTITY_BASED_TYPES.includes(currentObj.type) ? (
-            <input type="number" min="0" step="1" value={campaignBudget || ''} placeholder="0"
-              onChange={e => updateField('budget_value', parseFloat(e.target.value) || 0)} disabled={readOnly}
-              className={`w-full h-8 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50 ${isCampaignOver ? 'border-red-400 ring-1 ring-red-300' : ''}`} />
-          ) : (
-            <CurrencyInput value={campaignBudget} onChange={v => updateField('budget_value', Number(v))}
-              prefix="R$" className={`text-xs h-8 ${isCampaignOver ? 'border-red-400 ring-1 ring-red-300' : ''}`}
-              disabled={readOnly} placeholder="Budget" />
-          )}
+          <label className="text-[10px] text-gray-400 block mb-1">Valor da campanha</label>
+          <CurrencyInput value={campaignBudget} onChange={v => updateField('budget_value', Number(v))}
+            prefix="R$" className={`text-xs h-8 ${isCampaignOver ? 'border-red-400 ring-1 ring-red-300' : ''}`}
+            disabled={readOnly} placeholder="Budget" />
         </div>
         <div className="w-28 shrink-0">
           <label className="text-[10px] text-gray-400 block mb-1">Objetivo</label>
@@ -418,15 +387,9 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
             className="w-full h-8 border border-gray-200 rounded-md text-xs px-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
         </div>
         <div className="w-28 shrink-0">
-          <label className="text-[10px] text-gray-400 block mb-1">{currentObj && QUANTITY_BASED_TYPES.includes(currentObj.type) ? 'Meta de Clientes' : 'Valor da campanha'}</label>
-          {currentObj && QUANTITY_BASED_TYPES.includes(currentObj.type) ? (
-            <input type="number" min="0" step="1" value={campaign.budget_value || ''} placeholder="0"
-              onChange={e => updateField('budget_value', parseFloat(e.target.value) || 0)} disabled={readOnly}
-              className={`w-full h-8 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50 ${isOver ? 'border-red-400 ring-1 ring-red-300' : ''}`} />
-          ) : (
-            <CurrencyInput value={campaign.budget_value || 0} onChange={v => updateField('budget_value', Number(v))}
-              prefix="R$" className={`text-xs h-8 ${isOver ? 'border-red-400 ring-1 ring-red-300' : ''}`} disabled={readOnly} />
-          )}
+          <label className="text-[10px] text-gray-400 block mb-1">Valor da campanha</label>
+          <CurrencyInput value={campaign.budget_value || 0} onChange={v => updateField('budget_value', Number(v))}
+            prefix="R$" className={`text-xs h-8 ${isOver ? 'border-red-400 ring-1 ring-red-300' : ''}`} disabled={readOnly} />
         </div>
         <div className="w-28 shrink-0">
           <label className="text-[10px] text-gray-400 block mb-1">Objetivo</label>
@@ -482,8 +445,6 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, 
   const netBudget = (channelBudget || 0) * (1 - (taxPercent || 0) / 100);
   const totalAllocated = strategies.reduce((s, c) => s + (c.budget_value || 0), 0);
   const remaining = netBudget - totalAllocated;
-  const qty = isQuantityChannel(strategies, objectives);
-  const fmtVal = (v) => qty ? Math.round(v).toLocaleString('pt-BR') : fmtBRL(v);
 
   const addCampaign = () => {
     if (readOnly) return;
@@ -504,7 +465,7 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, 
         <span className="text-xs font-semibold text-gray-700">Campanhas Google</span>
         <div className="flex items-center gap-3">
           <span className={`text-[11px] font-medium ${remaining < -0.01 ? 'text-red-500' : 'text-gray-400'}`}>
-            Alocado {fmtVal(totalAllocated)} de {fmtVal(netBudget)}{qty ? ' clientes' : ''} · Restante {fmtVal(remaining)}
+            Alocado {fmtBRL(totalAllocated)} de {fmtBRL(netBudget)} · Restante {fmtBRL(remaining)}
           </span>
           {!readOnly && (
             <Button variant="outline" size="sm" onClick={addCampaign} className="h-7 text-[11px] gap-1">
@@ -514,7 +475,7 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, 
         </div>
       </div>
       {remaining < -0.01 && (
-        <p className="text-[11px] text-red-500 font-medium">{qty ? '⚠ A soma das metas excede a meta total do canal.' : '⚠ A soma das campanhas excede o budget líquido do canal.'}</p>
+        <p className="text-[11px] text-red-500 font-medium">⚠ A soma das campanhas excede o budget líquido do canal.</p>
       )}
       {strategies.length === 0 && (
         <p className="text-[11px] text-gray-400 py-1">Nenhuma campanha adicionada.</p>
@@ -543,8 +504,6 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
   const netBudget = (channelBudget || 0) * (1 - (taxPercent || 0) / 100);
   const totalAllocated = strategies.reduce((s, camp) => s + (camp.budget_value || 0), 0);
   const remaining = netBudget - totalAllocated;
-  const qty = isQuantityChannel(strategies, objectives);
-  const fmtVal = (v) => qty ? Math.round(v).toLocaleString('pt-BR') : fmtBRL(v);
 
   const addCampaign = () => {
     if (readOnly) return;
@@ -573,7 +532,7 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
         <span className="text-xs font-semibold text-gray-700">Campanhas</span>
         <div className="flex items-center gap-3">
           <span className={`text-[11px] font-medium ${remaining < -0.01 ? 'text-red-500' : 'text-gray-400'}`}>
-            Alocado {fmtVal(totalAllocated)} de {fmtVal(netBudget)}{qty ? ' clientes' : ''} · Restante {fmtVal(remaining)}
+            Alocado {fmtBRL(totalAllocated)} de {fmtBRL(netBudget)} · Restante {fmtBRL(remaining)}
           </span>
           {!readOnly && (
             <Button variant="outline" size="sm" onClick={addCampaign} className="h-7 text-[11px] gap-1">
@@ -583,7 +542,7 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
         </div>
       </div>
       {remaining < -0.01 && (
-        <p className="text-[11px] text-red-500 font-medium">{qty ? '⚠ A soma das metas excede a meta total do canal.' : '⚠ A soma das campanhas excede o budget líquido do canal.'}</p>
+        <p className="text-[11px] text-red-500 font-medium">⚠ A soma das campanhas excede o budget líquido do canal.</p>
       )}
       {strategies.length === 0 && (
         <p className="text-[11px] text-gray-400 py-1">Nenhuma campanha adicionada. Selecione um objetivo para ver os KPIs disponíveis.</p>

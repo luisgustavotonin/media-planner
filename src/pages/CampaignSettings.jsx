@@ -15,15 +15,10 @@ const UNIT_SHORT = { numero: 'nº', moeda: 'R$', percentual: '%' };
 const TYPE_META = {
   performance: { label: 'Performance', short: 'Performance', desc: 'Passa pelo funil de vendas (leads → agendamento → venda). Medido por investimento.' },
   branding: { label: 'Branding', short: 'Branding', desc: 'Não passa pelo funil de vendas — apenas métricas de eficiência (CPM, CTR, etc.). Medido por investimento.' },
-  reativacao: { label: 'Reativação de Base', short: 'Reativação', desc: 'Reativação de clientes inativos. Medido por quantidade de clientes (meta), com cálculo reverso via taxas de conversão e ticket médio.' },
-  resgate: { label: 'Resgate', short: 'Resgate', desc: 'Resgate de clientes. Medido por quantidade de clientes (meta), com cálculo reverso via taxas de conversão e ticket médio.' },
 };
-const QUANTITY_BASED_TYPES = ['reativacao', 'resgate'];
 const TYPE_BADGE = {
   performance: 'bg-primary/10 text-primary border border-primary/20',
   branding: 'bg-secondary/60 text-secondary-foreground border border-border',
-  reativacao: 'bg-amber-50 text-amber-700 border border-amber-200',
-  resgate: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
 };
 
 const PRESET_CHANNELS = ['Meta', 'Google', 'TikTok', 'YouTube', 'LinkedIn'];
@@ -190,7 +185,6 @@ function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [], funne
   const availableVars = [...new Set([
     'investimento', 'investimento_liquido',
     ...(form.type === 'performance' ? ['vendas', 'leads', 'ticket_medio'] : []),
-    ...(QUANTITY_BASED_TYPES.includes(form.type) ? ['meta_clientes', 'clientes', 'ticket_medio'] : []),
     ...(form.kpis || []).filter(k => k.label).map(k => sanitizeVar(k.label)),
     ...(form.calculated_metrics || []).filter(m => m.label).map(m => sanitizeVar(m.label)),
   ])];

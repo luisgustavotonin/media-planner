@@ -1,8 +1,6 @@
 // Calcula métricas de um canal agregando os KPIs das campanhas (strategies)
 // Cada campanha tem: objective, kpi_value (custo por unidade na 1ª etapa do funil), budget_value
 // Retorna também stageValues: array com o volume em cada etapa [leads, stage1, stage2, ..., sales]
-const QUANTITY_BASED_TYPES = ['reativacao', 'resgate'];
-
 export function calculateChannelMetrics(channel, conversionRates, averageTicket, objectives = []) {
   let rates = Array.isArray(conversionRates) ? conversionRates : [];
   if (channel.use_custom_funnel) {
@@ -19,7 +17,6 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket,
   let revenue = 0;
   const totalStageValues = [];
   let branding = { impressions: 0, clicks: 0, reach: 0, investment: 0 };
-  let quantityMeta = 0;
   const campaigns = channel.strategies || [];
 
   for (const camp of campaigns) {
@@ -49,26 +46,6 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket,
         kv.unit === 'numero' && (kv.label || '').toLowerCase().includes('freq'));
       if (freqKpi && freqKpi.value > 0 && campImpressions > 0) {
         branding.reach += campImpressions / freqKpi.value;
-      }
-    } else if (QUANTITY_BASED_TYPES.includes(objType)) {
-      // Baseado em quantidade de clientes: budget_value = meta de clientes
-      // Cálculo reverso: última etapa = meta, sobe o funil dividindo pelas taxas
-      const meta = campBudget || 0;
-      const percentKpis = (camp.kpi_values || []).filter(kv => kv.unit === 'percentual' && kv.value > 0);
-      const kpiRates = percentKpis.map(kv => kv.value);
-      const campRates = kpiRates.length > 0 ? kpiRates : (camp.funnel_rates?.length ? camp.funnel_rates : (rates.length > 0 ? rates : null));
-      if (campRates && campRates.length > 0 && meta > 0) {
-        const numStages = campRates.length + 1;
-        const stagesArr = Array(numStages).fill(0);
-        stagesArr[numStages - 1] = meta;
-        for (let i = numStages - 2; i >= 0; i--) {
-          stagesArr[i] = stagesArr[i + 1] / (campRates[i] || 0);
-        }
-        sales += meta;
-        revenue += meta * campAvgTicket;
-        quantityMeta += meta;
-        leads += stagesArr[0] || 0;
-        stagesArr.forEach((v, i) => { totalStageValues[i] = (totalStageValues[i] || 0) + v; });
       }
     } else {
       if (kpiValue > 0) {
@@ -128,7 +105,6 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket,
       reach: Math.round(branding.reach),
       investment: branding.investment,
     },
-    quantity_meta: Math.round(quantityMeta),
   };
 }
 
@@ -167,9 +143,8 @@ export function calculateConsolidated(channels, conversionRates, averageTicket, 
       total_showups: acc.total_showups + ch.metrics.showups,
       total_sales: acc.total_sales + ch.metrics.sales,
       total_revenue: acc.total_revenue + ch.metrics.revenue,
-      total_quantity_meta: acc.total_quantity_meta + (ch.metrics.quantity_meta || 0),
     };
-  }, { total_budget: 0, total_net_budget: 0, total_leads: 0, total_appointments: 0, total_showups: 0, total_sales: 0, total_revenue: 0, total_quantity_meta: 0 });
+  }, { total_budget: 0, total_net_budget: 0, total_leads: 0, total_appointments: 0, total_showups: 0, total_sales: 0, total_revenue: 0 });
 
   totals.stageValues = totalStageValues;
   totals.branding = {

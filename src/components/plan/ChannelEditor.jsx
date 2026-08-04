@@ -96,15 +96,6 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
     queryFn: () => base44.entities.CampaignObjective.filter({ is_active: true }),
   });
 
-  const isQuantityChannel = (ch) => {
-    const camps = ch.strategies || [];
-    if (camps.length === 0) return false;
-    return camps.every(camp => {
-      const obj = dbObjectives.find(o => o.name === camp.objective);
-      return obj && ['reativacao', 'resgate'].includes(obj.type);
-    });
-  };
-
   const updateChannel = (idx, field, value) => {
     if (readOnly) return;
     const updated = channels.map((ch, i) => i !== idx ? ch : { ...ch, [field]: value });
@@ -160,14 +151,8 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                   <ChannelBadge channel={ch.channel_name} />
                 </div>
                 <div>
-                  {isQuantityChannel(ch) ? (
-                    <input type="number" min="0" step="1" value={ch.budget_value || ''} placeholder="Meta"
-                      onChange={e => handleBudgetChange(idx, parseFloat(e.target.value) || 0)} disabled={readOnly}
-                      className="w-full h-9 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
-                  ) : (
-                    <CurrencyInput value={ch.budget_value || 0} onChange={v => handleBudgetChange(idx, v)}
-                      placeholder="Investimento R$" prefix="R$" className="text-xs" disabled={readOnly} />
-                  )}
+                  <CurrencyInput value={ch.budget_value || 0} onChange={v => handleBudgetChange(idx, v)}
+                    placeholder="Investimento R$" prefix="R$" className="text-xs" disabled={readOnly} />
                 </div>
                 <div className="text-center">
                   <span className="text-xs font-medium text-gray-500">{(ch.budget_percent || 0).toFixed(1)}%</span>

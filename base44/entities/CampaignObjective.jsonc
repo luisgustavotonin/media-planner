@@ -14,12 +14,10 @@
       "type": "string",
       "enum": [
         "performance",
-        "branding",
-        "reativacao",
-        "resgate"
+        "branding"
       ],
       "default": "performance",
-      "description": "Tipo do objetivo: performance (funil de vendas, baseado em investimento), branding (awareness/alcance), reativacao (reativa\u00e7\u00e3o de base, baseado em quantidade de clientes) ou resgate (resgate de clientes, baseado em quantidade de clientes)"
+      "description": "Tipo do objetivo: performance (funil de vendas, baseado em investimento) ou branding (awareness/alcance)"
     },
     "funnel_type_id": {
       "type": "string",
