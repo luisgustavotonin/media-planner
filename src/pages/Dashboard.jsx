@@ -1,75 +1,89 @@
-import React from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import PageHeader from '../components/ui-custom/PageHeader';
-import StatCard from '../components/ui-custom/StatCard';
+import ComparisonStatCard from '../components/ui-custom/ComparisonStatCard';
 import EmptyState from '../components/ui-custom/EmptyState';
-import { 
-  Building2, 
-  BarChart3, 
-  DollarSign, 
-  Target,
-  TrendingUp,
-  Calendar,
-  Users as UsersIcon,
-  ArrowRight
-} from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import { Building2, Target, DollarSign, Users, TrendingUp, Calendar } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { calculateConsolidated } from '../components/hooks/usePlanCalculations';
 
-const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-function calcPlanLeads(plan, objectives = []) {
-  if (!plan?.channels?.length) return 0;
+function calcPlanMetrics(plan, objectives = []) {
+  if (!plan?.channels?.length) return { leads: 0, sales: 0, investment: 0 };
   const rates = Array.isArray(plan.conversion_rates) && plan.conversion_rates.length
     ? plan.conversion_rates
     : [plan.lead_to_appointment_rate || 0.35, plan.appointment_to_show_rate || 0.7, plan.show_to_sale_rate || 0.35];
   const consolidated = calculateConsolidated(plan.channels, rates, plan.average_ticket || 5000, objectives);
-  return consolidated.totals.total_leads || 0;
+  const investment = (plan.channels || []).reduce((s, c) => s + (c.budget_value || 0), 0);
+  return {
+    leads: consolidated.totals.total_leads || 0,
+    sales: consolidated.totals.total_sales || 0,
+    investment,
+  };
 }
 
-function calcPlanInvestment(plan) {
-  return (plan?.channels || []).reduce((s, c) => s + (c.budget_value || 0), 0);
+function sumMetrics(plans, objectives) {
+  return plans.reduce((acc, p) => {
+    const m = calcPlanMetrics(p, objectives);
+    return { investment: acc.investment + m.investment, leads: acc.leads + m.leads, sales: acc.sales + m.sales };
+  }, { investment: 0, leads: 0, sales: 0 });
 }
 
 export default function Dashboard() {
-  const currentMonth = new Date().getMonth() + 1;
-  const currentYear = new Date().getFullYear();
+  const now = new Date();
+  const curMonth = now.getMonth() + 1;
+  const curYear = now.getFullYear();
 
-  const { data: clients = [], isLoading: clientsLoading } = useQuery({
-    queryKey: ['clients'],
-    queryFn: async () => {
-      const data = await base44.entities.Client.list();
-      return data.sort((a, b) => (a.clinic_name || '').localeCompare(b.clinic_name || '', 'pt-BR'));
-    },
-  });
-
-  const { data: plans = [], isLoading: plansLoading } = useQuery({
+  const { data: plans = [], isLoading } = useQuery({
     queryKey: ['plans'],
     queryFn: () => base44.entities.MediaPlan.list('-created_date'),
   });
-
   const { data: objectives = [] } = useQuery({
     queryKey: ['campaignObjectives'],
     queryFn: () => base44.entities.CampaignObjective.filter({ is_active: true }),
   });
 
-  // Filtros para mês atual
-  const currentMonthPlans = plans.filter(p => 
-    p.period_month === currentMonth && p.period_year === currentYear
-  );
-  const activePlans = currentMonthPlans.filter(p => p.status === 'active');
-  const draftPlans = currentMonthPlans.filter(p => p.status === 'draft');
+  // Meses com planos (únicos, ordenados do mais recente para o mais antigo)
+  const availableMonths = useMemo(() => {
+    const map = new Map();
+    for (const p of plans) {
+      if (!p.period_month || !p.period_year) continue;
+      const key = `${p.period_year}-${String(p.period_month).padStart(2, '0')}`;
+      if (!map.has(key)) map.set(key, { month: p.period_month, year: p.period_year, key });
+    }
+    return Array.from(map.values()).sort((a, b) => b.year - a.year || b.month - a.month);
+  }, [plans]);
 
-  // Métricas
-  const activeInvestment = activePlans.reduce((sum, p) => sum + calcPlanInvestment(p), 0);
-  const activeLeads = activePlans.reduce((sum, p) => sum + calcPlanLeads(p, objectives), 0);
+  // Sempre abre no mês atual quando há planos; senão no mais recente disponível
+  const [selectedKey, setSelectedKey] = useState('');
+  useEffect(() => {
+    if (availableMonths.length === 0) { setSelectedKey(''); return; }
+    const cur = availableMonths.find(m => m.month === curMonth && m.year === curYear);
+    setSelectedKey((cur || availableMonths[0]).key);
+  }, [availableMonths]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const totalInvestment = plans.reduce((sum, p) => sum + calcPlanInvestment(p), 0);
-  const totalLeads = plans.reduce((sum, p) => sum + calcPlanLeads(p, objectives), 0);
+  const sel = availableMonths.find(m => m.key === selectedKey) || { month: curMonth, year: curYear };
+  const selMonth = sel.month;
+  const selYear = sel.year;
+  const prevMonth = selMonth === 1 ? 12 : selMonth - 1;
+  const prevYear = selMonth === 1 ? selYear - 1 : selYear;
 
-  const isLoading = clientsLoading || plansLoading;
+  const monthPlans = plans.filter(p => p.period_month === selMonth && p.period_year === selYear);
+  const prevMonthPlans = plans.filter(p => p.period_month === prevMonth && p.period_year === prevYear);
+
+  const activePlans = monthPlans.filter(p => p.status === 'active');
+  const prevActivePlans = prevMonthPlans.filter(p => p.status === 'active');
+
+  const clientsThisMonth = new Set(monthPlans.map(p => p.client_id).filter(Boolean)).size;
+  const clientsPrevMonth = new Set(prevMonthPlans.map(p => p.client_id).filter(Boolean)).size;
+
+  const cur = sumMetrics(activePlans, objectives);
+  const prev = sumMetrics(prevActivePlans, objectives);
+
+  const fmtCurrency = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
+  const fmtInt = v => Math.round(v).toLocaleString('pt-BR');
 
   if (isLoading) {
     return (
@@ -82,181 +96,79 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full space-y-6 sm:space-y-8">
-      {/* Header */}
-      <PageHeader 
+    <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto w-full space-y-6">
+      <PageHeader
         title="Dashboard"
-        description={`Visão geral de ${MESES_SHORT[currentMonth - 1]}/${currentYear}`}
+        description={`Visão geral de ${MESES[selMonth - 1]}/${selYear}`}
+        actions={
+          availableMonths.length > 0 && (
+            <Select value={selectedKey} onValueChange={setSelectedKey}>
+              <SelectTrigger className="w-[180px] h-9">
+                <Calendar className="w-3.5 h-3.5 text-muted-foreground mr-1.5" />
+                <SelectValue placeholder="Selecione o mês" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableMonths.map(m => (
+                  <SelectItem key={m.key} value={m.key}>
+                    {MESES[m.month - 1]}/{m.year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )
+        }
       />
 
-      {/* Métricas do Mês Atual */}
-      <div>
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">
-          Este Mês ({MESES_SHORT[currentMonth - 1]}/{currentYear})
-        </h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <StatCard 
-            label="Planos Ativos" 
-            value={activePlans.length.toString()} 
-            icon={Target} 
-            color="green"
-          />
-          <StatCard 
-            label="Planos em Rascunho" 
-            value={draftPlans.length.toString()} 
-            icon={BarChart3} 
-            color="amber"
-          />
-          <StatCard 
-            label="Investimento Ativo" 
-            value={`R$${Math.round(activeInvestment).toLocaleString('pt-BR')}`} 
-            icon={DollarSign} 
-            color="blue"
-          />
-          <StatCard 
-            label="Leads Estimados" 
-            value={Math.round(activeLeads).toLocaleString('pt-BR')} 
-            icon={TrendingUp} 
-            color="purple"
-          />
-        </div>
-      </div>
-
-      {/* Métricas Gerais */}
-      <div>
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">
-          Totais (Todos os Períodos)
-        </h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <StatCard 
-            label="Clientes" 
-            value={clients.length.toString()} 
-            icon={Building2} 
+      {monthPlans.length === 0 ? (
+        <EmptyState
+          icon={Calendar}
+          title={`Nenhum plano em ${MESES[selMonth - 1]}/${selYear}`}
+          description="Selecione outro mês ou crie um novo plano de mídia."
+        />
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+          <ComparisonStatCard
+            label="Clientes"
+            value={clientsThisMonth}
+            previousValue={clientsPrevMonth}
+            formatValue={fmtInt}
+            icon={Building2}
             color="indigo"
           />
-          <StatCard 
-            label="Total de Planos" 
-            value={plans.length.toString()} 
-            icon={Calendar} 
-            color="cyan"
+          <ComparisonStatCard
+            label="Planos Ativos"
+            value={activePlans.length}
+            previousValue={prevActivePlans.length}
+            formatValue={fmtInt}
+            icon={Target}
+            color="green"
           />
-          <StatCard 
-            label="Investimento Total" 
-            value={`R$${Math.round(totalInvestment).toLocaleString('pt-BR')}`} 
-            icon={DollarSign} 
-            color="rose"
+          <ComparisonStatCard
+            label="Investimento Total"
+            value={cur.investment}
+            previousValue={prev.investment}
+            formatValue={fmtCurrency}
+            icon={DollarSign}
+            color="blue"
           />
-          <StatCard 
-            label="Leads Projetados" 
-            value={Math.round(totalLeads).toLocaleString('pt-BR')} 
-            icon={UsersIcon} 
-            color="teal"
+          <ComparisonStatCard
+            label="Leads Projetados"
+            value={cur.leads}
+            previousValue={prev.leads}
+            formatValue={fmtInt}
+            icon={Users}
+            color="purple"
+          />
+          <ComparisonStatCard
+            label="Venda Projetada"
+            value={cur.sales}
+            previousValue={prev.sales}
+            formatValue={fmtInt}
+            icon={TrendingUp}
+            color="orange"
           />
         </div>
-      </div>
-
-      {/* Planos Ativos Recentes */}
-      {activePlans.length > 0 ? (
-        <div className="bg-white rounded-xl border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Planos Ativos de {MESES_SHORT[currentMonth - 1]}</h2>
-          <div className="space-y-3">
-            {activePlans.slice(0, 5).map(plan => {
-              const clientInfo = clients.find(c => c.id === plan.client_id);
-              const investment = calcPlanInvestment(plan);
-              const leads = calcPlanLeads(plan, objectives);
-              
-              return (
-                <Link 
-                  key={plan.id}
-                  to={createPageUrl(`PlanDetail?id=${plan.id}`)}
-                  className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50 hover:border-gray-200 transition-all group"
-                >
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900 group-hover:text-primary">{clientInfo?.clinic_name || 'Sem cliente'}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{plan.channels?.length || 0} canais • {Math.round(leads)} leads estimados</p>
-                  </div>
-                  <div className="text-right ml-4">
-                    <p className="font-semibold text-gray-900">R${Math.round(investment).toLocaleString('pt-BR')}</p>
-                    <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-primary mt-1 ml-auto transition-colors" />
-                  </div>
-                </Link>
-              );
-            })}
-            {activePlans.length > 5 && (
-              <p className="text-xs text-gray-400 pt-2">+ {activePlans.length - 5} planos não listados</p>
-            )}
-          </div>
-        </div>
-      ) : (
-        <EmptyState 
-          icon={Target}
-          title="Nenhum plano ativo este mês"
-          description="Comece criando um novo plano de mídia."
-        />
       )}
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-        <Link 
-          to={createPageUrl('Clients')}
-          className="bg-secondary/50 rounded-xl border border-border p-6 hover:border-primary/40 hover:shadow-sm transition-all"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-secondary-foreground" />
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">Gerenciar Clientes</p>
-              <p className="text-sm text-muted-foreground">{clients.length} clientes cadastrados</p>
-            </div>
-          </div>
-        </Link>
-
-        <Link 
-          to={createPageUrl('MediaPlans')}
-          className="bg-secondary/50 rounded-xl border border-border p-6 hover:border-primary/40 hover:shadow-sm transition-all"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-secondary-foreground" />
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">Planos de Mídia</p>
-              <p className="text-sm text-muted-foreground">{plans.length} planos no total</p>
-            </div>
-          </div>
-        </Link>
-
-        <Link 
-          to={createPageUrl('ReversePlan')}
-          className="bg-secondary/50 rounded-xl border border-border p-6 hover:border-primary/40 hover:shadow-sm transition-all"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
-              <Target className="w-5 h-5 text-secondary-foreground" />
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">Planejamento Reverso</p>
-              <p className="text-sm text-muted-foreground">Calcule orçamentos necessários</p>
-            </div>
-          </div>
-        </Link>
-
-        <Link 
-          to={createPageUrl('Scenarios')}
-          className="bg-secondary/50 rounded-xl border border-border p-6 hover:border-primary/40 hover:shadow-sm transition-all"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-secondary-foreground" />
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">Cenários</p>
-              <p className="text-sm text-muted-foreground">Compare diferentes projeções</p>
-            </div>
-          </div>
-        </Link>
-      </div>
     </div>
   );
 }
