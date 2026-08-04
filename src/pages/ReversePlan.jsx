@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { calculateReversePlan } from '../components/hooks/usePlanCalculations';
 import PageHeader from '../components/ui-custom/PageHeader';
@@ -874,6 +875,10 @@ export default function ReversePlan() {
     queryFn: () => base44.entities.ReversePlanRecord.list('-created_date'),
   });
 
+  const { allowedClientIds } = usePermissions();
+  const scopedClients = !allowedClientIds ? clients : clients.filter(c => allowedClientIds.includes(c.id));
+  const scopedRecords = !allowedClientIds ? records : records.filter(r => allowedClientIds.includes(r.client_id));
+
   const { data: funnelTypes = [] } = useQuery({
     queryKey: ['funnel-types'],
     queryFn: () => base44.entities.FunnelType.list(),
@@ -895,8 +900,8 @@ export default function ReversePlan() {
 
       {view === 'list' && (
         <PlanList
-          records={records}
-          clients={clients}
+          records={scopedRecords}
+          clients={scopedClients}
           onSelect={r => { setSelectedRecord(r); setView('view'); }}
           onNew={() => setView('new')}
         />
@@ -904,14 +909,14 @@ export default function ReversePlan() {
       {view === 'view' && selectedRecord && (
         <PlanView
           record={selectedRecord}
-          clients={clients}
+          clients={scopedClients}
           funnelTypes={funnelTypes}
           onBack={() => { setSelectedRecord(null); setView('list'); }}
         />
       )}
       {view === 'new' && (
         <PlanNew
-          clients={clients}
+          clients={scopedClients}
           funnelTypes={funnelTypes}
           objectives={objectives}
           benchmarks={benchmarks}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../components/hooks/useAuth';
+import { usePermissions } from '@/hooks/usePermissions';
 import { calculateConsolidated } from '../components/hooks/usePlanCalculations';
 import PageHeader from '../components/ui-custom/PageHeader';
 import StatCard from '../components/ui-custom/StatCard';
@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import PercentInput from '../components/ui-custom/PercentInput';
-import { Save, Users, DollarSign, TrendingUp, Target, ArrowLeft, FileDown, Trash2, Eye, MousePointer, Megaphone, Wallet, Radio, UserPlus, UserCheck, Repeat, MessageCircle, ShoppingBag, Calculator, Receipt, PhoneCall, CalendarCheck, Filter, Gauge, Sparkles, Activity, BarChart3, Image, Zap, Phone, AlertTriangle } from 'lucide-react';
+import { Save, Users, DollarSign, TrendingUp, Target, ArrowLeft, FileDown, Trash2, Eye, MousePointer, Megaphone, Wallet, Radio, UserPlus, UserCheck, Repeat, MessageCircle, ShoppingBag, Calculator, Receipt, PhoneCall, CalendarCheck, Filter, Gauge, Sparkles, Activity, BarChart3, Image, Zap, Phone, AlertTriangle, Lock } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { exportPlanToPdf } from '../components/plan/PlanPdfExport';
 import { Link, useNavigate } from 'react-router-dom';
@@ -68,7 +68,7 @@ const getMetricIcon = (label) => {
 export default function PlanDetail() {
   const params = new URLSearchParams(window.location.search);
   const planId = params.get('id');
-  const { user } = useAuth();
+  const { allowedClientIds } = usePermissions();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const readOnly = false;
@@ -133,6 +133,20 @@ export default function PlanDetail() {
 
   if (isLoading || !localPlan) {
     return <div className="flex items-center justify-center h-64"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
+  }
+
+  if (allowedClientIds && !allowedClientIds.includes(localPlan.client_id)) {
+    return (
+      <div className="flex items-center justify-center h-64 px-6">
+        <div className="max-w-md text-center">
+          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center mx-auto mb-3">
+            <Lock className="w-6 h-6 text-red-500" />
+          </div>
+          <h1 className="text-base font-semibold text-gray-800 mb-1">Acesso restrito</h1>
+          <p className="text-sm text-gray-500">Seu perfil não tem permissão para acessar este plano.</p>
+        </div>
+      </div>
+    );
   }
 
   const funnelType = funnelTypes.find(f => f.id === localPlan.funnel_type_id);

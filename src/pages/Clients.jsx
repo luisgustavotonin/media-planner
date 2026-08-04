@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../components/hooks/useAuth';
+import { usePermissions } from '@/hooks/usePermissions';
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,7 @@ const ESPECIALIDADES = [
 const emptyClient = { clinic_name: '', responsible_person: '', phone: '', email: '', city: '', specialty: 'general', average_ticket: 5000, primary_brand_color: '#F85D07', secondary_brand_color: '#312B1D', logo_url: '' };
 
 export default function Clients() {
-  const { user } = useAuth();
+  const { allowedClientIds } = usePermissions();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -82,7 +82,8 @@ export default function Clients() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['clients'] }); setDeleteTarget(null); },
   });
 
-  const filtered = allClients.filter(c => c.clinic_name?.toLowerCase().includes(search.toLowerCase()));
+  const scopedClients = !allowedClientIds ? allClients : allClients.filter(c => allowedClientIds.includes(c.id));
+  const filtered = scopedClients.filter(c => c.clinic_name?.toLowerCase().includes(search.toLowerCase()));
 
   const handleSubmit = () => {
     if (editing) { updateMut.mutate({ id: editing.id, d: form }); }

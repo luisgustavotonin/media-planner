@@ -43,6 +43,8 @@ export function usePermissions() {
     ? 'SEM_VINCULO'
     : (vinculos.some(v => v.status === 'APROVADO') ? 'APROVADO' : vinculos[0].status);
   const isApproved = status === 'APROVADO';
+  // null = sem restrição (admin); array = apenas estes clientes
+  const allowedClientIds = isAdmin ? null : vinculos.filter(v => v.status === 'APROVADO').map(v => v.client_id);
 
   const getPerm = (key) => {
     const p = profile?.permissions?.[key];
@@ -55,5 +57,5 @@ export function usePermissions() {
 
   const allowedPages = APP_MODULES.filter(m => canView(m.key)).map(m => m.page);
 
-  return { user, profile, vinculos, status, isApproved, isAdmin, loading, canView, canUse, allowedPages };
+  return { user, profile, vinculos, status, isApproved, isAdmin, loading, canView, canUse, allowedPages, allowedClientIds };
 }

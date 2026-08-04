@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../components/hooks/useAuth';
+import { usePermissions } from '@/hooks/usePermissions';
 import PageHeader from '../components/ui-custom/PageHeader';
 import EmptyState from '../components/ui-custom/EmptyState';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ const STATUS_LABELS = { active: 'ativo', draft: 'rascunho', completed: 'concluí
 const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
 export default function MediaPlans() {
-  const { user } = useAuth();
+  const { user, allowedClientIds } = usePermissions();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -100,7 +100,8 @@ export default function MediaPlans() {
 
   const isClientRole = user?.role === 'client';
 
-  const myPlans = plans.filter(p => allClients.some(c => c.id === p.client_id));
+  const scopedClients = !allowedClientIds ? allClients : allClients.filter(c => allowedClientIds.includes(c.id));
+  const myPlans = plans.filter(p => (!allowedClientIds || allowedClientIds.includes(p.client_id)) && allClients.some(c => c.id === p.client_id));
   const clientPlans = myPlans.filter(p => p.client_id === selectedClientId);
   const selectedPlan = myPlans.find(p => p.id === selectedPlanId);
 
@@ -139,7 +140,7 @@ export default function MediaPlans() {
               <SelectValue placeholder="Selecione um cliente..." />
             </SelectTrigger>
             <SelectContent>
-              {allClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
+              {scopedClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
             </SelectContent>
             </Select>
             </div>
@@ -205,7 +206,7 @@ export default function MediaPlans() {
               <Select value={form.client_id} onValueChange={v => setForm({...form, client_id: v})}>
                 <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
                 <SelectContent>
-                  {allClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
+                  {scopedClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

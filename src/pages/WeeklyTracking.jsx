@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../components/hooks/useAuth';
+import { usePermissions } from '@/hooks/usePermissions';
 import { calculateConsolidated } from '../components/hooks/usePlanCalculations';
 import PageHeader from '../components/ui-custom/PageHeader';
 import MonthlyFunnelSummary from '../components/plan/MonthlyFunnelSummary';
@@ -63,7 +63,7 @@ function NumField({ value, onChange, className }) {
 }
 
 export default function WeeklyTracking() {
-  const { user } = useAuth();
+  const { allowedClientIds } = usePermissions();
   const queryClient = useQueryClient();
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [weekForm, setWeekForm] = useState({
@@ -101,7 +101,8 @@ export default function WeeklyTracking() {
     queryFn: () => base44.entities.FunnelType.list(),
   });
 
-  const myPlans = user?.role === 'admin' ? plans : plans.filter(p => p.created_by === user?.email);
+  const scopedClients = !allowedClientIds ? clients : clients.filter(c => allowedClientIds.includes(c.id));
+  const myPlans = !allowedClientIds ? plans : plans.filter(p => allowedClientIds.includes(p.client_id));
   const clientPlans = myPlans.filter(p => !filterClientId || p.client_id === filterClientId);
   const plan = myPlans.find(p => p.id === selectedPlanId);
   const actuals = allActuals.filter(a => a.plan_id === selectedPlanId);
@@ -271,7 +272,7 @@ export default function WeeklyTracking() {
               <SelectValue placeholder="Selecione um cliente..." />
             </SelectTrigger>
             <SelectContent>
-              {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
+              {scopedClients.map(c => <SelectItem key={c.id} value={c.id}>{c.clinic_name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

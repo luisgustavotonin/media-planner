@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { usePermissions } from '@/hooks/usePermissions';
 import PageHeader from '../components/ui-custom/PageHeader';
 import ComparisonStatCard from '../components/ui-custom/ComparisonStatCard';
 import EmptyState from '../components/ui-custom/EmptyState';
@@ -46,16 +47,19 @@ export default function Dashboard() {
     queryFn: () => base44.entities.CampaignObjective.filter({ is_active: true }),
   });
 
+  const { allowedClientIds } = usePermissions();
+  const scopedPlans = !allowedClientIds ? plans : plans.filter(p => allowedClientIds.includes(p.client_id));
+
   // Meses com planos (únicos, ordenados do mais recente para o mais antigo)
   const availableMonths = useMemo(() => {
     const map = new Map();
-    for (const p of plans) {
+    for (const p of scopedPlans) {
       if (!p.period_month || !p.period_year) continue;
       const key = `${p.period_year}-${String(p.period_month).padStart(2, '0')}`;
       if (!map.has(key)) map.set(key, { month: p.period_month, year: p.period_year, key });
     }
     return Array.from(map.values()).sort((a, b) => b.year - a.year || b.month - a.month);
-  }, [plans]);
+  }, [scopedPlans]);
 
   // Sempre abre no mês atual quando há planos; senão no mais recente disponível
   const [selectedKey, setSelectedKey] = useState('');
@@ -71,8 +75,8 @@ export default function Dashboard() {
   const prevMonth = selMonth === 1 ? 12 : selMonth - 1;
   const prevYear = selMonth === 1 ? selYear - 1 : selYear;
 
-  const monthPlans = plans.filter(p => p.period_month === selMonth && p.period_year === selYear);
-  const prevMonthPlans = plans.filter(p => p.period_month === prevMonth && p.period_year === prevYear);
+  const monthPlans = scopedPlans.filter(p => p.period_month === selMonth && p.period_year === selYear);
+  const prevMonthPlans = scopedPlans.filter(p => p.period_month === prevMonth && p.period_year === prevYear);
 
   const activePlans = monthPlans.filter(p => p.status === 'active');
   const prevActivePlans = prevMonthPlans.filter(p => p.status === 'active');
