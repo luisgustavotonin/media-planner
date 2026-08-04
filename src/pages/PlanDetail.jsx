@@ -540,7 +540,7 @@ export default function PlanDetail() {
       </div>
 
       {channels.length > 0 && (
-        <ResultsTable channelResults={consolidated.channelResults} totals={consolidated.totals} blended={consolidated} funnelStages={funnelStages} />
+        <ResultsTable channelResults={consolidated.channelResults} totals={consolidated.totals} blended={consolidated} funnelStages={funnelStages} objectives={objectives} funnelTypes={funnelTypes} />
       )}
     </div>
   );
