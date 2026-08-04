@@ -1,42 +1,44 @@
-import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useQuery } from '@tanstack/react-query';
 import { APP_MODULES } from '@/lib/appModules';
 
 // Resolve o acesso do usuário atual: vínculos (UsuarioCliente), perfil e permissões.
 // Admin (role=admin) tem acesso total. Demais usuários são governados pelo perfil:
 //  - status deve ser APROVADO para acessar o sistema
 //  - canView(canUse) por módulo vêm de profile.permissions
-export function usePermissions() {
-  const [user, setUser] = useState(null);
-  const [vinculos, setVinculos] = useState([]);
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+//
+// O resultado é cacheado no react-query (chave ['permissions']) para que navegar
+// entre páginas não dispare novas chamadas em série a cada clique — o Layout monta
+// em cada rota, e sem cache ele refaria auth.me() + UsuarioCliente + Profile a cada
+// navegação, causando o delay percebido.
+async function resolvePermissions() {
+  const u = await base44.auth.me();
+  let vinculos = [];
+  try {
+    vinculos = await base44.entities.UsuarioCliente.filter({ user_email: u.email });
+  } catch (e) { /* sem vínculos */ }
+  const aprovado = vinculos.find(x => x.status === 'APROVADO');
+  let profile = null;
+  if (aprovado?.profile_id) {
+    try { profile = await base44.entities.Profile.get(aprovado.profile_id); }
+    catch (e) { /* perfil órfão */ }
+  }
+  return { user: u, vinculos, profile };
+}
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const u = await base44.auth.me();
-        if (!active) return;
-        setUser(u);
-        const v = await base44.entities.UsuarioCliente.filter({ user_email: u.email });
-        if (!active) return;
-        setVinculos(v);
-        const aprovado = v.find(x => x.status === 'APROVADO');
-        if (aprovado?.profile_id) {
-          try {
-            const p = await base44.entities.Profile.get(aprovado.profile_id);
-            if (active) setProfile(p);
-          } catch (e) { /* perfil órfão */ }
-        }
-      } catch (e) {
-        /* não logado */
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => { active = false; };
-  }, []);
+export function usePermissions() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['permissions'],
+    queryFn: resolvePermissions,
+    staleTime: 5 * 60 * 1000,   // não refaz a cada navegação; refaz em background após 5 min
+    gcTime: 30 * 60 * 1000,
+    retry: false,
+  });
+
+  const user = data?.user ?? null;
+  const vinculos = data?.vinculos ?? [];
+  const profile = data?.profile ?? null;
+  const loading = isLoading;
 
   const isAdmin = user?.role === 'admin';
   const status = vinculos.length === 0
