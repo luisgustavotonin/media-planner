@@ -57,6 +57,8 @@ import ReversePlan from './pages/ReversePlan';
 import Scenarios from './pages/Scenarios';
 import WeeklyTracking from './pages/WeeklyTracking';
 import CampaignSettings from './pages/CampaignSettings';
+import Usuarios from './pages/Usuarios';
+import PerfisPermissoes from './pages/PerfisPermissoes';
 import __Layout from './Layout.jsx';
 
 
@@ -71,6 +73,8 @@ export const PAGES = {
     "Scenarios": Scenarios,
     "WeeklyTracking": WeeklyTracking,
     "CampaignSettings": CampaignSettings,
+    "Usuarios": Usuarios,
+    "PerfisPermissoes": PerfisPermissoes,
 }
 
 export const pagesConfig = {

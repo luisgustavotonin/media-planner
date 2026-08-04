@@ -2,28 +2,13 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { useAuth } from './components/hooks/useAuth';
-import { 
-  LayoutDashboard, Building2, BarChart3, Target, 
-  FlaskConical, CalendarDays, Settings, Menu, X, 
-  ChevronRight, ChevronDown, LogOut, Activity, GitBranch, Megaphone, Briefcase
-} from 'lucide-react';
+import { Menu, X, ChevronRight, ChevronDown, LogOut, Briefcase } from 'lucide-react';
+import { APP_MODULES } from '@/lib/appModules';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
 
-const mainNav = [
-  { name: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'consultant', 'user'] },
-  { name: 'Planos de Mídia', page: 'MediaPlans', icon: BarChart3, roles: ['admin', 'consultant', 'user', 'client'] },
-  { name: 'Planejamento Reverso', page: 'ReversePlan', icon: Target, roles: ['admin', 'consultant', 'user'] },
-  { name: 'Cenários', page: 'Scenarios', icon: FlaskConical, roles: ['admin', 'consultant', 'user'] },
-  { name: 'Acomp. Semanal', page: 'WeeklyTracking', icon: CalendarDays, roles: ['admin', 'consultant', 'user'] },
-];
-
-const adminNav = [
-  { name: 'Clientes', page: 'Clients', icon: Building2, roles: ['admin', 'consultant', 'user'] },
-  { name: 'Benchmarks', page: 'Benchmarks', icon: Settings, roles: ['admin', 'user', 'consultant'] },
-  { name: 'Tipos de Funil', page: 'FunnelTypes', icon: GitBranch, roles: ['admin', 'user', 'consultant'] },
-  { name: 'Config. Campanhas', page: 'CampaignSettings', icon: Megaphone, roles: ['admin', 'user', 'consultant'] },
-];
+const mainNav = APP_MODULES.filter(m => m.group === 'Operacional');
+const adminNav = APP_MODULES.filter(m => m.group === 'Administrativo');
 
 export default function Layout({ children, currentPageName }) {
   const { user, loading } = useAuth();
