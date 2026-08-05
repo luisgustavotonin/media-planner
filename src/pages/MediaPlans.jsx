@@ -35,14 +35,6 @@ export default function MediaPlans() {
     else sessionStorage.removeItem('mp.selectedPlanId');
   }, [selectedClientId, selectedPlanId]);
 
-  // Limpa o plano salvo se ele não pertencer à unidade atual
-  useEffect(() => {
-    if (selectedPlanId && plans.length > 0) {
-      const p = plans.find(pl => pl.id === selectedPlanId);
-      if (p && p.client_id !== selectedClientId) setSelectedPlanId('');
-    }
-  }, [plans, selectedPlanId, selectedClientId]);
-
   const { data: plans = [], isLoading } = useQuery({
     queryKey: ['plans'],
     queryFn: () => base44.entities.MediaPlan.list('-created_date'),
@@ -62,6 +54,14 @@ export default function MediaPlans() {
     queryKey: ['funnelTypes'],
     queryFn: () => base44.entities.FunnelType.filter({ is_active: true }),
   });
+
+  // Limpa o plano salvo se ele não pertencer à unidade atual
+  useEffect(() => {
+    if (selectedPlanId && plans.length > 0) {
+      const p = plans.find(pl => pl.id === selectedPlanId);
+      if (p && p.client_id !== selectedClientId) setSelectedPlanId('');
+    }
+  }, [plans, selectedPlanId, selectedClientId]);
 
   const [form, setForm] = useState({
     client_id: '', period_month: new Date().getMonth() + 1, period_year: new Date().getFullYear(),
