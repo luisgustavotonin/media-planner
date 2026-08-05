@@ -9,37 +9,42 @@
     "client_id": {
       "type": "string"
     },
+    "reference_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data de refer\u00eancia do realizado (at\u00e9 quando os n\u00fameros foram coletados)"
+    },
     "week_number": {
       "type": "number",
-      "description": "Week number within the month (1-5)"
+      "description": "Legado: n\u00famero da semana. N\u00e3o usado no acompanhamento de resultados atual."
     },
     "week_start_date": {
       "type": "string",
-      "format": "date"
+      "format": "date",
+      "description": "Legado: data de in\u00edcio da semana."
     },
     "investment_actual": {
-      "type": "number"
+      "type": "number",
+      "description": "Legado: investimento realizado consolidado."
     },
     "kpi_actuals": {
       "type": "array",
-      "description": "Valores reais dos KPIs preenchidos semanalmente. S\u00f3 aparecem aqui os KPIs que tiveram valor preenchido no plano de m\u00eddia.",
+      "description": "Legado: KPIs realizados consolidados.",
       "items": {
         "type": "object",
         "properties": {
           "label": {
-            "type": "string",
-            "description": "Nome do KPI"
+            "type": "string"
           },
           "value": {
-            "type": "number",
-            "description": "Valor real informado"
+            "type": "number"
           }
         }
       }
     },
     "leads_actual": {
       "type": "number",
-      "description": "Legacy: leads reais"
+      "description": "Legado: leads reais"
     },
     "appointments_actual": {
       "type": "number"
@@ -49,6 +54,7 @@
     },
     "channel_actuals": {
       "type": "array",
+      "description": "Resultados realizados por canal. Cada item cont\u00e9m o investimento realizado e os valores reais por etapa do funil (stage_actuals).",
       "items": {
         "type": "object",
         "properties": {
@@ -56,17 +62,33 @@
             "type": "string"
           },
           "investment": {
-            "type": "number"
+            "type": "number",
+            "description": "Investimento realizado do canal"
+          },
+          "stage_actuals": {
+            "type": "array",
+            "description": "Valores realizados por etapa do funil (alinhado por label com o FunnelType)",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "number"
+                }
+              }
+            }
           },
           "leads": {
-            "type": "number"
+            "type": "number",
+            "description": "Legado: leads do canal"
           }
         }
       }
     }
   },
   "required": [
-    "plan_id",
-    "week_number"
+    "plan_id"
   ]
 }

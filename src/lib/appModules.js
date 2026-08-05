@@ -13,7 +13,7 @@ export const APP_MODULES = [
   { key: 'planos_midia', label: 'Planos de Mídia', page: 'MediaPlans', icon: BarChart3, group: 'Operacional', roles: ['admin', 'consultant', 'user', 'client'] },
   { key: 'planejamento_reverso', label: 'Planejamento Reverso', page: 'ReversePlan', icon: Target, group: 'Operacional', roles: ['admin', 'consultant', 'user'] },
   { key: 'cenarios', label: 'Cenários', page: 'Scenarios', icon: FlaskConical, group: 'Operacional', roles: ['admin', 'consultant', 'user'] },
-  { key: 'acomp_semanal', label: 'Acomp. Semanal', page: 'WeeklyTracking', icon: CalendarDays, group: 'Operacional', roles: ['admin', 'consultant', 'user'] },
+  { key: 'acomp_semanal', label: 'Acomp. de Resultados', page: 'WeeklyTracking', icon: CalendarDays, group: 'Operacional', roles: ['admin', 'consultant', 'user'] },
   { key: 'clientes', label: 'Clientes', page: 'Clients', icon: Building2, group: 'Administrativo', roles: ['admin', 'consultant', 'user'] },
   { key: 'benchmarks', label: 'Benchmarks', page: 'Benchmarks', icon: Settings, group: 'Administrativo', roles: ['admin', 'user', 'consultant'] },
   { key: 'tipos_funil', label: 'Tipos de Funil', page: 'FunnelTypes', icon: GitBranch, group: 'Administrativo', roles: ['admin', 'user', 'consultant'] },
