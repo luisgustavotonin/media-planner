@@ -185,15 +185,17 @@ function drawFunnelPyramid(doc, { x, y, w, stages, values, title = 'Funil de Con
   const n = stages.length;
   const stageH = compact ? 12 : 16;
   const gap = compact ? 1 : 1.2;
-  const maxVal = Math.max(...values, 1);
   const cx = x + w / 2;
 
-  // Largura de cada borda superior proporcional ao valor (funil de verdade)
-  const widths = values.map(v => w * Math.max(0.10, v / maxVal));
+  // Funil de formato FIXO — afunila linearmente de 100% (topo) a ~35% (base),
+  // independente dos valores. Os números ficam dentro de cada trapézio.
+  const topRatio = 1.0;
+  const botRatio = 0.35;
+  const widths = stages.map((_, i) => w * (topRatio - (topRatio - botRatio) * (i / Math.max(1, n - 1))));
 
   stages.forEach((stage, i) => {
     const wTop = widths[i];
-    const wBot = i < n - 1 ? widths[i + 1] : Math.max(10, widths[i] * 0.65);
+    const wBot = i < n - 1 ? widths[i + 1] : Math.max(10, widths[i] * 0.8);
     const yTop = y + i * (stageH + gap);
     const yBot = yTop + stageH;
     const color = STAGE_COLORS_FUNNEL[Math.min(i, STAGE_COLORS_FUNNEL.length - 1)];
