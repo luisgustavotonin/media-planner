@@ -91,10 +91,22 @@ function ChannelsTab() {
   const queryClient = useQueryClient();
   const [newName, setNewName] = useState('');
   const [newCategory, setNewCategory] = useState('digital');
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState('');
 
   const { data: channels = [], isLoading } = useQuery({
     queryKey: ['channels'],
     queryFn: () => base44.entities.Channel.list(),
+  });
+
+  const { data: plans = [] } = useQuery({
+    queryKey: ['plans'],
+    queryFn: () => base44.entities.MediaPlan.list(),
+  });
+
+  const { data: benchmarks = [] } = useQuery({
+    queryKey: ['benchmarks'],
+    queryFn: () => base44.entities.Benchmark.list(),
   });
 
   const createMut = useMutation({
@@ -102,10 +114,53 @@ function ChannelsTab() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['channels'] }); setNewName(''); toast({ title: 'Canal criado!' }); },
   });
 
-  const deleteMut = useMutation({
-    mutationFn: (id) => base44.entities.Channel.delete(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['channels'] }); toast({ title: 'Canal removido.' }); },
-  });
+  // Verifica se o canal está em uso em algum plano de mídia
+  const channelInUse = (channelName) =>
+    plans.some(p => (p.channels || []).some(ch => ch.channel_name === channelName));
+
+  const saveEdit = async (ch) => {
+    const trimmed = editName.trim();
+    if (!trimmed || trimmed === ch.name) { setEditingId(null); return; }
+    if (channels.find(c => c.name.toLowerCase() === trimmed.toLowerCase() && c.id !== ch.id)) {
+      toast({ title: 'Já existe um canal com esse nome.', variant: 'destructive' });
+      return;
+    }
+    const oldName = ch.name;
+    await base44.entities.Channel.update(ch.id, { name: trimmed });
+    for (const b of benchmarks.filter(b => b.channel_name === oldName)) {
+      await base44.entities.Benchmark.update(b.id, { channel_name: trimmed });
+    }
+    for (const plan of plans) {
+      if ((plan.channels || []).some(ch => ch.channel_name === oldName)) {
+        const updatedChannels = plan.channels.map(ch => ch.channel_name === oldName ? { ...ch, channel_name: trimmed } : ch);
+        await base44.entities.MediaPlan.update(plan.id, { channels: updatedChannels });
+      }
+    }
+    const objectives = await base44.entities.CampaignObjective.list();
+    for (const obj of objectives.filter(o => (o.channels || []).includes(oldName))) {
+      await base44.entities.CampaignObjective.update(obj.id, { channels: (obj.channels || []).map(n => n === oldName ? trimmed : n) });
+    }
+    queryClient.invalidateQueries({ queryKey: ['channels'] });
+    queryClient.invalidateQueries({ queryKey: ['plans'] });
+    queryClient.invalidateQueries({ queryKey: ['benchmarks'] });
+    queryClient.invalidateQueries({ queryKey: ['campaign-objectives'] });
+    setEditingId(null);
+    toast({ title: 'Canal renomeado e referências atualizadas.' });
+  };
+
+  const handleDelete = async (ch) => {
+    if (channelInUse(ch.name)) {
+      toast({ title: 'Canal em uso', description: 'Este canal está em planos de mídia salvos. Inative-o até removê-lo dos planos.', variant: 'destructive' });
+      return;
+    }
+    await base44.entities.Channel.delete(ch.id);
+    for (const b of benchmarks.filter(b => b.channel_name === ch.name)) {
+      await base44.entities.Benchmark.delete(b.id);
+    }
+    queryClient.invalidateQueries({ queryKey: ['channels'] });
+    queryClient.invalidateQueries({ queryKey: ['benchmarks'] });
+    toast({ title: 'Canal removido e benchmarks associados excluídos.' });
+  };
 
   const toggleActive = (ch) => {
     base44.entities.Channel.update(ch.id, { is_active: !ch.is_active })
@@ -180,23 +235,42 @@ function ChannelsTab() {
                   <span className="text-[10px] text-gray-400">{CATEGORY_META[cat].desc}</span>
                 </div>
                 <div className="space-y-2">
-                  {list.map(ch => (
+                  {list.map(ch => {
+                    const inUse = channelInUse(ch.name);
+                    return (
                     <div key={ch.id} className={`bg-white rounded-xl border border-gray-100 px-5 py-3.5 flex items-center justify-between ${!ch.is_active ? 'opacity-60' : ''}`}>
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-primary" />
-                        <span className="text-sm font-medium text-gray-800">{ch.name}</span>
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                        {editingId === ch.id ? (
+                          <div className="flex items-center gap-1.5">
+                            <input autoFocus className="border border-gray-200 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary w-56"
+                              value={editName} onChange={e => setEditName(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter') saveEdit(ch); if (e.key === 'Escape') setEditingId(null); }} />
+                            <button onClick={() => saveEdit(ch)} className="p-1 rounded hover:bg-green-50 text-green-600"><Check className="w-4 h-4" /></button>
+                            <button onClick={() => setEditingId(null)} className="p-1 rounded hover:bg-gray-100 text-gray-400"><X className="w-4 h-4" /></button>
+                          </div>
+                        ) : (
+                          <span className="text-sm font-medium text-gray-800 truncate">{ch.name}</span>
+                        )}
                         {!ch.is_active && <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">Inativo</span>}
+                        {inUse && <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">Em uso</span>}
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 shrink-0">
                         <button onClick={() => toggleActive(ch)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400" title={ch.is_active ? 'Desativar' : 'Ativar'}>
                           {ch.is_active ? <ToggleRight className="w-4 h-4 text-primary" /> : <ToggleLeft className="w-4 h-4" />}
                         </button>
-                        <button onClick={() => deleteMut.mutate(ch.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400">
+                        {editingId !== ch.id && (
+                          <button onClick={() => { setEditingId(ch.id); setEditName(ch.name); }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400" title="Editar nome">
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        )}
+                        <button onClick={() => handleDelete(ch)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400" title={inUse ? 'Canal em uso — inative em vez de excluir' : 'Excluir canal'}>
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             );
