@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import PercentInput from '../components/ui-custom/PercentInput';
-import { Save, Users, DollarSign, TrendingUp, Target, ArrowLeft, FileDown, Trash2, Eye, MousePointer, Megaphone, Wallet, Radio, UserPlus, UserCheck, Repeat, MessageCircle, ShoppingBag, Calculator, Receipt, PhoneCall, CalendarCheck, Filter, Gauge, Sparkles, Activity, BarChart3, Image, Zap, Phone, AlertTriangle, Lock } from 'lucide-react';
+import { Save, Users, DollarSign, TrendingUp, Target, ArrowLeft, FileDown, Trash2, Eye, MousePointer, Megaphone, Wallet, Radio, UserPlus, UserCheck, Repeat, MessageCircle, ShoppingBag, Calculator, Receipt, PhoneCall, CalendarCheck, Filter, Gauge, Sparkles, Activity, BarChart3, Image, Zap, Phone, AlertTriangle, Lock, Copy } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { exportPlanToPdf } from '../components/plan/PlanPdfExport';
 import { Link, useNavigate } from 'react-router-dom';
@@ -130,6 +130,21 @@ export default function PlanDetail() {
   });
 
   const handleDelete = () => setShowDeleteConfirm(true);
+
+  const duplicateMut = useMutation({
+    mutationFn: (data) => base44.entities.MediaPlan.create(data),
+    onSuccess: (created) => {
+      toast.success('Plano duplicado com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['plans'] });
+      if (created?.id) navigate(createPageUrl('PlanDetail') + '?id=' + created.id);
+    },
+    onError: () => toast.error('Erro ao duplicar plano de mídia'),
+  });
+
+  const handleDuplicate = () => {
+    const { id, created_date, updated_date, created_by, created_by_id, ...rest } = localPlan;
+    duplicateMut.mutate({ ...rest, status: 'draft' });
+  };
 
   if (isLoading || !localPlan) {
     return <div className="flex items-center justify-center h-64"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
@@ -355,13 +370,6 @@ export default function PlanDetail() {
           description={`Funil: ${funnelType?.name || '—'} · Status: ${statusLabel}`}
           actions={
             <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                className="gap-2 h-9 text-xs"
-                onClick={() => exportPlanToPdf({ localPlan, consolidated, totalInvestment, funnelStages, conversionPairs, getRate, brandingGroups, performanceGroups })}
-              >
-                <FileDown className="w-4 h-4" /> Exportar PDF
-              </Button>
               {!readOnly && (
                 <>
                   <Select value={localPlan.status || 'draft'} onValueChange={v => updateField('status', v)}>
@@ -378,6 +386,21 @@ export default function PlanDetail() {
                   </Button>
                 </>
               )}
+              <Button
+                variant="outline"
+                className="gap-2 h-9 text-xs"
+                onClick={() => exportPlanToPdf({ localPlan, consolidated, totalInvestment, funnelStages, conversionPairs, getRate, brandingGroups, performanceGroups })}
+              >
+                <FileDown className="w-4 h-4" /> Exportar PDF
+              </Button>
+              <Button
+                variant="outline"
+                className="gap-2 h-9 text-xs"
+                onClick={handleDuplicate}
+                disabled={duplicateMut.isPending}
+              >
+                <Copy className="w-4 h-4" /> {duplicateMut.isPending ? 'Duplicando...' : 'Duplicar'}
+              </Button>
             </div>
           }
         />
