@@ -173,7 +173,7 @@ function stageTopLabel(stageLabel, isLast) {
   return isLast ? `${lbl} projetadas` : `${lbl} esperados`;
 }
 
-function drawFunnelPyramid(doc, { x, y, w, stages, values, title = 'Funil de Conversão', compact = false }) {
+function drawFunnelPyramid(doc, { x, y, w, stages, values, title = 'Funil de Conversão', compact = false, stageH: stageHOpt }) {
   if (!stages || stages.length === 0) return y;
 
   // Título
@@ -188,7 +188,7 @@ function drawFunnelPyramid(doc, { x, y, w, stages, values, title = 'Funil de Con
   y += 7;
 
   const n = stages.length;
-  const stageH = compact ? 15 : 19;
+  const stageH = stageHOpt || (compact ? 15 : 19);
   const gap = compact ? 1 : 1.2;
   const cx = x + w / 2;
 
@@ -532,30 +532,50 @@ function drawSectionTitle(doc, text, y, color, marginL) {
   return y + 6;
 }
 
-// ── Página: resumo de branding (cards) ────────────────────────────────────────
+// ── Página: Detalhamento das Campanhas (branding + performance) ────────────────
 function drawObjectiveCardsPage(doc, { brandingGroups, performanceGroups, pageW, pageH, marginL, titulo }) {
   const bEntries = Object.entries(brandingGroups || {});
-  if (bEntries.length === 0) return;
+  const pEntries = Object.entries(performanceGroups || {});
+  if (bEntries.length === 0 && pEntries.length === 0) return;
 
   doc.addPage();
-  const headerH = drawHeader(doc, titulo, 'Resumo — Branding', pageW);
+  const headerH = drawHeader(doc, titulo, 'Detalhamento das Campanhas', pageW);
   let y = headerH + 8;
 
-  y = drawSectionTitle(doc, 'Branding', y, C.amareloStage, marginL);
-  for (const [name, data] of bEntries) {
-    if (y > pageH - 25) { doc.addPage(); y = drawSectionTitle(doc, 'Branding (cont.)', 14, C.amareloStage, marginL); }
-    doc.setFontSize(7);
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(...C.savana);
-    const chs = data.channels && data.channels.size ? '  ·  ' + Array.from(data.channels).join(', ') : '';
-    doc.text(safe(name) + chs, marginL, y);
-    y += 4;
-    y = drawCardsRow(doc, { cards: buildGroupCards(data, 'branding'), y, pageW, marginL, accent: C.amareloStage });
-    y += 2;
+  if (bEntries.length) {
+    y = drawSectionTitle(doc, 'Branding', y, C.amareloStage, marginL);
+    for (const [name, data] of bEntries) {
+      if (y > pageH - 25) { doc.addPage(); y = drawSectionTitle(doc, 'Branding (cont.)', 14, C.amareloStage, marginL); }
+      doc.setFontSize(7);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(...C.savana);
+      const chs = data.channels && data.channels.size ? '  ·  ' + Array.from(data.channels).join(', ') : '';
+      doc.text(safe(name) + chs, marginL, y);
+      y += 4;
+      y = drawCardsRow(doc, { cards: buildGroupCards(data, 'branding'), y, pageW, marginL, accent: C.amareloStage });
+      y += 2;
+    }
+  }
+
+  if (pEntries.length) {
+    if (bEntries.length) y += 2;
+    if (y > pageH - 25) { doc.addPage(); y = 14; }
+    y = drawSectionTitle(doc, 'Performance', y, C.laranja, marginL);
+    for (const [name, data] of pEntries) {
+      if (y > pageH - 25) { doc.addPage(); y = drawSectionTitle(doc, 'Performance (cont.)', 14, C.laranja, marginL); }
+      doc.setFontSize(7);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(...C.savana);
+      const chs = data.channels && data.channels.size ? '  ·  ' + Array.from(data.channels).join(', ') : '';
+      doc.text(safe(name) + chs, marginL, y);
+      y += 4;
+      y = drawCardsRow(doc, { cards: buildGroupCards(data, 'performance'), y, pageW, marginL, accent: C.laranja });
+      y += 2;
+    }
   }
 }
 
-// ── Páginas de Performance por Canal (barras horizontais, estilo referência) ──
+// ── Páginas: Resumo por Funis (grade de até 6 por página, centralizados) ──────
 function drawPerformanceByChannelPages(doc, { channelResults, funnelStageLabels, pageW, pageH, marginL, titulo }) {
   const perf = (channelResults || []).filter(ch => {
     const sv = ch.metrics?.stageValues;
@@ -563,35 +583,71 @@ function drawPerformanceByChannelPages(doc, { channelResults, funnelStageLabels,
   });
   if (perf.length === 0) return;
 
-  // Quantos canais cabem por página (em colunas de 2)
+  const usableW = pageW - marginL * 2;
+  const headerReserve = 40; // espaço para cabeçalho
+  const usableH = pageH - headerReserve - 8;
   const colGap = 10;
-  const colW = (pageW - marginL * 2 - colGap) / 2;
+  const rowGap = 8;
 
-  let pageStarted = false;
-  let col = 0;
-  let leftY = 0, rightY = 0;
-  const topY_fn = (headerH) => headerH + 8;
+  // Calcula colunas/linhas por página conforme a quantidade
+  function layoutForCount(count) {
+    let cols, rows;
+    if (count <= 1) { cols = 1; rows = 1; }
+    else if (count <= 2) { cols = 2; rows = 1; }
+    else if (count <= 3) { cols = 3; rows = 1; }
+    else if (count <= 6) { cols = 3; rows = 2; }
+    else { cols = 3; rows = 2; } // 6 por página, resto em próx. página
+    return { cols, rows };
+  }
 
-  for (const ch of perf) {
-    const values = funnelStageLabels.map((_, i) => Math.round(ch.metrics.stageValues?.[i] || 0));
-    const estimatedH = funnelStageLabels.length * 18 + 40;
+  let remaining = [...perf];
+  let firstPage = true;
 
-    // Nova página se não iniciou ou não há espaço
-    const needPage = !pageStarted || (col === 0 && leftY > pageH - estimatedH - 10) || (col === 1 && rightY > pageH - estimatedH - 10);
-    if (needPage) {
-      doc.addPage();
-      const headerH = drawHeader(doc, titulo, 'Performance', pageW);
-      leftY = topY_fn(headerH);
-      rightY = topY_fn(headerH);
-      col = 0;
-      pageStarted = true;
-    }
+  while (remaining.length > 0) {
+    const { cols, rows } = layoutForCount(remaining.length);
+    const perPage = cols * rows;
+    const pageItems = remaining.slice(0, perPage);
+    remaining = remaining.slice(perPage);
 
-    const x = col === 0 ? marginL : marginL + colW + colGap;
-    const startY = col === 0 ? leftY : rightY;
-    const endY = drawChannelFunnel(doc, { x, y: startY, w: colW, channelName: ch.channel_name || 'Canal', stages: funnelStageLabels, values, title: `Performance · ${safe(ch.channel_name || 'Canal')}` });
+    doc.addPage();
+    const headerH = drawHeader(doc, titulo, 'Resumo por Funis', pageW);
 
-    if (col === 0) { leftY = endY; col = 1; } else { rightY = endY; col = 0; }
+    // Largura/altura de cada célula
+    const cellW = (usableW - (cols - 1) * colGap) / cols;
+    const cellH = (usableH - (rows - 1) * rowGap) / rows;
+
+    // Altura do funil compacta conforme linhas
+    const n = funnelStageLabels.length;
+    const stageH = rows === 1 ? 14 : 11;
+    const gap = rows === 2 ? 1 : 1.2;
+    const titleH = 7;
+    const funnelH = titleH + n * (stageH + gap) + 2;
+    // Largura do funil: ocupa ~80% da célula (deixa respiro)
+    const funnelW = Math.min(cellW, rows === 1 ? cellW * 0.7 : cellW * 0.82);
+
+    // Centraliza o bloco horizontalmente quando há menos colunas que 3
+    const totalBlockW = cols * funnelW + (cols - 1) * colGap;
+    const blockStartX = marginL + (usableW - totalBlockW) / 2;
+
+    pageItems.forEach((ch, idx) => {
+      const col = idx % cols;
+      const row = Math.floor(idx / cols);
+      const cellX = blockStartX + col * (funnelW + colGap);
+      const cellY = headerH + 8 + row * (cellH + rowGap);
+      // Centraliza verticalmente dentro da célula
+      const startY = cellY + (cellH - funnelH) / 2;
+
+      const values = funnelStageLabels.map((_, i) => Math.round(ch.metrics.stageValues?.[i] || 0));
+      drawFunnelPyramid(doc, {
+        x: cellX, y: startY, w: funnelW,
+        stages: funnelStageLabels, values,
+        title: safe(ch.channel_name || 'Canal'),
+        compact: rows === 2,
+        stageH,
+      });
+    });
+
+    firstPage = false;
   }
 }
 
@@ -602,7 +658,7 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
   const marginL = 14;
   const mes = MESES[(localPlan.period_month || 1) - 1];
   const titulo = safe(`${localPlan.client_name || 'Cliente'}  |  ${mes} ${localPlan.period_year}`);
-  const subtitulo = safe(`Segmento: ${SEGMENTOS[localPlan.segment] || 'Geral'}   Status: ${STATUS_PT[localPlan.status] || 'Rascunho'}   Gerado em: ${new Date().toLocaleDateString('pt-BR')}`);
+  const subtitulo = safe('Resultado · Planejamento Consolidado');
 
   // ═══════════════════════════════════════════════
   // PÁGINA 1 — Resumo, Funil e Canais
