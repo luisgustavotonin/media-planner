@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Trash2, ChevronDown, ChevronUp, Plus, X } from 'lucide-react';
+import { Trash2, ChevronDown, ChevronRight, Plus, X } from 'lucide-react';
 import CurrencyInput from '../ui-custom/CurrencyInput';
 import ChannelStrategies from './ChannelStrategies';
 import ChannelBadge from '../ui-custom/ChannelBadge';
@@ -90,8 +90,10 @@ function AddChannelModal({ channels, onAdd, onClose }) {
 }
 
 export default function ChannelEditor({ channels, onChange, totalInvestment, readOnly, days = 30, funnelStages = [], funnelTypes = [], benchmarks = [], segment = '', planFunnelTypeId = '', averageTicket = 0 }) {
-  // canais sempre expandidos — sem toggle de setinha
   const [showModal, setShowModal] = useState(false);
+  const [expandedChannels, setExpandedChannels] = useState(() => ({}));
+
+  const toggleExpand = (idx) => setExpandedChannels(e => ({ ...e, [idx]: !e[idx] }));
 
   const { data: dbChannels = [] } = useQuery({
     queryKey: ['channels'],
@@ -156,60 +158,68 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
       </div>
 
       <div className="space-y-2">
-        {channels.map((ch, idx) => (
-          <div key={idx} className="bg-white rounded-lg border border-[#d9cdb8] overflow-hidden">
-            <div className="flex items-center gap-3 p-4">
-              <div className="flex-1 grid grid-cols-2 sm:grid-cols-[1fr_1fr_60px_80px_100px] gap-3 items-center">
-                <div>
-                  <ChannelBadge channel={ch.channel_name} />
+        {channels.map((ch, idx) => {
+          const isExpanded = expandedChannels[idx] !== false; // expandido por padrão
+          return (
+            <div key={idx} className="bg-white rounded-lg border border-[#d9cdb8] overflow-hidden">
+              <div className="flex items-center gap-3 p-4">
+                <button onClick={() => toggleExpand(idx)} className="p-0.5 text-gray-400 hover:text-gray-600 shrink-0">
+                  {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </button>
+                <div className="flex-1 grid grid-cols-2 sm:grid-cols-[1fr_1fr_60px_80px_100px] gap-3 items-center">
+                  <div>
+                    <ChannelBadge channel={ch.channel_name} />
+                  </div>
+                  <div>
+                    <CurrencyInput value={ch.budget_value || 0} onChange={v => handleBudgetChange(idx, v)}
+                      placeholder="Investimento R$" prefix="R$" className="text-xs border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold focus-visible:ring-[#f85d07]" disabled={readOnly} />
+                  </div>
+                  <div className="text-center">
+                    <span className="text-xs font-medium text-gray-500">{(ch.budget_percent || 0).toFixed(1)}%</span>
+                  </div>
+                  <div className="relative">
+                    <input type="number" min="0" max="100" step="0.1" value={ch.tax_percent || ''} placeholder="0"
+                      onChange={e => updateChannel(idx, 'tax_percent', parseFloat(e.target.value) || 0)} disabled={readOnly}
+                      className="w-full h-9 border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold rounded-md text-xs px-2 pr-6 focus:outline-none focus:ring-1 focus:ring-[#f85d07] disabled:opacity-50" />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs font-semibold text-gray-700">
+                      R$ {((ch.budget_value || 0) * (1 - (ch.tax_percent || 0) / 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <CurrencyInput value={ch.budget_value || 0} onChange={v => handleBudgetChange(idx, v)}
-                    placeholder="Investimento R$" prefix="R$" className="text-xs border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold focus-visible:ring-[#f85d07]" disabled={readOnly} />
-                </div>
-                <div className="text-center">
-                  <span className="text-xs font-medium text-gray-500">{(ch.budget_percent || 0).toFixed(1)}%</span>
-                </div>
-                <div className="relative">
-                  <input type="number" min="0" max="100" step="0.1" value={ch.tax_percent || ''} placeholder="0"
-                    onChange={e => updateChannel(idx, 'tax_percent', parseFloat(e.target.value) || 0)} disabled={readOnly}
-                    className="w-full h-9 border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold rounded-md text-xs px-2 pr-6 focus:outline-none focus:ring-1 focus:ring-[#f85d07] disabled:opacity-50" />
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs font-semibold text-gray-700">
-                    R$ {((ch.budget_value || 0) * (1 - (ch.tax_percent || 0) / 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
+                <div className="flex items-center gap-1">
+                  {!readOnly && (
+                    <button onClick={() => removeChannel(idx)} className="p-1.5 rounded-md hover:bg-red-50">
+                      <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                    </button>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-1">
-                {!readOnly && (
-                  <button onClick={() => removeChannel(idx)} className="p-1.5 rounded-md hover:bg-red-50">
-                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                  </button>
-                )}
-              </div>
-            </div>
 
-              <div className="px-4 pb-4 pt-2 border-t border-[#e2ccaf]/60 bg-[#f2ede2]/40">
-                <ChannelStrategies
-                  strategies={ch.strategies || []}
-                  channelBudget={ch.budget_value || 0}
-                  taxPercent={ch.tax_percent || 0}
-                  days={days}
-                  readOnly={readOnly}
-                  channelName={ch.channel_name}
-                  objectives={dbObjectives}
-                  funnelTypes={funnelTypes}
-                  benchmarks={benchmarks}
-                  segment={segment}
-                  planFunnelTypeId={planFunnelTypeId}
-                  averageTicket={averageTicket}
-                  onChange={(newStrategies) => updateChannel(idx, 'strategies', newStrategies)}
-                />
-              </div>
-          </div>
-        ))}
+              {isExpanded && (
+                <div className="px-4 pb-4 pt-2 border-t border-[#e2ccaf]/60 bg-[#f2ede2]/40">
+                  <ChannelStrategies
+                    strategies={ch.strategies || []}
+                    channelBudget={ch.budget_value || 0}
+                    taxPercent={ch.tax_percent || 0}
+                    days={days}
+                    readOnly={readOnly}
+                    channelName={ch.channel_name}
+                    objectives={dbObjectives}
+                    funnelTypes={funnelTypes}
+                    benchmarks={benchmarks}
+                    segment={segment}
+                    planFunnelTypeId={planFunnelTypeId}
+                    averageTicket={averageTicket}
+                    onChange={(newStrategies) => updateChannel(idx, 'strategies', newStrategies)}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

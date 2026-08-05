@@ -24,16 +24,15 @@ export default function MediaPlans() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  // Persistência apenas de retorno do PlanDetail (não persiste ao sair do menu e voltar)
   const [selectedClientId, setSelectedClientId] = useState(() => sessionStorage.getItem('mp.selectedClientId') || '');
   const [selectedPlanId, setSelectedPlanId] = useState(() => sessionStorage.getItem('mp.selectedPlanId') || '');
 
-  // Persiste a unidade/plano selecionados para manter ao retornar do detalhe do plano
+  // Ao montar, consome os valores e limpa — assim só funciona em retorno imediato do PlanDetail
   useEffect(() => {
-    if (selectedClientId) sessionStorage.setItem('mp.selectedClientId', selectedClientId);
-    else sessionStorage.removeItem('mp.selectedClientId');
-    if (selectedPlanId) sessionStorage.setItem('mp.selectedPlanId', selectedPlanId);
-    else sessionStorage.removeItem('mp.selectedPlanId');
-  }, [selectedClientId, selectedPlanId]);
+    sessionStorage.removeItem('mp.selectedClientId');
+    sessionStorage.removeItem('mp.selectedPlanId');
+  }, []);
 
   const { data: plans = [], isLoading } = useQuery({
     queryKey: ['plans'],

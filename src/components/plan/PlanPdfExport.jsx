@@ -151,105 +151,157 @@ function drawTable(doc, { startY, headers, rows, colWidths, pageW, marginL = 14,
   return y;
 }
 
-// ── Gráfico funil vertical (barras verticais decrescentes, estilo UI) ─────────
-function drawFunnelChart(doc, { x, y, w, h, stages, values, pageW, marginL, title = 'Funil de Conversão', compact = false }) {
+// ── Funil pirâmide (trapézios decrescentes — estilo referência) ───────────────
+function drawFunnelPyramid(doc, { x, y, w, stages, values, title = 'Funil de Conversão' }) {
   if (!stages || stages.length === 0) return y;
 
-  const maxVal = Math.max(...values, 1);
-  const chartH = compact ? 38 : 52; // altura da área de barras
-  const footerH = 16; // área das taxas de conversão abaixo
-  let cy = y;
-
   // Título
-  doc.setFontSize(compact ? 8 : 9);
+  doc.setFontSize(9);
   doc.setFont(undefined, 'bold');
   doc.setTextColor(...C.marrom);
-  doc.text(safe(title), x, cy);
+  doc.text(safe(title), x, y);
   doc.setDrawColor(...C.laranja);
   doc.setLineWidth(0.5);
-  doc.line(x, cy + 1.5, x + (compact ? 40 : 55), cy + 1.5);
+  doc.line(x, y + 1.5, x + 55, y + 1.5);
   doc.setLineWidth(0.2);
-  cy += compact ? 6 : 7;
+  y += 8;
 
   const n = stages.length;
-  const gap = 3;
-  const totalGap = gap * (n - 1);
-  const barW = (w - totalGap) / n;
+  const blockH = 13;
+  const gap = 1.5;
+  const totalH = n * blockH + (n - 1) * gap;
+  const maxVal = Math.max(...values, 1);
 
-  // Cores paleta U-Trax
+  // A largura da barra vai de 100% (1ª etapa) reduzindo proporcionalmente
+  // mas mantemos no mínimo 35% para leitura
   const STAGE_COLORS = [
-    [248,  93,   7],  // laranja U-Trax
-    [200,  75,   5],  // laranja escuro
-    [126, 105,  81],  // savana
-    [ 49,  43,  29],  // marrom
-    [160,  60,   4],
-    [ 80,  30,   2],
+    [248, 93,  7],
+    [220, 80,  5],
+    [180, 65,  4],
+    [140, 55,  4],
+    [100, 40,  3],
+    [ 70, 30,  2],
   ];
 
-  // Eixo Y — linhas de grade leves
-  const gridLines = [0, 0.25, 0.5, 0.75, 1.0];
-  gridLines.forEach(pct => {
-    const gy = cy + chartH * (1 - pct);
-    doc.setDrawColor(220, 217, 210);
-    doc.setLineWidth(0.15);
-    doc.line(x, gy, x + w, gy);
-    if (pct > 0) {
-      doc.setFontSize(5.5);
-      doc.setFont(undefined, 'normal');
+  stages.forEach((stage, i) => {
+    const val = values[i] || 0;
+    const pct = Math.max(0.35, val / maxVal);
+    const bw = w * pct;
+    const bx = x + (w - bw) / 2;
+    const by = y + i * (blockH + gap);
+    const color = STAGE_COLORS[Math.min(i, STAGE_COLORS.length - 1)];
+
+    doc.setFillColor(...color);
+    doc.roundedRect(bx, by, bw, blockH, 1.5, 1.5, 'F');
+
+    // Valor no centro da barra
+    doc.setFontSize(8);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(...C.branco);
+    doc.text(fmtN(val), bx + bw / 2, by + blockH / 2 + 2.5, { align: 'center' });
+
+    // Label à esquerda
+    doc.setFontSize(6.5);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(...C.marrom);
+    doc.text(safe(stage), x, by + blockH / 2 + 2.5);
+
+    // Taxa de conversão à direita (entre etapas)
+    if (i < stages.length - 1) {
+      const nextVal = values[i + 1] || 0;
+      const rate = val > 0 ? ((nextVal / val) * 100).toFixed(1) + '%' : '-';
+      doc.setFontSize(6);
       doc.setTextColor(...C.savana);
-      doc.text(Math.round(maxVal * pct).toLocaleString('pt-BR'), x - 1, gy + 1.5, { align: 'right' });
+      doc.text(rate, x + w, by + blockH + gap / 2 + 1, { align: 'right' });
     }
   });
+
+  return y + totalH + 6;
+}
+
+// ── Funil barras horizontais por canal (estilo referência) ────────────────────
+function drawChannelFunnelHorizontal(doc, { x, y, w, channelName, stages, values, title }) {
+  if (!stages || stages.length === 0) return y;
+  const maxVal = Math.max(...values, 1);
+  const barH = 10;
+  const gap = 4;
+  const labelW = 30;
+  const barAreaW = w - labelW;
+
+  // Título do canal
+  doc.setFontSize(8.5);
+  doc.setFont(undefined, 'bold');
+  doc.setTextColor(...C.marrom);
+  doc.text(safe(title || channelName), x, y);
+  doc.setDrawColor(...C.laranja);
+  doc.setLineWidth(0.4);
+  doc.line(x, y + 1.5, x + 50, y + 1.5);
   doc.setLineWidth(0.2);
+  y += 7;
+
+  const STAGE_COLORS = [
+    [248, 93,  7],
+    [220, 80,  5],
+    [180, 65,  4],
+    [140, 55,  4],
+    [100, 40,  3],
+  ];
 
   stages.forEach((stage, i) => {
     const val = values[i] || 0;
     const pct = val / maxVal;
-    const bh = Math.max(2, chartH * pct);
-    const bx = x + i * (barW + gap);
-    const by = cy + chartH - bh;
+    const bw = Math.max(6, barAreaW * pct);
     const color = STAGE_COLORS[Math.min(i, STAGE_COLORS.length - 1)];
+    const by = y + i * (barH + gap);
 
-    doc.setFillColor(...color);
-    doc.roundedRect(bx, by, barW, bh, 1, 1, 'F');
-
-    // Valor acima da barra
-    doc.setFontSize(7);
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(...C.marrom);
-    doc.text(fmtN(val), bx + barW / 2, by - 2, { align: 'center' });
-
-    // Label da etapa abaixo do chart
+    // Label etapa
     doc.setFontSize(6.5);
     doc.setFont(undefined, 'normal');
-    doc.setTextColor(...C.marrom);
-    const label = safe(stage);
-    doc.text(label, bx + barW / 2, cy + chartH + 5, { align: 'center' });
-  });
+    doc.setTextColor(...C.savana);
+    doc.text(safe(stage).toUpperCase(), x, by + barH / 2 + 2);
 
-  // Taxas de conversão entre etapas (rodapé)
-  const rateY = cy + chartH + 11;
-  doc.setFontSize(6);
-  doc.setFont(undefined, 'normal');
-  const convParts = [];
-  stages.forEach((stage, i) => {
-    if (i < stages.length - 1) {
-      const val = values[i] || 0;
-      const nextVal = values[i + 1] || 0;
-      const rate = val > 0 ? ((nextVal / val) * 100).toFixed(1) + '%' : '-';
-      convParts.push(`${safe(stage)} > ${safe(stages[i + 1])}  ${rate}`);
+    // Track cinza
+    doc.setFillColor(235, 232, 225);
+    doc.roundedRect(x + labelW, by, barAreaW, barH, 1, 1, 'F');
+    // Barra colorida
+    doc.setFillColor(...color);
+    doc.roundedRect(x + labelW, by, bw, barH, 1, 1, 'F');
+
+    // Valor na barra
+    doc.setFontSize(7.5);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(...C.branco);
+    if (bw > 12) doc.text(fmtN(val), x + labelW + bw / 2, by + barH / 2 + 2.5, { align: 'center' });
+    else {
+      doc.setTextColor(...C.marrom);
+      doc.text(fmtN(val), x + labelW + bw + 2, by + barH / 2 + 2.5);
     }
   });
-  // Centralizar todas as taxas numa linha
-  const fullText = convParts.join('    ');
-  doc.setTextColor(...C.savana);
-  // Quebra em linhas se necessário
-  const splitText = doc.splitTextToSize(fullText, w);
-  splitText.forEach((line, li) => {
-    doc.text(line, x + w / 2, rateY + li * 5, { align: 'center' });
-  });
 
-  return rateY + (splitText.length * 5) + 4;
+  // Taxas de conversão abaixo
+  const rateY = y + stages.length * (barH + gap) + 2;
+  doc.setFontSize(6);
+  doc.setFont(undefined, 'normal');
+  doc.setTextColor(...C.savana);
+  const rates = [];
+  stages.forEach((_, i) => {
+    if (i < stages.length - 1) {
+      const v = values[i] || 0;
+      const nv = values[i + 1] || 0;
+      rates.push(`${safe(stages[i])} > ${safe(stages[i + 1])}: ${v > 0 ? ((nv / v) * 100).toFixed(1) + '%' : '-'}`);
+    }
+  });
+  const ratesText = rates.join('  ·  ');
+  const splitRates = doc.splitTextToSize(ratesText, w);
+  splitRates.forEach((line, li) => doc.text(line, x + w / 2, rateY + li * 4.5, { align: 'center' }));
+
+  return rateY + splitRates.length * 4.5 + 6;
+}
+
+// ── Gráfico funil vertical (barras verticais) — mantido para compatibilidade ─
+function drawFunnelChart(doc, { x, y, w, h, stages, values, pageW, marginL, title = 'Funil de Conversão', compact = false }) {
+  // Redireciona para o novo funil pirâmide
+  return drawFunnelPyramid(doc, { x, y, w, stages, values, title });
 }
 
 // ── Alocação canais (barras horizontais proporcionais) ────────────────────────
@@ -583,26 +635,42 @@ function drawObjectiveCardsPage(doc, { brandingGroups, performanceGroups, pageW,
   }
 }
 
-// ── Página: funis por canal ────────────────────────────────────────────────────
-function drawChannelFunnelsPage(doc, { channelResults, funnelStageLabels, pageW, pageH, marginL, titulo }) {
+// ── Páginas de Performance por Canal (barras horizontais, estilo referência) ──
+function drawPerformanceByChannelPages(doc, { channelResults, funnelStageLabels, pageW, pageH, marginL, titulo }) {
   const perf = (channelResults || []).filter(ch => {
     const sv = ch.metrics?.stageValues;
     return sv && sv.length > 1 && sv.some(v => v > 0);
   });
   if (perf.length === 0) return;
-  doc.addPage();
-  const headerH = drawHeader(doc, titulo, 'Funil de Conversão por Canal', pageW);
-  const topY = headerH + 6;
-  const colGap = 8;
+
+  // Quantos canais cabem por página (em colunas de 2)
+  const colGap = 10;
   const colW = (pageW - marginL * 2 - colGap) / 2;
-  const rightX = marginL + colW + colGap;
-  let leftY = topY, rightY = topY, col = 0;
+
+  let pageStarted = false;
+  let col = 0;
+  let leftY = 0, rightY = 0;
+  const topY_fn = (headerH) => headerH + 8;
+
   for (const ch of perf) {
-    const x = col === 0 ? marginL : rightX;
-    const startY = col === 0 ? leftY : rightY;
-    if (startY > pageH - 85) { doc.addPage(); leftY = topY; rightY = topY; col = 0; continue; }
     const values = funnelStageLabels.map((_, i) => Math.round(ch.metrics.stageValues?.[i] || 0));
-    const endY = drawFunnelChart(doc, { x, y: startY, w: colW, h: 60, stages: funnelStageLabels, values, pageW, marginL, title: ch.channel_name || 'Canal', compact: true });
+    const estimatedH = funnelStageLabels.length * 14 + 30;
+
+    // Nova página se não iniciou ou não há espaço
+    const needPage = !pageStarted || (col === 0 && leftY > pageH - estimatedH - 10) || (col === 1 && rightY > pageH - estimatedH - 10);
+    if (needPage) {
+      doc.addPage();
+      const headerH = drawHeader(doc, titulo, 'Performance por Canal', pageW);
+      leftY = topY_fn(headerH);
+      rightY = topY_fn(headerH);
+      col = 0;
+      pageStarted = true;
+    }
+
+    const x = col === 0 ? marginL : marginL + colW + colGap;
+    const startY = col === 0 ? leftY : rightY;
+    const endY = drawChannelFunnelHorizontal(doc, { x, y: startY, w: colW, channelName: ch.channel_name || 'Canal', stages: funnelStageLabels, values });
+
     if (col === 0) { leftY = endY; col = 1; } else { rightY = endY; col = 0; }
   }
 }
@@ -761,7 +829,7 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
 
   // ── Páginas extras: cards por objetivo e funis por canal ──
   drawObjectiveCardsPage(doc, { brandingGroups, performanceGroups, pageW, pageH, marginL, titulo });
-  drawChannelFunnelsPage(doc, { channelResults: consolidated.channelResults, funnelStageLabels, pageW, pageH, marginL, titulo });
+  drawPerformanceByChannelPages(doc, { channelResults: consolidated.channelResults, funnelStageLabels, pageW, pageH, marginL, titulo });
 
   // ── Footer em todas as páginas ─────────────────
   const pageCount = doc.internal.getNumberOfPages();

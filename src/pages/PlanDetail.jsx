@@ -362,9 +362,18 @@ export default function PlanDetail() {
         </DialogContent>
       </Dialog>
       <div className="mb-6">
-        <Link to={createPageUrl('MediaPlans')} className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 mb-4">
+        <button
+          onClick={() => {
+            if (localPlan) {
+              sessionStorage.setItem('mp.selectedClientId', localPlan.client_id || '');
+              sessionStorage.setItem('mp.selectedPlanId', planId || '');
+            }
+            navigate(createPageUrl('MediaPlans'));
+          }}
+          className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 mb-4"
+        >
           <ArrowLeft className="w-3 h-3" /> Voltar aos Planos
-        </Link>
+        </button>
         <PageHeader
           title={`${localPlan.client_name || 'Sem nome'} — ${MESES[(localPlan.period_month || 1) - 1]} ${localPlan.period_year}`}
           description={`Funil: ${funnelType?.name || '—'} · Status: ${statusLabel}`}
