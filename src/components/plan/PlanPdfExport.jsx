@@ -151,157 +151,102 @@ function drawTable(doc, { startY, headers, rows, colWidths, pageW, marginL = 14,
   return y;
 }
 
-// ── Funil pirâmide (trapézios decrescentes — estilo referência) ───────────────
-function drawFunnelPyramid(doc, { x, y, w, stages, values, title = 'Funil de Conversão' }) {
+// ── Funil trapézio (formato de funil de verdade) ──────────────────────────────
+const STAGE_COLORS_FUNNEL = [
+  [248, 93,  7],
+  [214, 80,  5],
+  [180, 67,  4],
+  [140, 55,  4],
+  [100, 40,  3],
+  [ 70, 30,  2],
+];
+
+function drawTrapezoid(doc, cx, yTop, wTop, yBot, wBot) {
+  const xTL = cx - wTop / 2, xTR = cx + wTop / 2;
+  const xBL = cx - wBot / 2, xBR = cx + wBot / 2;
+  doc.triangle(xTL, yTop, xTR, yTop, xBR, yBot, 'F');
+  doc.triangle(xTL, yTop, xBR, yBot, xBL, yBot, 'F');
+}
+
+function drawFunnelPyramid(doc, { x, y, w, stages, values, title = 'Funil de Conversão', compact = false }) {
   if (!stages || stages.length === 0) return y;
 
   // Título
-  doc.setFontSize(9);
+  doc.setFontSize(compact ? 8 : 9);
   doc.setFont(undefined, 'bold');
   doc.setTextColor(...C.marrom);
   doc.text(safe(title), x, y);
   doc.setDrawColor(...C.laranja);
   doc.setLineWidth(0.5);
-  doc.line(x, y + 1.5, x + 55, y + 1.5);
-  doc.setLineWidth(0.2);
-  y += 8;
-
-  const n = stages.length;
-  const blockH = 13;
-  const gap = 1.5;
-  const totalH = n * blockH + (n - 1) * gap;
-  const maxVal = Math.max(...values, 1);
-
-  // A largura da barra vai de 100% (1ª etapa) reduzindo proporcionalmente
-  // mas mantemos no mínimo 35% para leitura
-  const STAGE_COLORS = [
-    [248, 93,  7],
-    [220, 80,  5],
-    [180, 65,  4],
-    [140, 55,  4],
-    [100, 40,  3],
-    [ 70, 30,  2],
-  ];
-
-  stages.forEach((stage, i) => {
-    const val = values[i] || 0;
-    const pct = Math.max(0.35, val / maxVal);
-    const bw = w * pct;
-    const bx = x + (w - bw) / 2;
-    const by = y + i * (blockH + gap);
-    const color = STAGE_COLORS[Math.min(i, STAGE_COLORS.length - 1)];
-
-    doc.setFillColor(...color);
-    doc.roundedRect(bx, by, bw, blockH, 1.5, 1.5, 'F');
-
-    // Valor no centro da barra
-    doc.setFontSize(8);
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(...C.branco);
-    doc.text(fmtN(val), bx + bw / 2, by + blockH / 2 + 2.5, { align: 'center' });
-
-    // Label à esquerda
-    doc.setFontSize(6.5);
-    doc.setFont(undefined, 'normal');
-    doc.setTextColor(...C.marrom);
-    doc.text(safe(stage), x, by + blockH / 2 + 2.5);
-
-    // Taxa de conversão à direita (entre etapas)
-    if (i < stages.length - 1) {
-      const nextVal = values[i + 1] || 0;
-      const rate = val > 0 ? ((nextVal / val) * 100).toFixed(1) + '%' : '-';
-      doc.setFontSize(6);
-      doc.setTextColor(...C.savana);
-      doc.text(rate, x + w, by + blockH + gap / 2 + 1, { align: 'right' });
-    }
-  });
-
-  return y + totalH + 6;
-}
-
-// ── Funil barras horizontais por canal (estilo referência) ────────────────────
-function drawChannelFunnelHorizontal(doc, { x, y, w, channelName, stages, values, title }) {
-  if (!stages || stages.length === 0) return y;
-  const maxVal = Math.max(...values, 1);
-  const barH = 10;
-  const gap = 4;
-  const labelW = 30;
-  const barAreaW = w - labelW;
-
-  // Título do canal
-  doc.setFontSize(8.5);
-  doc.setFont(undefined, 'bold');
-  doc.setTextColor(...C.marrom);
-  doc.text(safe(title || channelName), x, y);
-  doc.setDrawColor(...C.laranja);
-  doc.setLineWidth(0.4);
-  doc.line(x, y + 1.5, x + 50, y + 1.5);
+  doc.line(x, y + 1.5, x + (compact ? 40 : 55), y + 1.5);
   doc.setLineWidth(0.2);
   y += 7;
 
-  const STAGE_COLORS = [
-    [248, 93,  7],
-    [220, 80,  5],
-    [180, 65,  4],
-    [140, 55,  4],
-    [100, 40,  3],
-  ];
+  const n = stages.length;
+  const stageH = compact ? 12 : 16;
+  const gap = compact ? 1 : 1.2;
+  const maxVal = Math.max(...values, 1);
+  const cx = x + w / 2;
+
+  // Largura de cada borda superior proporcional ao valor (funil de verdade)
+  const widths = values.map(v => w * Math.max(0.10, v / maxVal));
 
   stages.forEach((stage, i) => {
-    const val = values[i] || 0;
-    const pct = val / maxVal;
-    const bw = Math.max(6, barAreaW * pct);
-    const color = STAGE_COLORS[Math.min(i, STAGE_COLORS.length - 1)];
-    const by = y + i * (barH + gap);
+    const wTop = widths[i];
+    const wBot = i < n - 1 ? widths[i + 1] : Math.max(10, widths[i] * 0.65);
+    const yTop = y + i * (stageH + gap);
+    const yBot = yTop + stageH;
+    const color = STAGE_COLORS_FUNNEL[Math.min(i, STAGE_COLORS_FUNNEL.length - 1)];
 
-    // Label etapa
-    doc.setFontSize(6.5);
-    doc.setFont(undefined, 'normal');
-    doc.setTextColor(...C.savana);
-    doc.text(safe(stage).toUpperCase(), x, by + barH / 2 + 2);
-
-    // Track cinza
-    doc.setFillColor(235, 232, 225);
-    doc.roundedRect(x + labelW, by, barAreaW, barH, 1, 1, 'F');
-    // Barra colorida
     doc.setFillColor(...color);
-    doc.roundedRect(x + labelW, by, bw, barH, 1, 1, 'F');
+    drawTrapezoid(doc, cx, yTop, wTop, yBot, wBot);
 
-    // Valor na barra
-    doc.setFontSize(7.5);
+    // Indicador de etapa (número) à esquerda, dentro do funil
+    doc.setFillColor(...C.marrom);
+    doc.circle(cx - wTop / 2 - 3.5, yTop + stageH / 2, 2.4, 'F');
+    doc.setFontSize(6);
     doc.setFont(undefined, 'bold');
     doc.setTextColor(...C.branco);
-    if (bw > 12) doc.text(fmtN(val), x + labelW + bw / 2, by + barH / 2 + 2.5, { align: 'center' });
-    else {
-      doc.setTextColor(...C.marrom);
-      doc.text(fmtN(val), x + labelW + bw + 2, by + barH / 2 + 2.5);
-    }
-  });
+    doc.text(String(i + 1), cx - wTop / 2 - 3.5, yTop + stageH / 2 + 1, { align: 'center' });
 
-  // Taxas de conversão abaixo
-  const rateY = y + stages.length * (barH + gap) + 2;
-  doc.setFontSize(6);
-  doc.setFont(undefined, 'normal');
-  doc.setTextColor(...C.savana);
-  const rates = [];
-  stages.forEach((_, i) => {
-    if (i < stages.length - 1) {
+    // Valor centralizado dentro do trapézio
+    doc.setFontSize(compact ? 8 : 9);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(...C.branco);
+    doc.text(fmtN(values[i] || 0), cx, yTop + stageH / 2 + (compact ? 2.5 : 3), { align: 'center' });
+
+    // Taxa de conversão à direita entre etapas (arredondada)
+    if (i < n - 1) {
       const v = values[i] || 0;
       const nv = values[i + 1] || 0;
-      rates.push(`${safe(stages[i])} > ${safe(stages[i + 1])}: ${v > 0 ? ((nv / v) * 100).toFixed(1) + '%' : '-'}`);
+      const rate = v > 0 ? Math.round((nv / v) * 100) + '%' : '-';
+      doc.setFontSize(compact ? 6.5 : 7);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(...C.laranja);
+      doc.text(rate, x + w, yBot + gap / 2 + 1, { align: 'right' });
     }
   });
-  const ratesText = rates.join('  ·  ');
-  const splitRates = doc.splitTextToSize(ratesText, w);
-  splitRates.forEach((line, li) => doc.text(line, x + w / 2, rateY + li * 4.5, { align: 'center' }));
 
-  return rateY + splitRates.length * 4.5 + 6;
+  // Legenda compacta das etapas abaixo
+  const legendY = y + n * (stageH + gap) + 3;
+  doc.setFontSize(compact ? 5.5 : 6.5);
+  doc.setFont(undefined, 'normal');
+  doc.setTextColor(...C.savana);
+  const legend = stages.map((s, i) => `${i + 1}. ${safe(s)}`).join('  ·  ');
+  const splitLeg = doc.splitTextToSize(legend, w);
+  splitLeg.forEach((line, li) => doc.text(line, cx, legendY + li * (compact ? 4 : 4.5), { align: 'center' }));
+
+  return legendY + splitLeg.length * (compact ? 4 : 4.5) + 4;
 }
 
-// ── Gráfico funil vertical (barras verticais) — mantido para compatibilidade ─
+// ── Funil por canal/objectivo (trapézio, compacto, lado a lado) ───────────────
+function drawChannelFunnel(doc, { x, y, w, channelName, stages, values, title }) {
+  return drawFunnelPyramid(doc, { x, y, w, stages, values, title: title || channelName, compact: true });
+}
+
+// ── Gráfico funil (compatibilidade) ──────────────────────────────────────────
 function drawFunnelChart(doc, { x, y, w, h, stages, values, pageW, marginL, title = 'Funil de Conversão', compact = false }) {
-  // Redireciona para o novo funil pirâmide
-  return drawFunnelPyramid(doc, { x, y, w, stages, values, title });
+  return drawFunnelPyramid(doc, { x, y, w, stages, values, title, compact });
 }
 
 // ── Alocação canais (barras horizontais proporcionais) ────────────────────────
@@ -594,44 +539,26 @@ function drawSectionTitle(doc, text, y, color, marginL) {
   return y + 6;
 }
 
-// ── Página: resumo por objetivo (branding + performance) ───────────────────────
+// ── Página: resumo de branding (cards) ────────────────────────────────────────
 function drawObjectiveCardsPage(doc, { brandingGroups, performanceGroups, pageW, pageH, marginL, titulo }) {
   const bEntries = Object.entries(brandingGroups || {});
-  const pEntries = Object.entries(performanceGroups || {});
-  if (bEntries.length === 0 && pEntries.length === 0) return;
+  if (bEntries.length === 0) return;
 
   doc.addPage();
-  const headerH = drawHeader(doc, titulo, 'Resumo por Objetivo — Branding & Performance', pageW);
+  const headerH = drawHeader(doc, titulo, 'Resumo — Branding', pageW);
   let y = headerH + 8;
 
-  if (bEntries.length) {
-    y = drawSectionTitle(doc, 'Branding', y, C.amareloStage, marginL);
-    for (const [name, data] of bEntries) {
-      if (y > pageH - 25) { doc.addPage(); y = drawSectionTitle(doc, 'Branding (cont.)', 14, C.amareloStage, marginL); }
-      doc.setFontSize(7);
-      doc.setFont(undefined, 'bold');
-      doc.setTextColor(...C.savana);
-      const chs = data.channels && data.channels.size ? '  ·  ' + Array.from(data.channels).join(', ') : '';
-      doc.text(safe(name) + chs, marginL, y);
-      y += 4;
-      y = drawCardsRow(doc, { cards: buildGroupCards(data, 'branding'), y, pageW, marginL, accent: C.amareloStage });
-      y += 2;
-    }
-  }
-
-  if (pEntries.length) {
-    y = drawSectionTitle(doc, 'Performance', y, C.azulMeta, marginL);
-    for (const [name, data] of pEntries) {
-      if (y > pageH - 25) { doc.addPage(); y = drawSectionTitle(doc, 'Performance (cont.)', 14, C.azulMeta, marginL); }
-      doc.setFontSize(7);
-      doc.setFont(undefined, 'bold');
-      doc.setTextColor(...C.savana);
-      const chs = data.channels && data.channels.size ? '  ·  ' + Array.from(data.channels).join(', ') : '';
-      doc.text(safe(name) + chs, marginL, y);
-      y += 4;
-      y = drawCardsRow(doc, { cards: buildGroupCards(data, 'performance'), y, pageW, marginL, accent: C.azulMeta });
-      y += 2;
-    }
+  y = drawSectionTitle(doc, 'Branding', y, C.amareloStage, marginL);
+  for (const [name, data] of bEntries) {
+    if (y > pageH - 25) { doc.addPage(); y = drawSectionTitle(doc, 'Branding (cont.)', 14, C.amareloStage, marginL); }
+    doc.setFontSize(7);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(...C.savana);
+    const chs = data.channels && data.channels.size ? '  ·  ' + Array.from(data.channels).join(', ') : '';
+    doc.text(safe(name) + chs, marginL, y);
+    y += 4;
+    y = drawCardsRow(doc, { cards: buildGroupCards(data, 'branding'), y, pageW, marginL, accent: C.amareloStage });
+    y += 2;
   }
 }
 
@@ -654,13 +581,13 @@ function drawPerformanceByChannelPages(doc, { channelResults, funnelStageLabels,
 
   for (const ch of perf) {
     const values = funnelStageLabels.map((_, i) => Math.round(ch.metrics.stageValues?.[i] || 0));
-    const estimatedH = funnelStageLabels.length * 14 + 30;
+    const estimatedH = funnelStageLabels.length * 16 + 35;
 
     // Nova página se não iniciou ou não há espaço
     const needPage = !pageStarted || (col === 0 && leftY > pageH - estimatedH - 10) || (col === 1 && rightY > pageH - estimatedH - 10);
     if (needPage) {
       doc.addPage();
-      const headerH = drawHeader(doc, titulo, 'Performance por Canal', pageW);
+      const headerH = drawHeader(doc, titulo, 'Performance', pageW);
       leftY = topY_fn(headerH);
       rightY = topY_fn(headerH);
       col = 0;
@@ -669,7 +596,7 @@ function drawPerformanceByChannelPages(doc, { channelResults, funnelStageLabels,
 
     const x = col === 0 ? marginL : marginL + colW + colGap;
     const startY = col === 0 ? leftY : rightY;
-    const endY = drawChannelFunnelHorizontal(doc, { x, y: startY, w: colW, channelName: ch.channel_name || 'Canal', stages: funnelStageLabels, values });
+    const endY = drawChannelFunnel(doc, { x, y: startY, w: colW, channelName: ch.channel_name || 'Canal', stages: funnelStageLabels, values, title: `Performance · ${safe(ch.channel_name || 'Canal')}` });
 
     if (col === 0) { leftY = endY; col = 1; } else { rightY = endY; col = 0; }
   }
