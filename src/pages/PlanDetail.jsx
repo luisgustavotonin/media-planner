@@ -233,34 +233,37 @@ export default function PlanDetail() {
       return obj?.type === 'performance';
     }).reduce((cs, camp) => cs + (camp.budget_value || 0), 0), 0);
 
+  // Agrupa por objetivo, mas mantém o detalhamento SEPARADO por canal.
+  // O funil/objetivo é compartilhado; os cards são por canal (nenhuma soma entre canais).
   const groupByObjective = (type) => {
     const groups = {};
     channels.forEach(ch => {
       const taxRate = (ch.tax_percent || 0) / 100;
+      const chName = ch.channel_name || 'Canal';
       (ch.strategies || []).forEach(camp => {
         const obj = objectives.find(o => o.name === camp.objective);
         if ((obj?.type || 'performance') !== type) return;
         const key = camp.objective || 'Sem objetivo';
-        if (!groups[key]) groups[key] = { investment: 0, netInvestment: 0, impressions: 0, clicks: 0, reach: 0, leads: 0, sales: 0, revenue: 0, kpis: {}, objective: obj, channels: new Set() };
+        if (!groups[key]) groups[key] = { objective: obj, channelData: {} };
         const g = groups[key];
-        g.channels.add(ch.channel_name);
+        if (!g.channelData[chName]) g.channelData[chName] = { investment: 0, netInvestment: 0, impressions: 0, clicks: 0, reach: 0, leads: 0, sales: 0, revenue: 0, kpis: {} };
+        const c = g.channelData[chName];
         const campBudget = camp.budget_value || 0;
         const netBudget = campBudget * (1 - taxRate);
-        g.investment += campBudget;
-        g.netInvestment += netBudget;
+        c.investment += campBudget;
+        c.netInvestment += netBudget;
         const kpiValues = camp.kpi_values || [];
-        // Só coleta KPIs que pertencem ao objetivo atual (ignora KPIs órfãos de objetivos anteriores)
         const objKpiLabels = new Set((obj?.kpis || []).map(k => k.label));
         kpiValues.forEach(kv => {
           if (kv.value > 0 && (objKpiLabels.size === 0 || objKpiLabels.has(kv.label))) {
-            if (!g.kpis[kv.label]) g.kpis[kv.label] = { label: kv.label, unit: kv.unit, totalValue: 0, totalBudget: 0, count: 0 };
+            if (!c.kpis[kv.label]) c.kpis[kv.label] = { label: kv.label, unit: kv.unit, totalValue: 0, totalBudget: 0, count: 0 };
             if (kv.unit === 'numero') {
-              g.kpis[kv.label].totalValue += kv.value;
+              c.kpis[kv.label].totalValue += kv.value;
             } else {
-              g.kpis[kv.label].totalValue += kv.value * campBudget;
-              g.kpis[kv.label].totalBudget += campBudget;
+              c.kpis[kv.label].totalValue += kv.value * campBudget;
+              c.kpis[kv.label].totalBudget += campBudget;
             }
-            g.kpis[kv.label].count++;
+            c.kpis[kv.label].count++;
           }
         });
         const ticketKpi = kpiValues.find(kv => (kv.label || '').toLowerCase().includes('ticket') && kv.value > 0);
@@ -272,54 +275,55 @@ export default function PlanDetail() {
           if (kpiValue > 0) {
             if (costKpiLabel.includes('cpm') || costKpiLabel.includes('impress') || costKpiLabel.includes('mil')) {
               campImpressions = (campBudget / kpiValue) * 1000;
-              g.impressions += campImpressions;
+              c.impressions += campImpressions;
             } else if (costKpiLabel.includes('cpc') || costKpiLabel.includes('click') || costKpiLabel.includes('clique')) {
-              g.clicks += campBudget / kpiValue;
+              c.clicks += campBudget / kpiValue;
             }
           }
           const freqKpi = kpiValues.find(kv => kv.unit === 'numero' && (kv.label || '').toLowerCase().includes('freq'));
           if (freqKpi && freqKpi.value > 0 && campImpressions > 0) {
-            g.reach += campImpressions / freqKpi.value;
+            c.reach += campImpressions / freqKpi.value;
           }
         } else {
-          // Performance: calcula leads, vendas e receita pelo funil
           if (kpiValue > 0) {
-          const campLeads = campBudget / kpiValue;
-          g.leads += campLeads;
-          const percentKpis = (camp.kpi_values || []).filter(kv => kv.unit === 'percentual' && kv.value > 0);
-          const kpiRates = percentKpis.map(kv => kv.value);
-          const campRates = kpiRates.length > 0 ? kpiRates : (camp.funnel_rates?.length ? camp.funnel_rates : (activeRates.length > 0 ? activeRates : null));
+            const campLeads = campBudget / kpiValue;
+            c.leads += campLeads;
+            const percentKpis = (camp.kpi_values || []).filter(kv => kv.unit === 'percentual' && kv.value > 0);
+            const kpiRates = percentKpis.map(kv => kv.value);
+            const campRates = kpiRates.length > 0 ? kpiRates : (camp.funnel_rates?.length ? camp.funnel_rates : (activeRates.length > 0 ? activeRates : null));
             if (campRates && campRates.length > 0) {
               const campStages = [campLeads];
               for (let i = 0; i < campRates.length; i++) {
                 campStages.push(campStages[i] * (campRates[i] || 0));
               }
               const campSales = campStages[campStages.length - 1];
-              g.sales += campSales;
-              g.revenue += campSales * (ticketKpi?.value || avgTicket);
+              c.sales += campSales;
+              c.revenue += campSales * (ticketKpi?.value || avgTicket);
             }
           }
         }
       });
     });
-    // Avalia métricas calculadas dinamicamente (fórmulas configuradas no objetivo)
+    // Avalia métricas calculadas dinamicamente por canal (fórmulas do objetivo)
     Object.values(groups).forEach(g => {
       const calcMetrics = g.objective?.calculated_metrics;
-      if (calcMetrics?.length) {
-        const ctx = {
-          investimento: g.investment,
-          investimento_liquido: g.investment,
-          leads: g.leads,
-          vendas: g.sales || 0,
-          receita: g.revenue || 0,
-          ticket_medio: avgTicket || 0,
-        };
-        Object.values(g.kpis).forEach(k => {
-          const val = k.unit === 'numero' ? (k.count > 0 ? k.totalValue / k.count : 0) : (k.totalBudget > 0 ? k.totalValue / k.totalBudget : (k.count > 0 ? k.totalValue / k.count : 0));
-          ctx[sanitizeVar(k.label)] = val;
-        });
-        g.calculatedCards = evaluateCalculatedMetrics(calcMetrics, ctx);
-      }
+      Object.values(g.channelData).forEach(c => {
+        if (calcMetrics?.length) {
+          const ctx = {
+            investimento: c.investment,
+            investimento_liquido: c.netInvestment,
+            leads: c.leads,
+            vendas: c.sales || 0,
+            receita: c.revenue || 0,
+            ticket_medio: avgTicket || 0,
+          };
+          Object.values(c.kpis).forEach(k => {
+            const val = k.unit === 'numero' ? (k.count > 0 ? k.totalValue / k.count : 0) : (k.totalBudget > 0 ? k.totalValue / k.totalBudget : (k.count > 0 ? k.totalValue / k.count : 0));
+            ctx[sanitizeVar(k.label)] = val;
+          });
+          c.calculatedCards = evaluateCalculatedMetrics(calcMetrics, ctx);
+        }
+      });
     });
     return groups;
   };
@@ -437,40 +441,46 @@ export default function PlanDetail() {
             <span className="text-[10px] text-amber-500/60">·</span>
             <span className="text-[10px] text-amber-600/70">Awareness & Reconhecimento</span>
           </div>
-          {Object.entries(brandingGroups).map(([objName, data]) => {
-            const hasCalcMetrics = data.calculatedCards?.length > 0;
-            const frequency = data.reach > 0 ? data.impressions / data.reach : 0;
-            const calcCards = hasCalcMetrics ? data.calculatedCards.map(c => ({
-              label: c.label,
-              value: formatCardValue(c.value, c.unit, c.label),
-              icon: getMetricIcon(c.label),
-              color: c.unit === 'moeda' ? 'amber' : c.unit === 'percentual' ? 'teal' : 'amber',
-            })) : [];
-            const hardcodedCards = hasCalcMetrics ? [] : [
-              data.impressions > 0 && { label: 'Impressões', value: Math.round(data.impressions).toLocaleString('pt-BR'), icon: getMetricIcon('Impressões'), color: 'amber' },
-              data.reach > 0 && { label: 'Alcance', value: Math.round(data.reach).toLocaleString('pt-BR'), icon: getMetricIcon('Alcance'), color: 'teal' },
-              frequency > 0 && { label: 'Frequência', value: frequency.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }), icon: getMetricIcon('Frequência'), color: 'amber' },
-              data.clicks > 0 && { label: 'Cliques', value: Math.round(data.clicks).toLocaleString('pt-BR'), icon: getMetricIcon('Cliques'), color: 'teal' },
-            ].filter(Boolean);
-            const cards = [
-              { label: 'Investimento', value: `R$${Math.round(data.investment).toLocaleString('pt-BR')}`, icon: getMetricIcon('Investimento'), color: 'amber' },
-              ...calcCards,
-              ...hardcodedCards,
-            ].filter(Boolean);
-            return (
-              <div key={objName} className="mb-4">
-                <div className="flex items-center gap-2 mb-2 ml-1 flex-wrap">
-                  <span className="text-[10px] font-medium text-amber-600/80">{objName}</span>
-                  {data.channels && Array.from(data.channels).map(chName => (
-                    <ChannelBadge key={chName} channel={chName} />
-                  ))}
-                </div>
-                <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-                  {cards.map((c, i) => <StatCard key={i} {...c} />)}
-                </div>
+          {Object.entries(brandingGroups).map(([objName, data]) => (
+            <div key={objName} className="mb-4">
+              <div className="flex items-center gap-2 mb-2 ml-1">
+                <span className="text-[10px] font-medium text-amber-600/80">{objName}</span>
+                <span className="text-[10px] text-amber-400/50">·</span>
+                <span className="text-[10px] text-amber-500/50">funil compartilhado</span>
               </div>
-            );
-          })}
+              {Object.entries(data.channelData).map(([chName, c]) => {
+                const hasCalcMetrics = c.calculatedCards?.length > 0;
+                const frequency = c.reach > 0 ? c.impressions / c.reach : 0;
+                const calcCards = hasCalcMetrics ? c.calculatedCards.map(cm => ({
+                  label: cm.label,
+                  value: formatCardValue(cm.value, cm.unit, cm.label),
+                  icon: getMetricIcon(cm.label),
+                  color: cm.unit === 'moeda' ? 'amber' : cm.unit === 'percentual' ? 'teal' : 'amber',
+                })) : [];
+                const hardcodedCards = hasCalcMetrics ? [] : [
+                  c.impressions > 0 && { label: 'Impressões', value: Math.round(c.impressions).toLocaleString('pt-BR'), icon: getMetricIcon('Impressões'), color: 'amber' },
+                  c.reach > 0 && { label: 'Alcance', value: Math.round(c.reach).toLocaleString('pt-BR'), icon: getMetricIcon('Alcance'), color: 'teal' },
+                  frequency > 0 && { label: 'Frequência', value: frequency.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }), icon: getMetricIcon('Frequência'), color: 'amber' },
+                  c.clicks > 0 && { label: 'Cliques', value: Math.round(c.clicks).toLocaleString('pt-BR'), icon: getMetricIcon('Cliques'), color: 'teal' },
+                ].filter(Boolean);
+                const cards = [
+                  { label: 'Investimento', value: `R$${Math.round(c.investment).toLocaleString('pt-BR')}`, icon: getMetricIcon('Investimento'), color: 'amber' },
+                  ...calcCards,
+                  ...hardcodedCards,
+                ].filter(Boolean);
+                return (
+                  <div key={chName} className="mb-2">
+                    <div className="flex items-center gap-2 mb-1.5 ml-1">
+                      <ChannelBadge channel={chName} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+                      {cards.map((cd, i) => <StatCard key={i} {...cd} />)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
         </>
       )}
 
@@ -485,32 +495,38 @@ export default function PlanDetail() {
             <span className="text-[10px] text-indigo-400/60">·</span>
             <span className="text-[10px] text-indigo-500/70">Conversão & Vendas</span>
           </div>
-          {Object.entries(performanceGroups).map(([objName, data]) => {
-            const hasCalcMetrics = data.calculatedCards?.length > 0;
-            const calcCards = hasCalcMetrics ? data.calculatedCards.map(c => ({
-              label: c.label,
-              value: formatCardValue(c.value, c.unit, c.label),
-              icon: getMetricIcon(c.label),
-              color: c.unit === 'moeda' ? 'indigo' : c.unit === 'percentual' ? 'rose' : 'indigo',
-            })) : [];
-            const cards = [
-              { label: 'Investimento', value: `R$${Math.round(data.investment).toLocaleString('pt-BR')}`, icon: getMetricIcon('Investimento'), color: 'indigo' },
-              ...calcCards,
-            ].filter(Boolean);
-            return (
-              <div key={objName} className="mb-4">
-                <div className="flex items-center gap-2 mb-2 ml-1 flex-wrap">
-                  <span className="text-[10px] font-medium text-indigo-500/80">{objName}</span>
-                  {data.channels && Array.from(data.channels).map(chName => (
-                    <ChannelBadge key={chName} channel={chName} />
-                  ))}
-                </div>
-                <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-                  {cards.map((c, i) => <StatCard key={i} {...c} />)}
-                </div>
+          {Object.entries(performanceGroups).map(([objName, data]) => (
+            <div key={objName} className="mb-4">
+              <div className="flex items-center gap-2 mb-2 ml-1">
+                <span className="text-[10px] font-medium text-indigo-500/80">{objName}</span>
+                <span className="text-[10px] text-indigo-400/50">·</span>
+                <span className="text-[10px] text-indigo-400/50">funil compartilhado</span>
               </div>
-            );
-          })}
+              {Object.entries(data.channelData).map(([chName, c]) => {
+                const hasCalcMetrics = c.calculatedCards?.length > 0;
+                const calcCards = hasCalcMetrics ? c.calculatedCards.map(cm => ({
+                  label: cm.label,
+                  value: formatCardValue(cm.value, cm.unit, cm.label),
+                  icon: getMetricIcon(cm.label),
+                  color: cm.unit === 'moeda' ? 'indigo' : cm.unit === 'percentual' ? 'rose' : 'indigo',
+                })) : [];
+                const cards = [
+                  { label: 'Investimento', value: `R$${Math.round(c.investment).toLocaleString('pt-BR')}`, icon: getMetricIcon('Investimento'), color: 'indigo' },
+                  ...calcCards,
+                ].filter(Boolean);
+                return (
+                  <div key={chName} className="mb-2">
+                    <div className="flex items-center gap-2 mb-1.5 ml-1">
+                      <ChannelBadge channel={chName} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+                      {cards.map((cd, i) => <StatCard key={i} {...cd} />)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
         </>
       )}
 

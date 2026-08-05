@@ -542,36 +542,46 @@ function drawObjectiveCardsPage(doc, { brandingGroups, performanceGroups, pageW,
   const headerH = drawHeader(doc, titulo, 'Detalhamento das Campanhas', pageW);
   let y = headerH + 8;
 
+  const drawObjectiveChannels = (entries, type, accent, sectionLabel) => {
+    for (const [name, data] of entries) {
+      const chEntries = Object.entries(data.channelData || {});
+      if (chEntries.length === 0) continue;
+      if (y > pageH - 22) { doc.addPage(); y = drawSectionTitle(doc, sectionLabel + ' (cont.)', 14, accent, marginL); }
+      // Cabeçalho do objetivo (funil compartilhado)
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(...C.marrom);
+      doc.text(safe(name), marginL, y);
+      doc.setFontSize(6);
+      doc.setFont(undefined, 'normal');
+      doc.setTextColor(...C.savana);
+      doc.text('funil compartilhado', marginL + doc.getTextWidth(safe(name)) + 4, y);
+      y += 4.5;
+      // Um bloco de cards por canal
+      for (const [chName, cData] of chEntries) {
+        if (y > pageH - 22) { doc.addPage(); y = drawSectionTitle(doc, sectionLabel + ' (cont.)', 14, accent, marginL); }
+        doc.setFontSize(6.5);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(...C.savana);
+        doc.text(safe(chName), marginL, y);
+        y += 3.5;
+        y = drawCardsRow(doc, { cards: buildGroupCards(cData, type), y, pageW, marginL, accent });
+        y += 1.5;
+      }
+      y += 1.5;
+    }
+  };
+
   if (bEntries.length) {
     y = drawSectionTitle(doc, 'Branding', y, C.amareloStage, marginL);
-    for (const [name, data] of bEntries) {
-      if (y > pageH - 25) { doc.addPage(); y = drawSectionTitle(doc, 'Branding (cont.)', 14, C.amareloStage, marginL); }
-      doc.setFontSize(7);
-      doc.setFont(undefined, 'bold');
-      doc.setTextColor(...C.savana);
-      const chs = data.channels && data.channels.size ? '  ·  ' + Array.from(data.channels).join(', ') : '';
-      doc.text(safe(name) + chs, marginL, y);
-      y += 4;
-      y = drawCardsRow(doc, { cards: buildGroupCards(data, 'branding'), y, pageW, marginL, accent: C.amareloStage });
-      y += 2;
-    }
+    drawObjectiveChannels(bEntries, 'branding', C.amareloStage, 'Branding');
   }
 
   if (pEntries.length) {
-    if (bEntries.length) y += 2;
-    if (y > pageH - 25) { doc.addPage(); y = 14; }
+    if (bEntries.length) y += 1;
+    if (y > pageH - 22) { doc.addPage(); y = 14; }
     y = drawSectionTitle(doc, 'Performance', y, C.laranja, marginL);
-    for (const [name, data] of pEntries) {
-      if (y > pageH - 25) { doc.addPage(); y = drawSectionTitle(doc, 'Performance (cont.)', 14, C.laranja, marginL); }
-      doc.setFontSize(7);
-      doc.setFont(undefined, 'bold');
-      doc.setTextColor(...C.savana);
-      const chs = data.channels && data.channels.size ? '  ·  ' + Array.from(data.channels).join(', ') : '';
-      doc.text(safe(name) + chs, marginL, y);
-      y += 4;
-      y = drawCardsRow(doc, { cards: buildGroupCards(data, 'performance'), y, pageW, marginL, accent: C.laranja });
-      y += 2;
-    }
+    drawObjectiveChannels(pEntries, 'performance', C.laranja, 'Performance');
   }
 }
 
