@@ -376,6 +376,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
   const [result, setResult] = useState(null);
   const [expandedRows, setExpandedRows] = useState({});
   const [deleteRowIdx, setDeleteRowIdx] = useState(null);
+  const [pickerCategory, setPickerCategory] = useState('digital');
 
   const { data: channels = [] } = useQuery({
     queryKey: ['channels'],
@@ -419,25 +420,9 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
 
   // Pré-popula com os canais ativos (split igual) ao selecionar cliente
   useEffect(() => {
-    if (!selectedClientId) { setDistribution([]); setTitle(''); setTargetRevenue(0); setResult(null); return; }
     setTitle(''); setTargetRevenue(0); setResult(null);
-    if (activeChannels.length > 0) {
-      const equal = Math.round(100 / activeChannels.length);
-      setDistribution(activeChannels.map((ch, i) => ({
-        channel_name: ch.name,
-        objective_id: '',
-        objective_name: '',
-        percent: i === activeChannels.length - 1 ? 100 - equal * (activeChannels.length - 1) : equal,
-        expected_cpl: 0,
-        tax_percent: 0,
-        conversion_rates: [],
-        average_ticket: 0,
-        funnel_stage_labels: null,
-      })));
-    } else {
-      setDistribution([]);
-    }
-  }, [selectedClientId, activeChannels.length]);
+    setDistribution([]);
+  }, [selectedClientId]);
 
   const objectivesForChannel = (channelName) =>
     objectives.filter(o => o.is_active !== false && (!o.channels?.length || o.channels.includes(channelName)));
@@ -520,6 +505,23 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
     }]);
     setResult(null);
   };
+
+  const addSpecificChannel = (channelName) => {
+    setDistribution(d => [...d, {
+      channel_name: channelName, objective_id: '', objective_name: '',
+      percent: 0, expected_cpl: 0, tax_percent: 0,
+      conversion_rates: [], average_ticket: 0, funnel_stage_labels: null,
+    }]);
+    setResult(null);
+  };
+
+  const sortedIndices = distribution
+    .map((_, i) => i)
+    .sort((a, b) => (Number(distribution[b].percent) || 0) - (Number(distribution[a].percent) || 0));
+
+  const availableChannels = activeChannels.filter(c =>
+    (c.category || 'digital') === pickerCategory && !distribution.some(r => r.channel_name === c.name)
+  );
 
   const toggleRowExpand = (idx) => setExpandedRows(e => ({ ...e, [idx]: !e[idx] }));
 
@@ -665,9 +667,10 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
               ) : (
                 <div className="space-y-2">
                   <div className="hidden lg:grid grid-cols-[1.2fr_1.4fr_0.8fr_1fr_0.8fr_32px] gap-2 text-[10px] text-[#7c7161] font-semibold uppercase tracking-wide px-1">
-                    <span>Canal</span><span>Objetivo</span><span>% Budget</span><span>CPL (R$)</span><span>Imposto %</span><span></span>
+                    <span>Canal</span><span>Objetivo</span><span>Investimento %</span><span>CPL (R$)</span><span>Imposto %</span><span></span>
                   </div>
-                  {distribution.map((row, idx) => {
+                  {sortedIndices.map(idx => {
+                    const row = distribution[idx];
                     const isExpanded = expandedRows[idx];
                     const convLabels = rowConversionLabels(row);
                     const hasObjective = !!row.objective_id;
@@ -735,10 +738,32 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                 </div>
               )}
 
+              <div className="mt-3 border border-dashed border-[#d9cdb8] rounded-lg p-3 bg-[#f2ede2]/30">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <span className="text-[11px] font-semibold text-[#7c7161] uppercase tracking-wide">Adicionar canal:</span>
+                  <div className="flex gap-1 bg-white rounded-md p-0.5 border border-[#d9cdb8]">
+                    <button onClick={() => setPickerCategory('digital')}
+                      className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${pickerCategory === 'digital' ? 'bg-[#312b1d] text-white' : 'text-[#7c7161] hover:text-[#312b1d]'}`}>
+                      Digital
+                    </button>
+                    <button onClick={() => setPickerCategory('offline')}
+                      className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${pickerCategory === 'offline' ? 'bg-[#312b1d] text-white' : 'text-[#7c7161] hover:text-[#312b1d]'}`}>
+                      Offline
+                    </button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {availableChannels.map(ch => (
+                    <button key={ch.id} onClick={() => addSpecificChannel(ch.name)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-[#d9cdb8] bg-white text-[#312b1d] hover:border-[#f85d07] hover:bg-[#f2ede2] transition-all">
+                      <Plus className="w-3 h-3" /> {ch.name}
+                    </button>
+                  ))}
+                  {availableChannels.length === 0 && <span className="text-xs text-gray-400 italic">Todos os canais desta categoria já foram adicionados.</span>}
+                </div>
+              </div>
+
               <div className="flex flex-wrap gap-3 mt-3">
-                <Button variant="outline" onClick={addChannel} className="gap-2 text-sm">
-                  <Plus className="w-4 h-4" /> Adicionar Canal
-                </Button>
                 <Button
                   onClick={() => setResult(calculateReversePlan(targetRevenue, distribution))}
                   className="gap-2 bg-primary hover:bg-primary/90"
