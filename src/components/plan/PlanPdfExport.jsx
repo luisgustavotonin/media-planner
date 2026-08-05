@@ -154,10 +154,10 @@ function drawTable(doc, { startY, headers, rows, colWidths, pageW, marginL = 14,
 // ── Funil trapézio (formato FIXO, cores da empresa) ───────────────────────────
 const STAGE_COLORS_FUNNEL = [
   [248, 93,  7],    // laranja U-Trax
-  [251, 188,  4],   // amarelo
-  [ 52, 168, 83],   // verde
-  [ 66, 103, 178],  // azul
+  [200, 100, 30],   // laranja-âmbar
+  [160, 110, 50],   // terracota
   [126, 105, 81],   // savana
+  [ 80,  70, 50],   // marrom-claro
   [ 49,  43, 29],   // marrom
 ];
 
@@ -755,15 +755,10 @@ export async function exportPlanToPdf({ localPlan, consolidated, totalInvestment
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
-    doc.setDrawColor(...C.crema);
-    doc.line(marginL, pageH - 9, pageW - marginL, pageH - 9);
     doc.setFontSize(6.5);
     doc.setTextColor(...C.savana);
     doc.setFont(undefined, 'normal');
     doc.text(`Página ${i} de ${pageCount}`, pageW - marginL, pageH - 5, { align: 'right' });
-    doc.text('Media Planner - Performance Clinic', marginL, pageH - 5);
-    doc.setFillColor(...C.laranja);
-    doc.circle(pageW / 2, pageH - 6, 0.8, 'F');
   }
 
   const fileName = `plano_${(localPlan.client_name || 'cliente').replace(/\s+/g, '_')}_${mes}_${localPlan.period_year}.pdf`;
