@@ -151,14 +151,14 @@ function drawTable(doc, { startY, headers, rows, colWidths, pageW, marginL = 14,
   return y;
 }
 
-// ── Funil trapézio (formato de funil de verdade) ──────────────────────────────
+// ── Funil trapézio (formato FIXO, cores da empresa) ───────────────────────────
 const STAGE_COLORS_FUNNEL = [
-  [248, 93,  7],
-  [214, 80,  5],
-  [180, 67,  4],
-  [140, 55,  4],
-  [100, 40,  3],
-  [ 70, 30,  2],
+  [248, 93,  7],    // laranja U-Trax
+  [251, 188,  4],   // amarelo
+  [ 52, 168, 83],   // verde
+  [ 66, 103, 178],  // azul
+  [126, 105, 81],   // savana
+  [ 49,  43, 29],   // marrom
 ];
 
 function drawTrapezoid(doc, cx, yTop, wTop, yBot, wBot) {
@@ -166,6 +166,11 @@ function drawTrapezoid(doc, cx, yTop, wTop, yBot, wBot) {
   const xBL = cx - wBot / 2, xBR = cx + wBot / 2;
   doc.triangle(xTL, yTop, xTR, yTop, xBR, yBot, 'F');
   doc.triangle(xTL, yTop, xBR, yBot, xBL, yBot, 'F');
+}
+
+function stageTopLabel(stageLabel, isLast) {
+  const lbl = safe(stageLabel);
+  return isLast ? `${lbl} projetadas` : `${lbl} esperados`;
 }
 
 function drawFunnelPyramid(doc, { x, y, w, stages, values, title = 'Funil de Conversão', compact = false }) {
@@ -183,7 +188,7 @@ function drawFunnelPyramid(doc, { x, y, w, stages, values, title = 'Funil de Con
   y += 7;
 
   const n = stages.length;
-  const stageH = compact ? 12 : 16;
+  const stageH = compact ? 15 : 19;
   const gap = compact ? 1 : 1.2;
   const cx = x + w / 2;
 
@@ -199,46 +204,32 @@ function drawFunnelPyramid(doc, { x, y, w, stages, values, title = 'Funil de Con
     const yTop = y + i * (stageH + gap);
     const yBot = yTop + stageH;
     const color = STAGE_COLORS_FUNNEL[Math.min(i, STAGE_COLORS_FUNNEL.length - 1)];
+    const isLast = i === n - 1;
 
     doc.setFillColor(...color);
     drawTrapezoid(doc, cx, yTop, wTop, yBot, wBot);
 
-    // Indicador de etapa (número) à esquerda, dentro do funil
-    doc.setFillColor(...C.marrom);
-    doc.circle(cx - wTop / 2 - 3.5, yTop + stageH / 2, 2.4, 'F');
-    doc.setFontSize(6);
+    // Rótulo da etapa na parte superior do trapézio (ex.: "Leads esperados")
+    const label = stageTopLabel(stage, isLast);
+    doc.setFontSize(compact ? 5.5 : 6.5);
     doc.setFont(undefined, 'bold');
     doc.setTextColor(...C.branco);
-    doc.text(String(i + 1), cx - wTop / 2 - 3.5, yTop + stageH / 2 + 1, { align: 'center' });
+    const maxTextW = Math.min(wTop, wBot) - 4;
+    const lines = doc.splitTextToSize(label, Math.max(8, maxTextW));
+    const labelLineH = compact ? 2.6 : 3;
+    const labelStartY = yTop + (compact ? 3.5 : 4);
+    lines.slice(0, 2).forEach((line, li) => {
+      doc.text(line, cx, labelStartY + li * labelLineH, { align: 'center' });
+    });
 
-    // Valor centralizado dentro do trapézio
-    doc.setFontSize(compact ? 8 : 9);
+    // Valor centralizado na parte inferior do trapézio
+    doc.setFontSize(compact ? 9 : 11);
     doc.setFont(undefined, 'bold');
     doc.setTextColor(...C.branco);
-    doc.text(fmtN(values[i] || 0), cx, yTop + stageH / 2 + (compact ? 2.5 : 3), { align: 'center' });
-
-    // Taxa de conversão à direita entre etapas (arredondada)
-    if (i < n - 1) {
-      const v = values[i] || 0;
-      const nv = values[i + 1] || 0;
-      const rate = v > 0 ? Math.round((nv / v) * 100) + '%' : '-';
-      doc.setFontSize(compact ? 6.5 : 7);
-      doc.setFont(undefined, 'bold');
-      doc.setTextColor(...C.laranja);
-      doc.text(rate, x + w, yBot + gap / 2 + 1, { align: 'right' });
-    }
+    doc.text(fmtN(values[i] || 0), cx, yBot - (compact ? 3 : 4), { align: 'center' });
   });
 
-  // Legenda compacta das etapas abaixo
-  const legendY = y + n * (stageH + gap) + 3;
-  doc.setFontSize(compact ? 5.5 : 6.5);
-  doc.setFont(undefined, 'normal');
-  doc.setTextColor(...C.savana);
-  const legend = stages.map((s, i) => `${i + 1}. ${safe(s)}`).join('  ·  ');
-  const splitLeg = doc.splitTextToSize(legend, w);
-  splitLeg.forEach((line, li) => doc.text(line, cx, legendY + li * (compact ? 4 : 4.5), { align: 'center' }));
-
-  return legendY + splitLeg.length * (compact ? 4 : 4.5) + 4;
+  return y + n * (stageH + gap) + 2;
 }
 
 // ── Funil por canal/objectivo (trapézio, compacto, lado a lado) ───────────────
@@ -583,7 +574,7 @@ function drawPerformanceByChannelPages(doc, { channelResults, funnelStageLabels,
 
   for (const ch of perf) {
     const values = funnelStageLabels.map((_, i) => Math.round(ch.metrics.stageValues?.[i] || 0));
-    const estimatedH = funnelStageLabels.length * 16 + 35;
+    const estimatedH = funnelStageLabels.length * 18 + 40;
 
     // Nova página se não iniciou ou não há espaço
     const needPage = !pageStarted || (col === 0 && leftY > pageH - estimatedH - 10) || (col === 1 && rightY > pageH - estimatedH - 10);
