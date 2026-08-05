@@ -287,7 +287,7 @@ export default function PlanDetail() {
           }
         } else {
           if (kpiValue > 0) {
-            const campLeads = campBudget / kpiValue;
+            const campLeads = Math.round(campBudget / kpiValue);
             c.leads += campLeads;
             const percentKpis = (camp.kpi_values || []).filter(kv => kv.unit === 'percentual' && kv.value > 0);
             const kpiRates = percentKpis.map(kv => kv.value);
@@ -295,7 +295,7 @@ export default function PlanDetail() {
             if (campRates && campRates.length > 0) {
               const campStages = [campLeads];
               for (let i = 0; i < campRates.length; i++) {
-                campStages.push(campStages[i] * (campRates[i] || 0));
+                campStages.push(Math.round(campStages[i] * (campRates[i] || 0)));
               }
               const campSales = campStages[campStages.length - 1];
               c.sales += campSales;

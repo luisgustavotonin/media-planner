@@ -131,12 +131,12 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
   const stagesWithValues = [];
   for (let i = 0; i < stages.length; i++) {
     if (i === 0) {
-      const value = (cpl > 0 && budget > 0) ? budget / cpl : 0;
+      const value = (cpl > 0 && budget > 0) ? Math.round(budget / cpl) : 0;
       stagesWithValues.push({ label: stages[i].label, value });
     } else {
       const rate = rates[i - 1] || 0;
       const prevValue = stagesWithValues[i - 1].value;
-      stagesWithValues.push({ label: stages[i].label, value: prevValue * rate });
+      stagesWithValues.push({ label: stages[i].label, value: Math.round(prevValue * rate) });
     }
   }
 
@@ -145,12 +145,12 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
   if (benchmarkRates.length > 0) {
     for (let i = 0; i < stages.length; i++) {
       if (i === 0) {
-        const value = (bmCpl > 0 && budget > 0) ? budget / bmCpl : (stagesWithValues[0]?.value || 0);
+        const value = (bmCpl > 0 && budget > 0) ? Math.round(budget / bmCpl) : (stagesWithValues[0]?.value || 0);
         benchmarkStages.push({ label: stages[i].label, value });
       } else {
         const bmRate = benchmarkRates[i - 1] || 0;
         const prevValue = benchmarkStages[i - 1].value;
-        benchmarkStages.push({ label: stages[i].label, value: prevValue * bmRate });
+        benchmarkStages.push({ label: stages[i].label, value: Math.round(prevValue * bmRate) });
       }
     }
   }

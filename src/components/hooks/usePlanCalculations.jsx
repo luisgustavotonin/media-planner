@@ -49,7 +49,7 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket,
       }
     } else {
       if (kpiValue > 0) {
-        const campLeads = campBudget / kpiValue;
+        const campLeads = Math.round(campBudget / kpiValue);
         leads += campLeads;
         // Usa taxas percentuais dos KPIs se disponíveis, senão usa funnel_rates ou rates do plano (legacy)
         const percentKpis = (camp.kpi_values || []).filter(kv => kv.unit === 'percentual' && kv.value > 0);
@@ -58,7 +58,7 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket,
         if (campRates && campRates.length > 0) {
           const campStages = [campLeads];
           for (let i = 0; i < campRates.length; i++) {
-            campStages.push(campStages[i] * (campRates[i] || 0));
+            campStages.push(Math.round(campStages[i] * (campRates[i] || 0)));
           }
           const campSales = campStages[campStages.length - 1];
           sales += campSales;
@@ -71,11 +71,11 @@ export function calculateChannelMetrics(channel, conversionRates, averageTicket,
 
   // Retrocompatibilidade: se não há campanhas com KPI, usa expected_cpl do canal
   if (leads === 0 && channel.expected_cpl) {
-    leads = budget / channel.expected_cpl;
+    leads = Math.round(budget / channel.expected_cpl);
     if (rates.length > 0) {
       const stageValues = [leads];
       for (let i = 0; i < rates.length; i++) {
-        stageValues.push(stageValues[i] * (rates[i] || 0));
+        stageValues.push(Math.round(stageValues[i] * (rates[i] || 0)));
       }
       sales = stageValues[stageValues.length - 1];
       revenue = Math.round(sales) * averageTicket;
@@ -230,19 +230,19 @@ export function calculateReversePlan(targetRevenue, rows) {
     const net = tax > 0 ? gross / (1 + tax) : gross;  // Inv. Líquido
     const taxValue = gross - net;              // Imposto
     const cpl = row.expected_cpl || 0;
-    const leads = cpl > 0 ? net / cpl : 0;
-    const sales = leads * finalRate;
+    const leads = cpl > 0 ? Math.round(net / cpl) : 0;
     const ticket = row.average_ticket || 0;
-    const revenue = sales * ticket;
 
-    // Etapas do funil (do topo para o fundo) — sempre inteiros
-    const stageValues = [Math.round(leads)];
+    // Etapas do funil (do topo para o fundo) — arredondadas em cascata
+    const stageValues = [leads];
     let current = leads;
     for (let i = 0; i < rates.length - 1; i++) {
-      current = current * (rates[i] || 0);
-      stageValues.push(Math.round(current));
+      current = Math.round(current * (rates[i] || 0));
+      stageValues.push(current);
     }
-    stageValues.push(Math.round(sales));
+    const sales = Math.round(current * (rates[rates.length - 1] || 0));
+    stageValues.push(sales);
+    const revenue = sales * ticket;
 
     return {
       ...row,
