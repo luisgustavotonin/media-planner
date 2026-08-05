@@ -131,7 +131,11 @@ function drawTable(doc, { startY, headers, rows, colWidths, pageW, marginL }) {
     row.forEach((cell, i) => {
       const align = i <= 1 ? 'left' : 'right';
       const textX = align === 'left' ? cx + 3 : cx + colWidths[i] - 2;
-      doc.text(safe(String(cell ?? '-')), textX, y + 5.2, { align });
+      const cellText = safe(String(cell ?? '-'));
+      // Para colunas de texto longo (Canal, Objetivo), trunca para caber na coluna
+      const maxW = colWidths[i] - 5;
+      const truncated = i <= 1 ? (doc.splitTextToSize(cellText, maxW)[0] || '') : cellText;
+      doc.text(truncated, textX, y + 5.2, { align });
       cx += colWidths[i];
     });
     doc.setDrawColor(...C.crema);
@@ -148,8 +152,8 @@ function drawComparisonFunnel(doc, { x, y, w, title, stages, benchmarkStages }) 
   const hasBench = benchmarkStages && benchmarkStages.length === stages.length;
   const fmtV = (v) => fmtN(v);
 
-  const labelW = 13;
-  const deltaW = hasBench ? 13 : 0;
+  const labelW = 22;
+  const deltaW = hasBench ? 14 : 0;
   const barX = x + labelW + 2;
   const barAreaW = w - labelW - 2 - deltaW - 3;
   const stageH = 8.5;
@@ -208,7 +212,8 @@ function drawComparisonFunnel(doc, { x, y, w, title, stages, benchmarkStages }) 
     doc.setFontSize(5.5);
     doc.setFont(undefined, 'normal');
     doc.setTextColor(...C.marrom);
-    doc.text(safe(stage.label), x + 2, sy + 3);
+    const labelText = doc.splitTextToSize(safe(stage.label), labelW - 1)[0] || '';
+    doc.text(labelText, x + 2, sy + 3);
 
     // Barra projeção
     doc.setFillColor(...C.cinzaBenchLight);
@@ -287,8 +292,8 @@ export async function exportReversePlanToPdf({ clientName, planTitle, targetReve
 
   const headers = ['Canal', 'Objetivo', '%', 'CPL', 'Leads', 'Vendas', 'Inv. Líquido', 'Imposto', 'Inv. Bruto', 'Valor em Vendas', 'ROAS', 'CAC'];
   const totalW = pageW - marginL * 2;
-  const colWidths = [28, 40, 12, 16, 16, 16, 24, 20, 24, 30, 16, 16]
-    .map(w => (w / 258) * totalW);
+  const colWidths = [35, 42, 10, 14, 14, 14, 22, 18, 22, 28, 14, 14]
+    .map(w => (w / 247) * totalW);
 
   const rows = (result.channel_budgets || []).map(ch => [
     ch.channel_name || '-',
@@ -365,15 +370,10 @@ export async function exportReversePlanToPdf({ clientName, planTitle, targetReve
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
-    doc.setDrawColor(...C.crema);
-    doc.line(marginL, pageH - 9, pageW - marginL, pageH - 9);
     doc.setFontSize(6.5);
     doc.setTextColor(...C.savana);
     doc.setFont(undefined, 'normal');
     doc.text(`Página ${i} de ${pageCount}`, pageW - marginL, pageH - 5, { align: 'right' });
-    doc.text('Media Planner - Estudo da Parametrização', marginL, pageH - 5);
-    doc.setFillColor(...C.laranja);
-    doc.circle(pageW / 2, pageH - 6, 0.8, 'F');
   }
 
   const fileName = `planejamento_de_midia_${(clientName || 'cliente').replace(/\s+/g, '_')}.pdf`;
