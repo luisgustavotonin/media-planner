@@ -250,9 +250,15 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
     let rates = getRatesFromBenchmark(bm);
     if (rates.length === 0) rates = [0.35, 0.7, 0.35];
     const bmCpl = getCplFromBenchmark(bm);
+    let rateIdx = 0;
     const updatedKpiValues = newKpiValues.map(kv => {
       const label = (kv.label || '').toLowerCase();
       if (label.includes('ticket')) return { ...kv, value: averageTicket || 0 };
+      if (kv.unit === 'percentual') {
+        const r = rates[rateIdx] ?? 0;
+        rateIdx++;
+        return { ...kv, value: r };
+      }
       return kv;
     });
     const costKpi = updatedKpiValues.find(kv => kv.unit === 'moeda' && !(kv.label || '').toLowerCase().includes('ticket'));
@@ -266,18 +272,6 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
         <button onClick={() => setOpen(o => !o)} className="p-0.5 text-gray-400 hover:text-gray-600 mb-1.5">
           {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
-        <div className="flex-1 min-w-[200px]">
-          <label className="text-[10px] text-gray-400 block mb-1">Nome da campanha</label>
-          <input type="text" value={campaign.name || ''} onChange={e => updateField('name', e.target.value)}
-            placeholder="Ex: Topo de funil" disabled={readOnly}
-            className="w-full h-8 border border-[#f85d07] rounded-md text-xs px-2 font-medium bg-[#f2ede2] text-[#312b1d] font-semibold focus:outline-none focus:ring-1 focus:ring-[#f85d07] disabled:opacity-50" />
-        </div>
-        <div className="w-32 shrink-0">
-          <label className="text-[10px] text-gray-400 block mb-1">Valor da campanha</label>
-          <CurrencyInput value={campaignBudget} onChange={v => updateField('budget_value', Number(v))}
-            prefix="R$" className={`text-xs h-8 ${isCampaignOver ? 'border-red-400 ring-1 ring-red-300' : 'border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold'}`}
-            disabled={readOnly} placeholder="Budget" />
-        </div>
         <div className="w-28 shrink-0">
           <label className="text-[10px] text-gray-400 block mb-1">Objetivo</label>
           {readOnly ? (
@@ -292,6 +286,18 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
               </SelectContent>
             </Select>
           )}
+        </div>
+        <div className="flex-1 min-w-[200px]">
+          <label className="text-[10px] text-gray-400 block mb-1">Nome da campanha</label>
+          <input type="text" value={campaign.name || ''} onChange={e => updateField('name', e.target.value)}
+            placeholder="Ex: Topo de funil" disabled={readOnly}
+            className="w-full h-8 border border-[#f85d07] rounded-md text-xs px-2 font-medium bg-[#f2ede2] text-[#312b1d] font-semibold focus:outline-none focus:ring-1 focus:ring-[#f85d07] disabled:opacity-50" />
+        </div>
+        <div className="w-32 shrink-0">
+          <label className="text-[10px] text-gray-400 block mb-1">Valor da campanha</label>
+          <CurrencyInput value={campaignBudget} onChange={v => updateField('budget_value', Number(v))}
+            prefix="R$" className={`text-xs h-8 ${isCampaignOver ? 'border-red-400 ring-1 ring-red-300' : 'border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold'}`}
+            disabled={readOnly} placeholder="Budget" />
         </div>
         <CampaignKpis campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
         {!readOnly && (
@@ -365,9 +371,15 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
     let rates = getRatesFromBenchmark(bm);
     if (rates.length === 0) rates = [0.35, 0.7, 0.35];
     const bmCpl = getCplFromBenchmark(bm);
+    let rateIdx = 0;
     const updatedKpiValues = newKpiValues.map(kv => {
       const label = (kv.label || '').toLowerCase();
       if (label.includes('ticket')) return { ...kv, value: averageTicket || 0 };
+      if (kv.unit === 'percentual') {
+        const r = rates[rateIdx] ?? 0;
+        rateIdx++;
+        return { ...kv, value: r };
+      }
       return kv;
     });
     const costKpi = updatedKpiValues.find(kv => kv.unit === 'moeda' && !(kv.label || '').toLowerCase().includes('ticket'));
@@ -380,17 +392,6 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
         <button onClick={() => setOpen(o => !o)} className="p-0.5 text-gray-400 hover:text-gray-600 mb-1.5">
           {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
-        <div className="flex-1 min-w-[200px]">
-          <label className="text-[10px] text-gray-400 block mb-1">Nome da campanha</label>
-          <input type="text" value={campaign.name || ''} onChange={e => updateField('name', e.target.value)}
-            placeholder="Ex: Topo de funil" disabled={readOnly}
-            className="w-full h-8 border border-[#f85d07] rounded-md text-xs px-2 font-medium bg-[#f2ede2] text-[#312b1d] font-semibold focus:outline-none focus:ring-1 focus:ring-[#f85d07] disabled:opacity-50" />
-        </div>
-        <div className="w-28 shrink-0">
-          <label className="text-[10px] text-gray-400 block mb-1">Valor da campanha</label>
-          <CurrencyInput value={campaign.budget_value || 0} onChange={v => updateField('budget_value', Number(v))}
-            prefix="R$" className={`text-xs h-8 ${isOver ? 'border-red-400 ring-1 ring-red-300' : 'border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold'}`} disabled={readOnly} />
-        </div>
         <div className="w-28 shrink-0">
           <label className="text-[10px] text-gray-400 block mb-1">Objetivo</label>
           {readOnly ? (
@@ -405,6 +406,17 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
               </SelectContent>
             </Select>
           )}
+        </div>
+        <div className="flex-1 min-w-[200px]">
+          <label className="text-[10px] text-gray-400 block mb-1">Nome da campanha</label>
+          <input type="text" value={campaign.name || ''} onChange={e => updateField('name', e.target.value)}
+            placeholder="Ex: Topo de funil" disabled={readOnly}
+            className="w-full h-8 border border-[#f85d07] rounded-md text-xs px-2 font-medium bg-[#f2ede2] text-[#312b1d] font-semibold focus:outline-none focus:ring-1 focus:ring-[#f85d07] disabled:opacity-50" />
+        </div>
+        <div className="w-28 shrink-0">
+          <label className="text-[10px] text-gray-400 block mb-1">Valor da campanha</label>
+          <CurrencyInput value={campaign.budget_value || 0} onChange={v => updateField('budget_value', Number(v))}
+            prefix="R$" className={`text-xs h-8 ${isOver ? 'border-red-400 ring-1 ring-red-300' : 'border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold'}`} disabled={readOnly} />
         </div>
         <CampaignKpis campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
         <div className="text-right w-16 shrink-0">
