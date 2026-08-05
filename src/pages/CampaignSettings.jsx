@@ -93,6 +93,7 @@ function ChannelsTab() {
   const [newCategory, setNewCategory] = useState('digital');
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
+  const [editDesc, setEditDesc] = useState('');
 
   const { data: channels = [], isLoading } = useQuery({
     queryKey: ['channels'],
@@ -120,32 +121,38 @@ function ChannelsTab() {
 
   const saveEdit = async (ch) => {
     const trimmed = editName.trim();
-    if (!trimmed || trimmed === ch.name) { setEditingId(null); return; }
-    if (channels.find(c => c.name.toLowerCase() === trimmed.toLowerCase() && c.id !== ch.id)) {
+    const trimmedDesc = editDesc.trim();
+    if (!trimmed) { setEditingId(null); return; }
+    const nameChanged = trimmed !== ch.name;
+    const descChanged = trimmedDesc !== (ch.description || '');
+    if (!nameChanged && !descChanged) { setEditingId(null); return; }
+    if (nameChanged && channels.find(c => c.name.toLowerCase() === trimmed.toLowerCase() && c.id !== ch.id)) {
       toast({ title: 'Já existe um canal com esse nome.', variant: 'destructive' });
       return;
     }
     const oldName = ch.name;
-    await base44.entities.Channel.update(ch.id, { name: trimmed });
-    for (const b of benchmarks.filter(b => b.channel_name === oldName)) {
-      await base44.entities.Benchmark.update(b.id, { channel_name: trimmed });
-    }
-    for (const plan of plans) {
-      if ((plan.channels || []).some(ch => ch.channel_name === oldName)) {
-        const updatedChannels = plan.channels.map(ch => ch.channel_name === oldName ? { ...ch, channel_name: trimmed } : ch);
-        await base44.entities.MediaPlan.update(plan.id, { channels: updatedChannels });
+    await base44.entities.Channel.update(ch.id, { name: trimmed, description: trimmedDesc });
+    if (nameChanged) {
+      for (const b of benchmarks.filter(b => b.channel_name === oldName)) {
+        await base44.entities.Benchmark.update(b.id, { channel_name: trimmed });
       }
-    }
-    const objectives = await base44.entities.CampaignObjective.list();
-    for (const obj of objectives.filter(o => (o.channels || []).includes(oldName))) {
-      await base44.entities.CampaignObjective.update(obj.id, { channels: (obj.channels || []).map(n => n === oldName ? trimmed : n) });
+      for (const plan of plans) {
+        if ((plan.channels || []).some(ch => ch.channel_name === oldName)) {
+          const updatedChannels = plan.channels.map(ch => ch.channel_name === oldName ? { ...ch, channel_name: trimmed } : ch);
+          await base44.entities.MediaPlan.update(plan.id, { channels: updatedChannels });
+        }
+      }
+      const objectives = await base44.entities.CampaignObjective.list();
+      for (const obj of objectives.filter(o => (o.channels || []).includes(oldName))) {
+        await base44.entities.CampaignObjective.update(obj.id, { channels: (obj.channels || []).map(n => n === oldName ? trimmed : n) });
+      }
     }
     queryClient.invalidateQueries({ queryKey: ['channels'] });
     queryClient.invalidateQueries({ queryKey: ['plans'] });
     queryClient.invalidateQueries({ queryKey: ['benchmarks'] });
     queryClient.invalidateQueries({ queryKey: ['campaign-objectives'] });
     setEditingId(null);
-    toast({ title: 'Canal renomeado e referências atualizadas.' });
+    toast({ title: 'Canal atualizado.' });
   };
 
   const handleDelete = async (ch) => {
@@ -242,15 +249,23 @@ function ChannelsTab() {
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
                         {editingId === ch.id ? (
-                          <div className="flex items-center gap-1.5">
-                            <input autoFocus className="border border-gray-200 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary w-56"
-                              value={editName} onChange={e => setEditName(e.target.value)}
-                              onKeyDown={e => { if (e.key === 'Enter') saveEdit(ch); if (e.key === 'Escape') setEditingId(null); }} />
-                            <button onClick={() => saveEdit(ch)} className="p-1 rounded hover:bg-green-50 text-green-600"><Check className="w-4 h-4" /></button>
-                            <button onClick={() => setEditingId(null)} className="p-1 rounded hover:bg-gray-100 text-gray-400"><X className="w-4 h-4" /></button>
+                          <div className="flex flex-col gap-1.5 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <input autoFocus className="border border-gray-200 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary w-56"
+                                value={editName} onChange={e => setEditName(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') saveEdit(ch); if (e.key === 'Escape') setEditingId(null); }} />
+                              <button onClick={() => saveEdit(ch)} className="p-1 rounded hover:bg-green-50 text-green-600"><Check className="w-4 h-4" /></button>
+                              <button onClick={() => setEditingId(null)} className="p-1 rounded hover:bg-gray-100 text-gray-400"><X className="w-4 h-4" /></button>
+                            </div>
+                            <input className="border border-gray-200 rounded-md px-2 py-1 text-xs text-gray-600 focus:outline-none focus:ring-1 focus:ring-primary w-72"
+                              placeholder="Observações (o que é este canal)..."
+                              value={editDesc} onChange={e => setEditDesc(e.target.value)} />
                           </div>
                         ) : (
-                          <span className="text-sm font-medium text-gray-800 truncate">{ch.name}</span>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-medium text-gray-800 truncate">{ch.name}</span>
+                            {ch.description && <span className="text-xs text-gray-400 truncate">{ch.description}</span>}
+                          </div>
                         )}
                         {!ch.is_active && <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">Inativo</span>}
                         {inUse && <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">Em uso</span>}
@@ -260,7 +275,7 @@ function ChannelsTab() {
                           {ch.is_active ? <ToggleRight className="w-4 h-4 text-primary" /> : <ToggleLeft className="w-4 h-4" />}
                         </button>
                         {editingId !== ch.id && (
-                          <button onClick={() => { setEditingId(ch.id); setEditName(ch.name); }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400" title="Editar nome">
+                          <button onClick={() => { setEditingId(ch.id); setEditName(ch.name); setEditDesc(ch.description || ''); }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400" title="Editar canal">
                             <Pencil className="w-4 h-4" />
                           </button>
                         )}
