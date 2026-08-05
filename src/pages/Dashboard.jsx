@@ -5,32 +5,57 @@ import { usePermissions } from '@/hooks/usePermissions';
 import PageHeader from '../components/ui-custom/PageHeader';
 import ComparisonStatCard from '../components/ui-custom/ComparisonStatCard';
 import EmptyState from '../components/ui-custom/EmptyState';
-import { Building2, Target, DollarSign, Users, TrendingUp, Calendar, Wallet } from 'lucide-react';
+import ChannelInvestmentChart from '../components/dashboard/ChannelInvestmentChart';
+import FunnelProjectionChart from '../components/dashboard/FunnelProjectionChart';
+import MonthlyTrendChart from '../components/dashboard/MonthlyTrendChart';
+import ChannelPerformanceTable from '../components/dashboard/ChannelPerformanceTable';
+import TopClientsTable from '../components/dashboard/TopClientsTable';
+import { formatCurrency, formatInt, formatDecimal } from '@/lib/format';
+import { Building2, Target, DollarSign, Users, TrendingUp, Calendar, Wallet, Filter, Activity } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { calculateConsolidated } from '../components/hooks/usePlanCalculations';
 
-const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+const ABREV = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
-function calcPlanMetrics(plan, objectives = []) {
-  if (!plan?.channels?.length) return { leads: 0, sales: 0, investment: 0 };
-  const rates = Array.isArray(plan.conversion_rates) && plan.conversion_rates.length
-    ? plan.conversion_rates
-    : [plan.lead_to_appointment_rate || 0.35, plan.appointment_to_show_rate || 0.7, plan.show_to_sale_rate || 0.35];
-  const consolidated = calculateConsolidated(plan.channels, rates, plan.average_ticket || 5000, objectives);
-  const investment = (plan.channels || []).reduce((s, c) => s + (c.budget_value || 0), 0);
-  return {
-    leads: consolidated.totals.total_leads || 0,
-    sales: consolidated.totals.total_sales || 0,
-    revenue: consolidated.totals.total_revenue || 0,
-    investment,
-  };
+function planRates(plan) {
+  if (Array.isArray(plan.conversion_rates) && plan.conversion_rates.length) return plan.conversion_rates;
+  return [plan.lead_to_appointment_rate || 0.35, plan.appointment_to_show_rate || 0.7, plan.show_to_sale_rate || 0.35];
 }
 
-function sumMetrics(plans, objectives) {
-  return plans.reduce((acc, p) => {
-    const m = calcPlanMetrics(p, objectives);
-    return { investment: acc.investment + m.investment, leads: acc.leads + m.leads, sales: acc.sales + m.sales, revenue: acc.revenue + m.revenue };
-  }, { investment: 0, leads: 0, sales: 0, revenue: 0 });
+// Agrega um plano em um acumulador (channelAgg, clientAgg, totals, funnel)
+function aggregatePlan(plan, objectives, channelAgg, clientAgg, totals, funnel) {
+  const rates = planRates(plan);
+  const c = calculateConsolidated(plan.channels, rates, plan.average_ticket || 5000, objectives);
+  totals.investment += c.totals.total_budget || 0;
+  totals.leads += c.totals.total_leads || 0;
+  totals.sales += c.totals.total_sales || 0;
+  totals.revenue += c.totals.total_revenue || 0;
+  totals.appointments += c.totals.total_appointments || 0;
+  totals.showups += c.totals.total_showups || 0;
+
+  (c.totals.stageValues || []).forEach((v, i) => {
+    funnel[i] = (funnel[i] || 0) + (v || 0);
+  });
+
+  for (const ch of c.channelResults) {
+    const name = ch.channel_name || '—';
+    if (!channelAgg[name]) channelAgg[name] = { name, investment: 0, leads: 0, sales: 0, revenue: 0 };
+    const a = channelAgg[name];
+    a.investment += ch.budget_value || 0;
+    a.leads += ch.metrics.leads || 0;
+    a.sales += ch.metrics.sales || 0;
+    a.revenue += ch.metrics.revenue || 0;
+  }
+
+  const cid = plan.client_id || '—';
+  if (!clientAgg[cid]) clientAgg[cid] = { name: plan.client_name || '—', planCount: 0, investment: 0, leads: 0, sales: 0, revenue: 0 };
+  const cl = clientAgg[cid];
+  cl.planCount += 1;
+  cl.investment += c.totals.total_budget || 0;
+  cl.leads += c.totals.total_leads || 0;
+  cl.sales += c.totals.total_sales || 0;
+  cl.revenue += c.totals.total_revenue || 0;
 }
 
 export default function Dashboard() {
@@ -50,7 +75,6 @@ export default function Dashboard() {
   const { allowedClientIds } = usePermissions();
   const scopedPlans = !allowedClientIds ? plans : plans.filter(p => allowedClientIds.includes(p.client_id));
 
-  // Meses com planos (únicos, ordenados do mais recente para o mais antigo)
   const availableMonths = useMemo(() => {
     const map = new Map();
     for (const p of scopedPlans) {
@@ -61,7 +85,6 @@ export default function Dashboard() {
     return Array.from(map.values()).sort((a, b) => b.year - a.year || b.month - a.month);
   }, [scopedPlans]);
 
-  // Sempre abre no mês atual quando há planos; senão no mais recente disponível
   const [selectedKey, setSelectedKey] = useState('');
   useEffect(() => {
     if (availableMonths.length === 0) { setSelectedKey(''); return; }
@@ -84,11 +107,66 @@ export default function Dashboard() {
   const clientsThisMonth = new Set(monthPlans.map(p => p.client_id).filter(Boolean)).size;
   const clientsPrevMonth = new Set(prevMonthPlans.map(p => p.client_id).filter(Boolean)).size;
 
-  const cur = sumMetrics(activePlans, objectives);
-  const prev = sumMetrics(prevActivePlans, objectives);
+  // Agregações do mês selecionado
+  const dash = useMemo(() => {
+    const channelAgg = {};
+    const clientAgg = {};
+    const totals = { investment: 0, leads: 0, sales: 0, revenue: 0, appointments: 0, showups: 0 };
+    const funnel = [];
+    for (const p of activePlans) aggregatePlan(p, objectives, channelAgg, clientAgg, totals, funnel);
 
-  const fmtCurrency = v => `R$${Math.round(v).toLocaleString('pt-BR')}`;
-  const fmtInt = v => Math.round(v).toLocaleString('pt-BR');
+    const channelRows = Object.values(channelAgg).map(a => ({
+      ...a,
+      cpl: a.leads > 0 ? a.investment / a.leads : 0,
+      roas: a.investment > 0 ? a.revenue / a.investment : 0,
+    }));
+    const clientRows = Object.values(clientAgg);
+
+    const blendedCPL = totals.leads > 0 ? totals.investment / totals.leads : 0;
+    const blendedROAS = totals.investment > 0 ? totals.revenue / totals.investment : 0;
+
+    return { channelRows, clientRows, totals, funnel, blendedCPL, blendedROAS };
+  }, [activePlans, objectives]);
+
+  // Agregações mês anterior (para CPL/ROAS comparativos)
+  const prevDash = useMemo(() => {
+    const totals = { investment: 0, leads: 0, sales: 0, revenue: 0 };
+    for (const p of prevActivePlans) {
+      const rates = planRates(p);
+      const c = calculateConsolidated(p.channels, rates, p.average_ticket || 5000, objectives);
+      totals.investment += c.totals.total_budget || 0;
+      totals.leads += c.totals.total_leads || 0;
+      totals.sales += c.totals.total_sales || 0;
+      totals.revenue += c.totals.total_revenue || 0;
+    }
+    return {
+      cpl: totals.leads > 0 ? totals.investment / totals.leads : 0,
+      roas: totals.investment > 0 ? totals.revenue / totals.investment : 0,
+      investment: totals.investment,
+      leads: totals.leads,
+      sales: totals.sales,
+      revenue: totals.revenue,
+    };
+  }, [prevActivePlans, objectives]);
+
+  // Tendência mensal (ascendente)
+  const trendData = useMemo(() => {
+    return [...availableMonths].reverse().map(m => {
+      const mp = scopedPlans.filter(p => p.period_month === m.month && p.period_year === m.year && p.status === 'active');
+      const t = { investment: 0, revenue: 0 };
+      for (const p of mp) {
+        const c = calculateConsolidated(p.channels, planRates(p), p.average_ticket || 5000, objectives);
+        t.investment += c.totals.total_budget || 0;
+        t.revenue += c.totals.total_revenue || 0;
+      }
+      return { label: `${ABREV[m.month - 1]}/${String(m.year).slice(2)}`, investment: t.investment, revenue: t.revenue };
+    });
+  }, [availableMonths, scopedPlans, objectives]);
+
+  const channelPieData = dash.channelRows.map(a => ({ name: a.name, value: a.investment }));
+
+  const fmtCurrency = formatCurrency;
+  const fmtInt = formatInt;
 
   if (isLoading) {
     return (
@@ -131,56 +209,36 @@ export default function Dashboard() {
           description="Selecione outro mês ou crie um novo plano de mídia."
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-          <ComparisonStatCard
-            label="Clientes"
-            value={clientsThisMonth}
-            previousValue={clientsPrevMonth}
-            formatValue={fmtInt}
-            icon={Building2}
-            color="indigo"
-          />
-          <ComparisonStatCard
-            label="Planos Ativos"
-            value={activePlans.length}
-            previousValue={prevActivePlans.length}
-            formatValue={fmtInt}
-            icon={Target}
-            color="green"
-          />
-          <ComparisonStatCard
-            label="Investimento Total"
-            value={cur.investment}
-            previousValue={prev.investment}
-            formatValue={fmtCurrency}
-            icon={DollarSign}
-            color="blue"
-          />
-          <ComparisonStatCard
-            label="Leads Projetados"
-            value={cur.leads}
-            previousValue={prev.leads}
-            formatValue={fmtInt}
-            icon={Users}
-            color="purple"
-          />
-          <ComparisonStatCard
-            label="Venda Projetada"
-            value={cur.sales}
-            previousValue={prev.sales}
-            formatValue={fmtInt}
-            icon={TrendingUp}
-            color="orange"
-          />
-          <ComparisonStatCard
-            label="Valor das Vendas"
-            value={cur.revenue}
-            previousValue={prev.revenue}
-            formatValue={fmtCurrency}
-            icon={Wallet}
-            color="rose"
-          />
-        </div>
+        <>
+          {/* KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+            <ComparisonStatCard label="Clientes" value={clientsThisMonth} previousValue={clientsPrevMonth} formatValue={fmtInt} icon={Building2} color="indigo" />
+            <ComparisonStatCard label="Planos Ativos" value={activePlans.length} previousValue={prevActivePlans.length} formatValue={fmtInt} icon={Target} color="green" />
+            <ComparisonStatCard label="Investimento Total" value={dash.totals.investment} previousValue={prevDash.investment} formatValue={fmtCurrency} icon={DollarSign} color="blue" />
+            <ComparisonStatCard label="Leads Projetados" value={dash.totals.leads} previousValue={prevDash.leads} formatValue={fmtInt} icon={Users} color="purple" />
+            <ComparisonStatCard label="Venda Projetada" value={dash.totals.sales} previousValue={prevDash.sales} formatValue={fmtInt} icon={TrendingUp} color="orange" />
+            <ComparisonStatCard label="Valor das Vendas" value={dash.totals.revenue} previousValue={prevDash.revenue} formatValue={fmtCurrency} icon={Wallet} color="rose" />
+            <ComparisonStatCard label="CPL Blended" value={dash.blendedCPL} previousValue={prevDash.cpl} formatValue={fmtCurrency} icon={Filter} color="amber" />
+            <ComparisonStatCard label="ROAS Blended" value={dash.blendedROAS} previousValue={prevDash.roas} formatValue={v => `${formatDecimal(v)}x`} icon={Activity} color="teal" />
+          </div>
+
+          {/* Charts row */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
+            <ChannelInvestmentChart data={channelPieData} />
+            <FunnelProjectionChart data={dash.funnel} />
+            <MonthlyTrendChart data={trendData} />
+          </div>
+
+          {/* Tables row */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-5">
+            <div className="lg:col-span-3">
+              <ChannelPerformanceTable data={dash.channelRows} />
+            </div>
+            <div className="lg:col-span-2">
+              <TopClientsTable data={dash.clientRows} />
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
