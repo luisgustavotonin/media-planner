@@ -297,7 +297,7 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
           <label className="text-[10px] text-gray-400 block mb-1">Valor da campanha</label>
           <CurrencyInput value={campaignBudget} onChange={v => updateField('budget_value', Number(v))}
             prefix="R$" className={`text-xs h-8 ${isCampaignOver ? 'border-red-400 ring-1 ring-red-300' : 'border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold'}`}
-            disabled={readOnly} placeholder="Budget" />
+            disabled={readOnly} placeholder="Investimento" />
         </div>
         <CampaignKpis campaign={campaign} objectives={objectives} onChange={onChange} readOnly={readOnly} />
         {!readOnly && (

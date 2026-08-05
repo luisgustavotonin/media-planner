@@ -12,12 +12,12 @@ import ChannelBadge from '../ui-custom/ChannelBadge';
 
 // Modal para adicionar canal (apenas nome + budget + imposto)
 function AddChannelModal({ channels, onAdd, onClose }) {
-  const [channelName, setChannelName] = useState(channels[0]?.name || '');
+  const [channelName, setChannelName] = useState('');
   const [budget, setBudget] = useState(0);
   const [tax, setTax] = useState(0);
 
   const handleAdd = () => {
-    if (!channelName) return;
+    if (!channelName || !budget) return;
     onAdd({
       channel_name: channelName,
       budget_value: budget || 0,
@@ -64,7 +64,7 @@ function AddChannelModal({ channels, onAdd, onClose }) {
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider block mb-1.5">Budget do Canal (R$)</label>
+            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider block mb-1.5">Investimento do Canal (R$) *</label>
             <CurrencyInput value={budget} onChange={v => setBudget(v || 0)} prefix="R$" />
           </div>
 
@@ -81,7 +81,7 @@ function AddChannelModal({ channels, onAdd, onClose }) {
         </div>
 
         <div className="flex gap-2 mt-6">
-          <Button onClick={handleAdd} disabled={!channelName} className="flex-1 bg-primary hover:bg-primary/90">
+          <Button onClick={handleAdd} disabled={!channelName || !budget} className="flex-1 bg-primary hover:bg-primary/90">
             <Plus className="w-4 h-4 mr-1.5" /> Adicionar
           </Button>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
