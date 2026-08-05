@@ -6,6 +6,15 @@
       "type": "string",
       "description": "Nome do canal (ex: Meta, Google, TikTok)"
     },
+    "category": {
+      "type": "string",
+      "enum": [
+        "digital",
+        "offline"
+      ],
+      "default": "digital",
+      "description": "Grupo do canal: digital (online) ou offline (m\u00eddia tradicional)"
+    },
     "is_active": {
       "type": "boolean",
       "default": true

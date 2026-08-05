@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Trash2, ChevronDown, ChevronUp, Plus, X } from 'lucide-react';
@@ -44,7 +44,16 @@ function AddChannelModal({ channels, onAdd, onClose }) {
               <Select value={channelName} onValueChange={setChannelName}>
                 <SelectTrigger><SelectValue placeholder="Selecione o canal..." /></SelectTrigger>
                 <SelectContent>
-                  {channels.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                  {['digital', 'offline'].map(cat => {
+                    const list = channels.filter(c => (c.category || 'digital') === cat);
+                    if (list.length === 0) return null;
+                    return (
+                      <SelectGroup key={cat}>
+                        <SelectLabel className="text-[10px] uppercase tracking-wide text-gray-400">{cat === 'digital' ? 'Digitais' : 'Offline'}</SelectLabel>
+                        {list.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                      </SelectGroup>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             ) : (

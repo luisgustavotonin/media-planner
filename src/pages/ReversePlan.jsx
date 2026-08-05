@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import PercentInput from '../components/ui-custom/PercentInput';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Target, DollarSign, Users, TrendingDown, Calculator, Plus, Trash2, Info, Save, ArrowLeft, ChevronRight, ChevronDown, ChevronUp, FileDown, AlertTriangle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
@@ -677,7 +677,16 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                           <Select value={row.channel_name || undefined} onValueChange={v => setChannelForRow(idx, v)}>
                             <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Canal..." /></SelectTrigger>
                             <SelectContent>
-                              {activeChannels.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                              {['digital', 'offline'].map(cat => {
+                                const list = activeChannels.filter(c => (c.category || 'digital') === cat);
+                                if (list.length === 0) return null;
+                                return (
+                                  <SelectGroup key={cat}>
+                                    <SelectLabel className="text-[10px] uppercase tracking-wide text-gray-400">{cat === 'digital' ? 'Digitais' : 'Offline'}</SelectLabel>
+                                    {list.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                                  </SelectGroup>
+                                );
+                              })}
                             </SelectContent>
                           </Select>
                           <Select value={row.objective_id || 'none'} onValueChange={v => setObjectiveForRow(idx, v === 'none' ? '' : v)} disabled={!row.channel_name}>

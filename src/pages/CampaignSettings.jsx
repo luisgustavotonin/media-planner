@@ -5,7 +5,7 @@ import PageHeader from '@/components/ui-custom/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Plus, Trash2, Pencil, X, Check, ToggleLeft, ToggleRight, ChevronDown, ChevronUp } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { sanitizeVar } from '@/lib/formulaEvaluator';
 
@@ -21,7 +21,23 @@ const TYPE_BADGE = {
   branding: 'bg-secondary/60 text-secondary-foreground border border-border',
 };
 
-const PRESET_CHANNELS = ['Meta', 'Google', 'TikTok', 'YouTube', 'LinkedIn'];
+const PRESET_CHANNELS = [
+  { name: 'Meta', category: 'digital' },
+  { name: 'Google', category: 'digital' },
+  { name: 'TikTok', category: 'digital' },
+  { name: 'YouTube', category: 'digital' },
+  { name: 'Instagram', category: 'digital' },
+  { name: 'LinkedIn', category: 'digital' },
+  { name: 'TV', category: 'offline' },
+  { name: 'Rádio', category: 'offline' },
+  { name: 'Outdoor', category: 'offline' },
+  { name: 'Jornal', category: 'offline' },
+  { name: 'Revista', category: 'offline' },
+];
+const CATEGORY_META = {
+  digital: { label: 'Canais Digitais', desc: 'Online: Meta, Google, TikTok, etc.' },
+  offline: { label: 'Canais Offline', desc: 'Mídia tradicional: TV, rádio, outdoor, etc.' },
+};
 const PRESET_OBJECTIVES = [
   {
     name: 'Lead',
@@ -74,6 +90,7 @@ function ChannelsTab() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newName, setNewName] = useState('');
+  const [newCategory, setNewCategory] = useState('digital');
 
   const { data: channels = [], isLoading } = useQuery({
     queryKey: ['channels'],
@@ -96,9 +113,9 @@ function ChannelsTab() {
   };
 
   const addPresets = async () => {
-    for (const name of PRESET_CHANNELS) {
-      if (!channels.find(c => c.name === name)) {
-        await base44.entities.Channel.create({ name, is_active: true });
+    for (const p of PRESET_CHANNELS) {
+      if (!channels.find(c => c.name === p.name)) {
+        await base44.entities.Channel.create({ name: p.name, category: p.category, is_active: true });
       }
     }
     queryClient.invalidateQueries({ queryKey: ['channels'] });
@@ -112,7 +129,7 @@ function ChannelsTab() {
       toast({ title: 'Canal já existe.', variant: 'destructive' });
       return;
     }
-    createMut.mutate({ name: trimmed, is_active: true });
+    createMut.mutate({ name: trimmed, category: newCategory, is_active: true });
   };
 
   if (isLoading) return <div className="flex justify-center py-12"><div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
@@ -121,14 +138,21 @@ function ChannelsTab() {
     <div>
       <div className="bg-white rounded-xl border border-gray-100 p-5 mb-4">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Novo Canal</p>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <input
-            className="flex-1 max-w-xs border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="flex-1 min-w-[180px] max-w-xs border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             placeholder="Ex: Pinterest, Kwai..."
             value={newName}
             onChange={e => setNewName(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleAdd()}
           />
+          <Select value={newCategory} onValueChange={setNewCategory}>
+            <SelectTrigger className="w-[150px] border-gray-200"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="digital">Digital</SelectItem>
+              <SelectItem value="offline">Offline</SelectItem>
+            </SelectContent>
+          </Select>
           <Button onClick={handleAdd} disabled={!newName.trim() || createMut.isPending} className="gap-1.5 bg-primary hover:bg-primary/90">
             <Plus className="w-4 h-4" /> Adicionar
           </Button>
@@ -145,24 +169,38 @@ function ChannelsTab() {
           <Button onClick={addPresets} className="gap-2 bg-primary hover:bg-primary/90"><Plus className="w-4 h-4" /> Adicionar Padrões</Button>
         </div>
       ) : (
-        <div className="space-y-2">
-          {channels.map(ch => (
-            <div key={ch.id} className={`bg-white rounded-xl border border-gray-100 px-5 py-3.5 flex items-center justify-between ${!ch.is_active ? 'opacity-60' : ''}`}>
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-primary" />
-                <span className="text-sm font-medium text-gray-800">{ch.name}</span>
-                {!ch.is_active && <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">Inativo</span>}
+        <div className="space-y-5">
+          {['digital', 'offline'].map(cat => {
+            const list = channels.filter(c => (c.category || 'digital') === cat);
+            if (list.length === 0) return null;
+            return (
+              <div key={cat}>
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">{CATEGORY_META[cat].label}</span>
+                  <span className="text-[10px] text-gray-400">{CATEGORY_META[cat].desc}</span>
+                </div>
+                <div className="space-y-2">
+                  {list.map(ch => (
+                    <div key={ch.id} className={`bg-white rounded-xl border border-gray-100 px-5 py-3.5 flex items-center justify-between ${!ch.is_active ? 'opacity-60' : ''}`}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-primary" />
+                        <span className="text-sm font-medium text-gray-800">{ch.name}</span>
+                        {!ch.is_active && <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">Inativo</span>}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => toggleActive(ch)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400" title={ch.is_active ? 'Desativar' : 'Ativar'}>
+                          {ch.is_active ? <ToggleRight className="w-4 h-4 text-primary" /> : <ToggleLeft className="w-4 h-4" />}
+                        </button>
+                        <button onClick={() => deleteMut.mutate(ch.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                <button onClick={() => toggleActive(ch)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400" title={ch.is_active ? 'Desativar' : 'Ativar'}>
-                  {ch.is_active ? <ToggleRight className="w-4 h-4 text-primary" /> : <ToggleLeft className="w-4 h-4" />}
-                </button>
-                <button onClick={() => deleteMut.mutate(ch.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
