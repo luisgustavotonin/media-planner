@@ -364,7 +364,7 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
       )}
 
       {/* Funil da campanha — no rodapé do card, vem do objetivo */}
-      {effectiveFunnelTypeId && (
+      {open && effectiveFunnelTypeId && (
         <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} taxPercent={taxPercent} benchmarks={benchmarks} segment={segment} channelName={channelName} objectives={objectives} />
       )}
     </div>
@@ -467,7 +467,7 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
       )}
 
       {/* Funil da campanha — no rodapé do card, vem do objetivo */}
-      {effectiveFunnelTypeId && (
+      {open && effectiveFunnelTypeId && (
         <CampaignFunnel campaign={campaign} funnelTypeId={effectiveFunnelTypeId} funnelTypes={funnelTypes} onChange={onChange} readOnly={readOnly} taxPercent={taxPercent} benchmarks={benchmarks} segment={segment} channelName={channelName} objectives={objectives} />
       )}
     </div>

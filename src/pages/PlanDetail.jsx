@@ -438,15 +438,11 @@ export default function PlanDetail() {
               <Megaphone className="w-3.5 h-3.5 text-amber-700" />
             </div>
             <span className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider">Branding</span>
-            <span className="text-[10px] text-amber-500/60">·</span>
-            <span className="text-[10px] text-amber-600/70">Awareness & Reconhecimento</span>
           </div>
           {Object.entries(brandingGroups).map(([objName, data]) => (
             <div key={objName} className="mb-4">
               <div className="flex items-center gap-2 mb-2 ml-1">
                 <span className="text-[10px] font-medium text-amber-600/80">{objName}</span>
-                <span className="text-[10px] text-amber-400/50">·</span>
-                <span className="text-[10px] text-amber-500/50">funil compartilhado</span>
               </div>
               {Object.entries(data.channelData).map(([chName, c]) => {
                 const hasCalcMetrics = c.calculatedCards?.length > 0;
@@ -492,15 +488,11 @@ export default function PlanDetail() {
               <Target className="w-3.5 h-3.5 text-indigo-600" />
             </div>
             <span className="text-[10px] font-semibold text-indigo-600 uppercase tracking-wider">Performance</span>
-            <span className="text-[10px] text-indigo-400/60">·</span>
-            <span className="text-[10px] text-indigo-500/70">Conversão & Vendas</span>
           </div>
           {Object.entries(performanceGroups).map(([objName, data]) => (
             <div key={objName} className="mb-4">
               <div className="flex items-center gap-2 mb-2 ml-1">
                 <span className="text-[10px] font-medium text-indigo-500/80">{objName}</span>
-                <span className="text-[10px] text-indigo-400/50">·</span>
-                <span className="text-[10px] text-indigo-400/50">funil compartilhado</span>
               </div>
               {Object.entries(data.channelData).map(([chName, c]) => {
                 const hasCalcMetrics = c.calculatedCards?.length > 0;

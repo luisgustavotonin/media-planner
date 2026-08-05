@@ -552,10 +552,6 @@ function drawObjectiveCardsPage(doc, { brandingGroups, performanceGroups, pageW,
       doc.setFont(undefined, 'bold');
       doc.setTextColor(...C.marrom);
       doc.text(safe(name), marginL, y);
-      doc.setFontSize(6);
-      doc.setFont(undefined, 'normal');
-      doc.setTextColor(...C.savana);
-      doc.text('funil compartilhado', marginL + doc.getTextWidth(safe(name)) + 4, y);
       y += 4.5;
       // Um bloco de cards por canal
       for (const [chName, cData] of chEntries) {
