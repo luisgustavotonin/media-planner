@@ -83,7 +83,7 @@ function AddChannelModal({ channels, onAdd, onClose }) {
 }
 
 export default function ChannelEditor({ channels, onChange, totalInvestment, readOnly, days = 30, funnelStages = [], funnelTypes = [], benchmarks = [], segment = '', planFunnelTypeId = '', averageTicket = 0 }) {
-  const [expandedIdx, setExpandedIdx] = useState(null);
+  // canais sempre expandidos — sem toggle de setinha
   const [showModal, setShowModal] = useState(false);
 
   const { data: dbChannels = [] } = useQuery({
@@ -158,7 +158,7 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                 </div>
                 <div>
                   <CurrencyInput value={ch.budget_value || 0} onChange={v => handleBudgetChange(idx, v)}
-                    placeholder="Investimento R$" prefix="R$" className="text-xs" disabled={readOnly} />
+                    placeholder="Investimento R$" prefix="R$" className="text-xs border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold focus-visible:ring-[#f85d07]" disabled={readOnly} />
                 </div>
                 <div className="text-center">
                   <span className="text-xs font-medium text-gray-500">{(ch.budget_percent || 0).toFixed(1)}%</span>
@@ -166,7 +166,7 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                 <div className="relative">
                   <input type="number" min="0" max="100" step="0.1" value={ch.tax_percent || ''} placeholder="0"
                     onChange={e => updateChannel(idx, 'tax_percent', parseFloat(e.target.value) || 0)} disabled={readOnly}
-                    className="w-full h-9 border border-gray-200 rounded-md text-xs px-2 pr-6 focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
+                    className="w-full h-9 border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold rounded-md text-xs px-2 pr-6 focus:outline-none focus:ring-1 focus:ring-[#f85d07] disabled:opacity-50" />
                   <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
                 </div>
                 <div className="text-right">
@@ -176,9 +176,6 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <button onClick={() => setExpandedIdx(expandedIdx === idx ? null : idx)} className="p-1.5 rounded-md hover:bg-gray-100">
-                  {expandedIdx === idx ? <ChevronUp className="w-3.5 h-3.5 text-gray-400" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400" />}
-                </button>
                 {!readOnly && (
                   <button onClick={() => removeChannel(idx)} className="p-1.5 rounded-md hover:bg-red-50">
                     <Trash2 className="w-3.5 h-3.5 text-red-400" />
@@ -187,7 +184,6 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
               </div>
             </div>
 
-            {expandedIdx === idx && (
               <div className="px-4 pb-4 pt-2 border-t border-[#e2ccaf]/60 bg-[#f2ede2]/40">
                 <div className="flex items-center gap-3 mb-3">
                   <Switch checked={ch.use_custom_funnel || false} onCheckedChange={v => updateChannel(idx, 'use_custom_funnel', v)} disabled={readOnly} />
@@ -210,7 +206,7 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                                   updated[si] = v;
                                   updateChannel(idx, 'conversion_rate_overrides', updated);
                                 }}
-                                className="h-8 text-xs" disabled={readOnly}
+                                className="h-8 text-xs border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold focus-visible:ring-[#f85d07]" disabled={readOnly}
                               />
                             </div>
                           );
@@ -220,15 +216,15 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                       <div className="grid grid-cols-3 gap-3">
                         <div>
                           <label className="text-[10px] text-gray-400">Lead→Agend.</label>
-                          <PercentInput value={ch.lead_to_appointment_rate_override || 0} onChange={v => updateChannel(idx, 'lead_to_appointment_rate_override', v)} className="h-8 text-xs" disabled={readOnly} />
+                          <PercentInput value={ch.lead_to_appointment_rate_override || 0} onChange={v => updateChannel(idx, 'lead_to_appointment_rate_override', v)} className="h-8 text-xs border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold focus-visible:ring-[#f85d07]" disabled={readOnly} />
                         </div>
                         <div>
                           <label className="text-[10px] text-gray-400">Agend.→Compar.</label>
-                          <PercentInput value={ch.appointment_to_show_rate_override || 0} onChange={v => updateChannel(idx, 'appointment_to_show_rate_override', v)} className="h-8 text-xs" disabled={readOnly} />
+                          <PercentInput value={ch.appointment_to_show_rate_override || 0} onChange={v => updateChannel(idx, 'appointment_to_show_rate_override', v)} className="h-8 text-xs border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold focus-visible:ring-[#f85d07]" disabled={readOnly} />
                         </div>
                         <div>
                           <label className="text-[10px] text-gray-400">Compar.→Venda</label>
-                          <PercentInput value={ch.show_to_sale_rate_override || 0} onChange={v => updateChannel(idx, 'show_to_sale_rate_override', v)} className="h-8 text-xs" disabled={readOnly} />
+                          <PercentInput value={ch.show_to_sale_rate_override || 0} onChange={v => updateChannel(idx, 'show_to_sale_rate_override', v)} className="h-8 text-xs border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold focus-visible:ring-[#f85d07]" disabled={readOnly} />
                         </div>
                       </div>
                     )}
@@ -250,7 +246,6 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                   onChange={(newStrategies) => updateChannel(idx, 'strategies', newStrategies)}
                 />
               </div>
-            )}
           </div>
         ))}
       </div>

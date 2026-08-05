@@ -674,8 +674,8 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                 <p className="text-sm text-gray-400 py-3">Nenhum canal ativo cadastrado. Cadastre canais em Config. Campanhas.</p>
               ) : (
                 <div className="space-y-2">
-                  <div className="hidden lg:grid grid-cols-[1.2fr_1.4fr_0.8fr_1fr_0.8fr_32px_32px] gap-2 text-[10px] text-gray-400 font-medium uppercase tracking-wider px-1">
-                    <span>Canal</span><span>Objetivo</span><span>% Budget</span><span>CPL (R$)</span><span>Imposto %</span><span></span><span></span>
+                  <div className="hidden lg:grid grid-cols-[1.2fr_1.4fr_0.8fr_1fr_0.8fr_32px] gap-2 text-[10px] text-[#7c7161] font-semibold uppercase tracking-wide px-1">
+                    <span>Canal</span><span>Objetivo</span><span>% Budget</span><span>CPL (R$)</span><span>Imposto %</span><span></span>
                   </div>
                   {distribution.map((row, idx) => {
                     const isExpanded = expandedRows[idx];
@@ -683,7 +683,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                     const hasObjective = !!row.objective_id;
                     return (
                       <div key={idx} className="bg-white border border-[#d9cdb8] rounded-lg overflow-hidden" style={{ borderLeft: `4px solid ${channelAccent(row.channel_name)}` }}>
-                        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1.4fr_0.8fr_1fr_0.8fr_32px_32px] gap-2 items-center p-2 transition-colors" style={{ backgroundColor: channelAccent(row.channel_name) + (isExpanded ? '22' : '12') }}>
+                        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1.4fr_0.8fr_1fr_0.8fr_32px] gap-2 items-center p-2" style={{ backgroundColor: channelAccent(row.channel_name) + '12' }}>
                           <Select value={row.channel_name || undefined} onValueChange={v => setChannelForRow(idx, v)}>
                             <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Canal..." /></SelectTrigger>
                             <SelectContent>
@@ -701,20 +701,16 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                               ))}
                             </SelectContent>
                           </Select>
-                          <CurrencyInput value={row.percent} onChange={v => handleDistChange(idx, 'percent', v)} className="text-xs" placeholder="%" />
-                          <CurrencyInput value={row.expected_cpl} onChange={v => handleDistChange(idx, 'expected_cpl', v)} prefix="R$" className="text-xs" placeholder="CPL" />
-                          <PercentInput value={row.tax_percent || 0} onChange={v => handleDistChange(idx, 'tax_percent', v)} className="text-xs h-9" />
-                          <button onClick={() => toggleRowExpand(idx)} disabled={!hasObjective}
-                            className={`p-1.5 rounded-md ${hasObjective ? 'hover:bg-gray-100 text-gray-400' : 'text-gray-200 cursor-not-allowed'}`} title="Editar funil">
-                            {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                          </button>
+                          <CurrencyInput value={row.percent} onChange={v => handleDistChange(idx, 'percent', v)} className="text-xs border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold focus-visible:ring-[#f85d07]" placeholder="%" />
+                          <CurrencyInput value={row.expected_cpl} onChange={v => handleDistChange(idx, 'expected_cpl', v)} prefix="R$" className="text-xs border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold focus-visible:ring-[#f85d07]" placeholder="CPL" />
+                          <PercentInput value={row.tax_percent || 0} onChange={v => handleDistChange(idx, 'tax_percent', v)} className="text-xs h-9 border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold focus-visible:ring-[#f85d07]" />
                           <button onClick={() => setDeleteRowIdx(idx)}
                             className="p-1.5 rounded-md hover:bg-red-50 text-red-400">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
 
-                        {hasObjective && isExpanded && (
+                        {hasObjective && (
                           <div className="px-3 py-3 bg-[#f2ede2]/50 border-t border-[#e2ccaf]/60">
                             <div className="flex items-center gap-2 mb-3">
                               <Info className="w-3.5 h-3.5 text-[#7e6951]" />
@@ -722,13 +718,13 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                             </div>
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-xs">
                               <div>
-                                <p className="text-gray-400 mb-1">Ticket Médio</p>
-                                <CurrencyInput value={row.average_ticket} onChange={v => updateRowTicket(idx, v)} prefix="R$" className="text-xs h-9" placeholder="0" />
+                                <p className="text-[#7c7161] mb-1 font-semibold">Ticket Médio</p>
+                                <CurrencyInput value={row.average_ticket} onChange={v => updateRowTicket(idx, v)} prefix="R$" className="text-xs h-9 border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold focus-visible:ring-[#f85d07]" placeholder="0" />
                               </div>
                               {(row.conversion_rates || []).map((r, ri) => (
                                 <div key={ri}>
-                                  <p className="text-gray-400 mb-1">{convLabels[ri] || `Taxa ${ri + 1}`}</p>
-                                  <PercentInput value={r} onChange={v => updateRowRate(idx, ri, v)} className="text-xs" />
+                                  <p className="text-[#7c7161] mb-1 font-semibold">{convLabels[ri] || `Taxa ${ri + 1}`}</p>
+                                  <PercentInput value={r} onChange={v => updateRowRate(idx, ri, v)} className="text-xs border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold focus-visible:ring-[#f85d07]" />
                                 </div>
                               ))}
                             </div>

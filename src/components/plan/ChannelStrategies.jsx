@@ -48,14 +48,14 @@ function KpiField({ kpi, value, onChange, readOnly }) {
     return <span className="text-xs font-semibold text-gray-700">{display}</span>;
   }
   if (kpi.unit === 'percentual') {
-    return <PercentInput value={value || 0} onChange={onChange} className="h-8 text-xs" />;
+    return <PercentInput value={value || 0} onChange={onChange} className="h-8 text-xs border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold focus-visible:ring-[#f85d07]" />;
   }
   if (kpi.unit === 'numero') {
     return <input type="number" min="0" step="any" value={value || ''} placeholder="0"
       onChange={e => onChange(parseFloat(e.target.value) || 0)}
-      className="w-full h-8 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-primary" />;
+      className="w-full h-8 border border-[#f85d07] rounded-md text-xs px-2 bg-[#f2ede2] text-[#312b1d] font-semibold focus:outline-none focus:ring-1 focus:ring-[#f85d07]" />;
   }
-  return <CurrencyInput value={value || 0} onChange={onChange} prefix="R$" className="text-xs h-8" placeholder="0" />;
+  return <CurrencyInput value={value || 0} onChange={onChange} prefix="R$" className="text-xs h-8 border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold focus-visible:ring-[#f85d07]" placeholder="0" />;
 }
 
 // Componente que renderiza todos os KPIs de uma campanha
@@ -146,7 +146,7 @@ function CampaignFunnel({ campaign, funnelTypeId, funnelTypes, onChange, readOnl
   }
 
   return (
-    <div className="px-3 pb-3 pt-2 bg-secondary/20 border-t border-gray-50">
+    <div className="px-3 pb-3 pt-2 bg-[#f2ede2]/40 border-t border-[#e2ccaf]/60">
       <div className="flex items-center justify-between mb-2">
         <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Funil: {funnelType.name}</span>
         {benchmark && (
@@ -166,18 +166,18 @@ function AdSet({ adset, days, onChange, onRemove, readOnly, maxBudget }) {
   const isOver = maxBudget !== undefined && (adset.budget_value || 0) > maxBudget + 0.01;
 
   return (
-    <div className="border border-gray-100 rounded-lg bg-gray-50/50 overflow-hidden">
+    <div className="border border-gray-100 rounded-lg bg-[#f2ede2]/50 overflow-hidden">
       <div className="flex items-center gap-2 p-2">
         <button onClick={() => setOpen(o => !o)} className="p-0.5 text-gray-400 hover:text-gray-600">
           {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
         </button>
         <input type="text" value={adset.name || ''} onChange={e => updateField('name', e.target.value)}
           placeholder="Nome do conjunto de anúncios" disabled={readOnly}
-          className="flex-1 h-7 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
+          className="flex-1 h-7 border border-[#f85d07] rounded-md text-xs px-2 bg-[#f2ede2] text-[#312b1d] font-semibold focus:outline-none focus:ring-1 focus:ring-[#f85d07] disabled:opacity-50" />
         <div className="w-36">
           <CurrencyInput value={adset.budget_value || 0}
             onChange={v => updateField('budget_value', Number(v))}
-            prefix="R$" className={`text-xs h-7 ${isOver ? 'border-red-400 ring-1 ring-red-300' : ''}`} disabled={readOnly} />
+            prefix="R$" className={`text-xs h-7 ${isOver ? 'border-red-400 ring-1 ring-red-300' : 'border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold'}`} disabled={readOnly} />
         </div>
         <div className="text-right w-24 shrink-0">
           <span className="text-[10px] text-gray-400">por dia</span>
@@ -211,7 +211,7 @@ function ParamField({ label, value, onChange, placeholder, readOnly }) {
     <div>
       <p className="text-[10px] text-gray-400 mb-0.5">{label}</p>
       <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={readOnly}
-        className="w-full h-7 border border-gray-200 rounded-md text-xs px-2 bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
+        className="w-full h-7 border border-[#f85d07] rounded-md text-xs px-2 bg-[#f2ede2] text-[#312b1d] font-semibold focus:outline-none focus:ring-1 focus:ring-[#f85d07] disabled:opacity-50" />
     </div>
   );
 }
@@ -260,7 +260,7 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
   };
 
   return (
-    <div className={`border rounded-xl overflow-hidden ${isCampaignOver ? 'border-red-300' : 'border-gray-200'}`}>
+    <div className={`border rounded-xl overflow-hidden ${isCampaignOver ? 'border-red-300' : 'border-[#d9cdb8]'}`}>
       {/* Campaign header */}
       <div className="flex items-end gap-2 p-3 bg-white flex-wrap">
         <button onClick={() => setOpen(o => !o)} className="p-0.5 text-gray-400 hover:text-gray-600 mb-1.5">
@@ -270,12 +270,12 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
           <label className="text-[10px] text-gray-400 block mb-1">Nome da campanha</label>
           <input type="text" value={campaign.name || ''} onChange={e => updateField('name', e.target.value)}
             placeholder="Ex: Topo de funil" disabled={readOnly}
-            className="w-full h-8 border border-gray-200 rounded-md text-xs px-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
+            className="w-full h-8 border border-[#f85d07] rounded-md text-xs px-2 font-medium bg-[#f2ede2] text-[#312b1d] font-semibold focus:outline-none focus:ring-1 focus:ring-[#f85d07] disabled:opacity-50" />
         </div>
         <div className="w-32 shrink-0">
           <label className="text-[10px] text-gray-400 block mb-1">Valor da campanha</label>
           <CurrencyInput value={campaignBudget} onChange={v => updateField('budget_value', Number(v))}
-            prefix="R$" className={`text-xs h-8 ${isCampaignOver ? 'border-red-400 ring-1 ring-red-300' : ''}`}
+            prefix="R$" className={`text-xs h-8 ${isCampaignOver ? 'border-red-400 ring-1 ring-red-300' : 'border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold'}`}
             disabled={readOnly} placeholder="Budget" />
         </div>
         <div className="w-28 shrink-0">
@@ -303,7 +303,7 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
 
       {/* Ad sets */}
       {open && (
-        <div className="p-3 pt-2 bg-gray-50/70 space-y-2 border-t border-gray-100">
+        <div className="p-3 pt-2 bg-[#f2ede2]/50 space-y-2 border-t border-gray-100">
           <div className="flex items-center justify-between pt-1 pb-1">
             <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1">
               <Layers className="w-3 h-3" /> Conjuntos de anúncios
@@ -375,7 +375,7 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
   };
 
   return (
-    <div className={`border rounded-xl overflow-hidden ${isOver ? 'border-red-300' : 'border-gray-200'}`}>
+    <div className={`border rounded-xl overflow-hidden ${isOver ? 'border-red-300' : 'border-[#d9cdb8]'}`}>
       <div className="flex items-end gap-2 p-3 bg-white flex-wrap">
         <button onClick={() => setOpen(o => !o)} className="p-0.5 text-gray-400 hover:text-gray-600 mb-1.5">
           {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -384,12 +384,12 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
           <label className="text-[10px] text-gray-400 block mb-1">Nome da campanha</label>
           <input type="text" value={campaign.name || ''} onChange={e => updateField('name', e.target.value)}
             placeholder="Ex: Topo de funil" disabled={readOnly}
-            className="w-full h-8 border border-gray-200 rounded-md text-xs px-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50" />
+            className="w-full h-8 border border-[#f85d07] rounded-md text-xs px-2 font-medium bg-[#f2ede2] text-[#312b1d] font-semibold focus:outline-none focus:ring-1 focus:ring-[#f85d07] disabled:opacity-50" />
         </div>
         <div className="w-28 shrink-0">
           <label className="text-[10px] text-gray-400 block mb-1">Valor da campanha</label>
           <CurrencyInput value={campaign.budget_value || 0} onChange={v => updateField('budget_value', Number(v))}
-            prefix="R$" className={`text-xs h-8 ${isOver ? 'border-red-400 ring-1 ring-red-300' : ''}`} disabled={readOnly} />
+            prefix="R$" className={`text-xs h-8 ${isOver ? 'border-red-400 ring-1 ring-red-300' : 'border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold'}`} disabled={readOnly} />
         </div>
         <div className="w-28 shrink-0">
           <label className="text-[10px] text-gray-400 block mb-1">Objetivo</label>
@@ -419,7 +419,7 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
       </div>
 
       {open && (
-        <div className="px-4 pb-4 pt-2 border-t border-gray-100 bg-gray-50/50">
+        <div className="px-4 pb-4 pt-2 border-t border-gray-100 bg-[#f2ede2]/50">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <ParamField label="Público-alvo" value={campaign.params?.publico || ''} onChange={v => updateParam('publico', v)} placeholder="Ex: Visitantes do site, Lookalike" readOnly={readOnly} />
             <ParamField label="Faixa etária" value={campaign.params?.faixa_etaria || ''} onChange={v => updateParam('faixa_etaria', v)} placeholder="Ex: 30-55" readOnly={readOnly} />
