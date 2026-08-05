@@ -10,6 +10,15 @@ import { findBenchmark, getCplFromBenchmark, getRatesFromBenchmark } from '@/lib
 const fmtBRL = (n) => `R$ ${(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtDaily = (budget, days) => days > 0 ? fmtBRL(budget / days) : fmtBRL(0);
 
+// Resolve o valor de refer\u00eancia (benchmark) de um KPI de moeda com base no label
+function getCurrencyKpiFromBenchmark(bm, label) {
+  const l = (label || '').toLowerCase();
+  if (l.includes('cpl')) return bm?.default_cpl || 0;
+  if (l.includes('cpc')) return bm?.default_cpc || 0;
+  if (l.includes('cpm')) return bm?.default_cpm || 0;
+  return bm?.default_cpl || bm?.default_cpc || bm?.default_cpm || 0;
+}
+
 // Retorna info do objetivo: tipo e lista de KPIs
 function getObjectiveInfo(objectiveName, objectives) {
   const obj = objectives.find(o => o.name === objectiveName);
@@ -259,6 +268,7 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
         rateIdx++;
         return { ...kv, value: r };
       }
+      if (kv.unit === 'moeda') return { ...kv, value: getCurrencyKpiFromBenchmark(bm, kv.label) };
       return kv;
     });
     const costKpi = updatedKpiValues.find(kv => kv.unit === 'moeda' && !(kv.label || '').toLowerCase().includes('ticket'));
@@ -380,6 +390,7 @@ function GoogleCampaign({ campaign, days, onChange, onRemove, readOnly, maxCampa
         rateIdx++;
         return { ...kv, value: r };
       }
+      if (kv.unit === 'moeda') return { ...kv, value: getCurrencyKpiFromBenchmark(bm, kv.label) };
       return kv;
     });
     const costKpi = updatedKpiValues.find(kv => kv.unit === 'moeda' && !(kv.label || '').toLowerCase().includes('ticket'));
@@ -511,7 +522,7 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function ChannelStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, days = 30, onChange, readOnly, channelName = 'Meta', objectives = [], funnelTypes = [], benchmarks = [], segment = '', planFunnelTypeId = '', averageTicket = 0 }) {
   // Filtra objetivos aplicáveis a este canal (sem channels = disponível para todos)
-  const availableObjectives = objectives.filter(o => !o.channels || o.channels.length === 0 || o.channels.includes(channelName)).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  const availableObjectives = objectives.filter(o => o.show_in_media_plan !== false && (!o.channels || o.channels.length === 0 || o.channels.includes(channelName))).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
   const netBudget = (channelBudget || 0) * (1 - (taxPercent || 0) / 100);
   const totalAllocated = strategies.reduce((s, camp) => s + (camp.budget_value || 0), 0);

@@ -299,7 +299,7 @@ function ChannelsTab() {
 
 // ── Formulário de Objetivo ──
 function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [], funnelTypes = [] }) {
-  const [form, setForm] = useState(initial);
+  const [form, setForm] = useState({ show_in_media_plan: true, show_in_reverse_plan: true, ...initial });
   const [activeFormulaIdx, setActiveFormulaIdx] = useState(null);
 
   const insertVar = (v) => {
@@ -385,6 +385,21 @@ function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [], funne
         <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Descrição</Label>
         <input className="mt-1.5 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           placeholder="Breve descrição..." value={form.description || ''} onChange={e => setField('description', e.target.value)} />
+      </div>
+
+      <div>
+        <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Disponível em</Label>
+        <p className="text-[10px] text-gray-400 mb-2">Marque onde este objetivo aparece como opção de seleção.</p>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => setField('show_in_media_plan', form.show_in_media_plan === false)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${form.show_in_media_plan !== false ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+            Plano de Mídia
+          </button>
+          <button type="button" onClick={() => setField('show_in_reverse_plan', form.show_in_reverse_plan === false)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${form.show_in_reverse_plan !== false ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+            Planejamento Reverso
+          </button>
+        </div>
       </div>
 
 
@@ -663,7 +678,7 @@ function ObjectivesTab() {
           </div>
           <ObjectiveForm
             initial={editingId === 'new'
-              ? { name: '', description: '', type: 'performance', kpis: [], channels: selectedChannel ? [selectedChannel] : [], is_active: true }
+              ? { name: '', description: '', type: 'performance', kpis: [], channels: selectedChannel ? [selectedChannel] : [], is_active: true, show_in_media_plan: true, show_in_reverse_plan: true }
               : getInitialForEdit()}
             onSave={handleSave} onCancel={() => setEditingId(null)} saving={createMut.isPending || updateMut.isPending}
             channels={channels} funnelTypes={funnelTypes}

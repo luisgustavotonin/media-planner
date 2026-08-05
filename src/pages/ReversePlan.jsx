@@ -425,7 +425,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
   }, [selectedClientId]);
 
   const objectivesForChannel = (channelName) =>
-    objectives.filter(o => o.is_active !== false && (!o.channels?.length || o.channels.includes(channelName)));
+    objectives.filter(o => o.is_active !== false && o.show_in_reverse_plan !== false && (!o.channels?.length || o.channels.includes(channelName)));
 
   const setChannelForRow = (idx, channelName) => {
     setDistribution(d => d.map((r, i) => {

@@ -80,6 +80,16 @@
         "type": "string"
       }
     },
+    "show_in_media_plan": {
+      "type": "boolean",
+      "default": true,
+      "description": "Exibe este objetivo como op\u00e7\u00e3o no Plano de M\u00eddia"
+    },
+    "show_in_reverse_plan": {
+      "type": "boolean",
+      "default": true,
+      "description": "Exibe este objetivo como op\u00e7\u00e3o no Planejamento Reverso"
+    },
     "is_active": {
       "type": "boolean",
       "default": true
