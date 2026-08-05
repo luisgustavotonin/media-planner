@@ -7,6 +7,7 @@ import { Trash2, ChevronDown, ChevronRight, Plus, X } from 'lucide-react';
 import CurrencyInput from '../ui-custom/CurrencyInput';
 import ChannelStrategies from './ChannelStrategies';
 import ChannelBadge from '../ui-custom/ChannelBadge';
+import ConfirmDeleteDialog from '../ui-custom/ConfirmDeleteDialog';
 
 // Modal para adicionar canal (apenas nome + budget + imposto)
 function AddChannelModal({ channels, onAdd, onClose }) {
@@ -92,6 +93,7 @@ function AddChannelModal({ channels, onAdd, onClose }) {
 export default function ChannelEditor({ channels, onChange, totalInvestment, readOnly, days = 30, funnelStages = [], funnelTypes = [], benchmarks = [], segment = '', planFunnelTypeId = '', averageTicket = 0 }) {
   const [showModal, setShowModal] = useState(false);
   const [expandedChannels, setExpandedChannels] = useState(() => ({}));
+  const [pendingChannelIdx, setPendingChannelIdx] = useState(null);
 
   const toggleExpand = (idx) => setExpandedChannels(e => ({ ...e, [idx]: !e[idx] }));
 
@@ -191,7 +193,7 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
                 </div>
                 <div className="flex items-center gap-1">
                   {!readOnly && (
-                    <button onClick={() => removeChannel(idx)} className="p-1.5 rounded-md hover:bg-red-50">
+                    <button onClick={() => setPendingChannelIdx(idx)} className="p-1.5 rounded-md hover:bg-red-50">
                       <Trash2 className="w-3.5 h-3.5 text-red-400" />
                     </button>
                   )}
@@ -221,6 +223,13 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
           );
         })}
       </div>
+      <ConfirmDeleteDialog
+        open={pendingChannelIdx !== null}
+        title="Excluir canal?"
+        message="O canal e todas as suas campanhas serão removidos do plano."
+        onConfirm={() => { removeChannel(pendingChannelIdx); setPendingChannelIdx(null); }}
+        onCancel={() => setPendingChannelIdx(null)}
+      />
     </div>
   );
 }

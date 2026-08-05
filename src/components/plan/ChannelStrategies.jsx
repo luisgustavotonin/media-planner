@@ -5,6 +5,7 @@ import { Trash2, Plus, ChevronDown, ChevronRight, Layers } from 'lucide-react';
 import CurrencyInput from '../ui-custom/CurrencyInput';
 import PercentInput from '../ui-custom/PercentInput';
 import FunnelVisual from '../ui-custom/FunnelVisual';
+import ConfirmDeleteDialog from '../ui-custom/ConfirmDeleteDialog';
 import { findBenchmark, getCplFromBenchmark, getRatesFromBenchmark } from '@/lib/benchmarkLookup';
 
 const fmtBRL = (n) => `R$ ${(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -228,6 +229,7 @@ function ParamField({ label, value, onChange, placeholder, readOnly }) {
 // ─── Campaign (Meta) ─────────────────────────────────────────────────────────
 function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBudget, objectives, availableObjectives, funnelTypes = [], benchmarks = [], segment = '', channelName = 'Meta', planFunnelTypeId = '', taxPercent = 0, averageTicket = 0 }) {
   const [open, setOpen] = useState(true);
+  const [pendingAdsetIdx, setPendingAdsetIdx] = useState(null);
 
   const updateField = (field, val) => onChange({ ...campaign, [field]: val });
   const updateAdSet = (idx, updated) => {
@@ -317,6 +319,14 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
         )}
       </div>
 
+      <ConfirmDeleteDialog
+        open={pendingAdsetIdx !== null}
+        title="Excluir conjunto de anúncios?"
+        message="O conjunto de anúncios será removido da campanha."
+        onConfirm={() => { removeAdSet(pendingAdsetIdx); setPendingAdsetIdx(null); }}
+        onCancel={() => setPendingAdsetIdx(null)}
+      />
+
       {/* Ad sets */}
       {open && (
         <div className="p-3 pt-2 bg-[#f2ede2]/50 space-y-2 border-t border-gray-100">
@@ -346,7 +356,7 @@ function Campaign({ campaign, days, onChange, onRemove, readOnly, maxCampaignBud
             const maxForAdset = campaignBudget - otherAdsetsTotal;
             return (
               <AdSet key={idx} adset={adset} days={days}
-                onChange={updated => updateAdSet(idx, updated)} onRemove={() => removeAdSet(idx)}
+                onChange={updated => updateAdSet(idx, updated)} onRemove={() => setPendingAdsetIdx(idx)}
                 readOnly={readOnly} maxBudget={maxForAdset} />
             );
           })}
@@ -468,6 +478,7 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, 
   const netBudget = (channelBudget || 0) * (1 - (taxPercent || 0) / 100);
   const totalAllocated = strategies.reduce((s, c) => s + (c.budget_value || 0), 0);
   const remaining = netBudget - totalAllocated;
+  const [pendingCampaignIdx, setPendingCampaignIdx] = useState(null);
 
   const addCampaign = () => {
     if (readOnly) return;
@@ -509,12 +520,19 @@ function GoogleStrategies({ strategies = [], channelBudget = 0, taxPercent = 0, 
           const maxForCampaign = netBudget - otherTotal;
           return (
             <GoogleCampaign key={idx} campaign={camp} days={days} taxPercent={taxPercent}
-              onChange={updated => updateCampaign(idx, updated)} onRemove={() => removeCampaign(idx)}
+              onChange={updated => updateCampaign(idx, updated)} onRemove={() => setPendingCampaignIdx(idx)}
               readOnly={readOnly} maxCampaignBudget={maxForCampaign} objectives={objectives} availableObjectives={availableObjectives}
               funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} planFunnelTypeId={planFunnelTypeId} averageTicket={averageTicket} />
           );
         })}
       </div>
+      <ConfirmDeleteDialog
+        open={pendingCampaignIdx !== null}
+        title="Excluir campanha Google?"
+        message="A campanha Google será removida do canal."
+        onConfirm={() => { removeCampaign(pendingCampaignIdx); setPendingCampaignIdx(null); }}
+        onCancel={() => setPendingCampaignIdx(null)}
+      />
     </div>
   );
 }
@@ -527,6 +545,7 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
   const netBudget = (channelBudget || 0) * (1 - (taxPercent || 0) / 100);
   const totalAllocated = strategies.reduce((s, camp) => s + (camp.budget_value || 0), 0);
   const remaining = netBudget - totalAllocated;
+  const [pendingCampaignIdx, setPendingCampaignIdx] = useState(null);
 
   const addCampaign = () => {
     if (readOnly) return;
@@ -576,12 +595,19 @@ export default function ChannelStrategies({ strategies = [], channelBudget = 0, 
           const maxForCampaign = netBudget - otherTotal;
           return (
             <Campaign key={idx} campaign={camp} days={days} taxPercent={taxPercent}
-              onChange={updated => updateCampaign(idx, updated)} onRemove={() => removeCampaign(idx)}
+              onChange={updated => updateCampaign(idx, updated)} onRemove={() => setPendingCampaignIdx(idx)}
               readOnly={readOnly} maxCampaignBudget={maxForCampaign} objectives={objectives} availableObjectives={availableObjectives}
               funnelTypes={funnelTypes} benchmarks={benchmarks} segment={segment} channelName={channelName} planFunnelTypeId={planFunnelTypeId} averageTicket={averageTicket} />
           );
         })}
       </div>
+      <ConfirmDeleteDialog
+        open={pendingCampaignIdx !== null}
+        title="Excluir campanha?"
+        message="A campanha será removida do canal."
+        onConfirm={() => { removeCampaign(pendingCampaignIdx); setPendingCampaignIdx(null); }}
+        onCancel={() => setPendingCampaignIdx(null)}
+      />
     </div>
   );
 }

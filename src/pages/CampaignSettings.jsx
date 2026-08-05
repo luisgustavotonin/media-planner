@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGr
 import { useToast } from '@/components/ui/use-toast';
 import { sanitizeVar } from '@/lib/formulaEvaluator';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import ConfirmDeleteDialog from '@/components/ui-custom/ConfirmDeleteDialog';
 
 const UNIT_LABELS = { numero: 'Número', moeda: 'Moeda (R$)', percentual: 'Percentual (%)' };
 const UNIT_SHORT = { numero: 'nº', moeda: 'R$', percentual: '%' };
@@ -95,6 +96,7 @@ function ChannelsTab() {
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
+  const [pendingChannel, setPendingChannel] = useState(null);
 
   const { data: channels = [], isLoading } = useQuery({
     queryKey: ['channels'],
@@ -280,7 +282,7 @@ function ChannelsTab() {
                             <Pencil className="w-4 h-4" />
                           </button>
                         )}
-                        <button onClick={() => handleDelete(ch)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400" title={inUse ? 'Canal em uso — inative em vez de excluir' : 'Excluir canal'}>
+                        <button onClick={() => setPendingChannel(ch)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400" title={inUse ? 'Canal em uso — inative em vez de excluir' : 'Excluir canal'}>
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -293,6 +295,13 @@ function ChannelsTab() {
           })}
         </div>
       )}
+      <ConfirmDeleteDialog
+        open={!!pendingChannel}
+        title="Excluir canal?"
+        message={`O canal "${pendingChannel?.name}" será removido${pendingChannel && !channelInUse(pendingChannel.name) ? ' junto com seus benchmarks associados.' : '.'}`}
+        onConfirm={() => { if (pendingChannel) handleDelete(pendingChannel); setPendingChannel(null); }}
+        onCancel={() => setPendingChannel(null)}
+      />
     </div>
   );
 }
@@ -530,6 +539,7 @@ function ObjectivesTab() {
   const [expanded, setExpanded] = useState({});
   const [selectedChannel, setSelectedChannel] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('digital');
+  const [pendingObjective, setPendingObjective] = useState(null);
 
   const { data: objectives = [], isLoading } = useQuery({
     queryKey: ['campaign-objectives'],
@@ -736,7 +746,7 @@ function ObjectivesTab() {
                       {obj.is_active ? <ToggleRight className="w-4 h-4 text-primary" /> : <ToggleLeft className="w-4 h-4" />}
                     </button>
                     <button onClick={() => setEditingId(obj.id)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"><Pencil className="w-4 h-4" /></button>
-                    <button onClick={() => deleteMut.mutate(obj.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => setPendingObjective(obj)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
               </div>
@@ -744,6 +754,14 @@ function ObjectivesTab() {
           })}
         </div>
       )}
+      <ConfirmDeleteDialog
+        open={!!pendingObjective}
+        title="Excluir objetivo?"
+        message={`O objetivo "${pendingObjective?.name}" será removido permanentemente.`}
+        onConfirm={() => { if (pendingObjective) deleteMut.mutate(pendingObjective.id); setPendingObjective(null); }}
+        onCancel={() => setPendingObjective(null)}
+        isPending={deleteMut.isPending}
+      />
     </div>
   );
 }

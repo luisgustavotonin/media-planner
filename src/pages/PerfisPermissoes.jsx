@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Plus, Pencil, Trash2, Shield, ChevronDown, ChevronUp, Eye, MousePointerClick } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { APP_MODULES } from '@/lib/appModules';
+import ConfirmDeleteDialog from '@/components/ui-custom/ConfirmDeleteDialog';
 
 const getPermVal = (perfil, key) => {
   const p = perfil?.permissions?.[key];
