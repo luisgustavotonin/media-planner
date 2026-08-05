@@ -401,6 +401,7 @@ function ObjectivesTab() {
   const [editingId, setEditingId] = useState(null);
   const [expanded, setExpanded] = useState({});
   const [selectedChannel, setSelectedChannel] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('digital');
 
   const { data: objectives = [], isLoading } = useQuery({
     queryKey: ['campaign-objectives'],
@@ -419,12 +420,13 @@ function ObjectivesTab() {
 
   const activeChannels = channels.filter(c => c.is_active);
   const activeChannelNames = activeChannels.map(c => c.name);
+  const categoryChannels = activeChannels.filter(c => (c.category || 'digital') === selectedCategory);
 
   useEffect(() => {
-    if (!selectedChannel && activeChannels.length > 0) {
-      setSelectedChannel(activeChannels[0].name);
+    if (!categoryChannels.find(c => c.name === selectedChannel)) {
+      setSelectedChannel(categoryChannels[0]?.name || '');
     }
-  }, [activeChannels, selectedChannel]);
+  }, [categoryChannels, selectedChannel]);
 
   const filteredObjectives = selectedChannel
     ? objectives.filter(o => !o.channels?.length || o.channels.includes(selectedChannel)).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
@@ -509,14 +511,30 @@ function ObjectivesTab() {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider mr-1">Filtrar por canal:</span>
-        {activeChannels.map(ch => (
-          <button key={ch.id} onClick={() => setSelectedChannel(ch.name)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selectedChannel === ch.name ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
-            {ch.name}
-          </button>
-        ))}
+      <div className="mb-4">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider mr-1">Filtrar:</span>
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+            <button onClick={() => setSelectedCategory('digital')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${selectedCategory === 'digital' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              Digital
+            </button>
+            <button onClick={() => setSelectedCategory('offline')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${selectedCategory === 'offline' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              Offline
+            </button>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider mr-1">Canal:</span>
+          {categoryChannels.map(ch => (
+            <button key={ch.id} onClick={() => setSelectedChannel(ch.name)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selectedChannel === ch.name ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+              {ch.name}
+            </button>
+          ))}
+          {categoryChannels.length === 0 && <span className="text-xs text-gray-400 italic">Nenhum canal nesta categoria.</span>}
+        </div>
       </div>
 
       <div className="flex justify-end mb-4 gap-2">
