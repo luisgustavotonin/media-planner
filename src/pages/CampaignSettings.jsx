@@ -4,10 +4,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import PageHeader from '@/components/ui-custom/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2, Pencil, X, Check, ToggleLeft, ToggleRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, Pencil, X, Check, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { sanitizeVar } from '@/lib/formulaEvaluator';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 const UNIT_LABELS = { numero: 'Número', moeda: 'Moeda (R$)', percentual: 'Percentual (%)' };
 const UNIT_SHORT = { numero: 'nº', moeda: 'R$', percentual: '%' };
@@ -325,6 +326,15 @@ function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [], funne
   const addKpi = () => setForm(f => ({ ...f, kpis: [...(f.kpis || []), { label: '', unit: 'moeda' }] }));
   const updateKpi = (i, k, v) => setForm(f => ({ ...f, kpis: f.kpis.map((kp, j) => j === i ? { ...kp, [k]: v } : kp) }));
   const removeKpi = (i) => setForm(f => ({ ...f, kpis: f.kpis.filter((_, j) => j !== i) }));
+  const onKpiDragEnd = (result) => {
+    if (!result.destination || result.destination.index === result.source.index) return;
+    setForm(f => {
+      const kpis = [...(f.kpis || [])];
+      const [moved] = kpis.splice(result.source.index, 1);
+      kpis.splice(result.destination.index, 0, moved);
+      return { ...f, kpis };
+    });
+  };
 
   const addCalcMetric = () => setForm(f => ({ ...f, calculated_metrics: [...(f.calculated_metrics || []), { label: '', formula: '', unit: 'numero' }] }));
   const updateCalcMetric = (i, k, v) => setForm(f => ({ ...f, calculated_metrics: (f.calculated_metrics || []).map((m, j) => j === i ? { ...m, [k]: v } : m) }));
@@ -390,23 +400,37 @@ function ObjectiveForm({ initial, onSave, onCancel, saving, channels = [], funne
             <Plus className="w-3.5 h-3.5" /> Adicionar KPI
           </button>
         </div>
-        <div className="space-y-2">
-          {(form.kpis || []).length === 0 && (
-            <p className="text-xs text-gray-400 italic py-2">Nenhum KPI cadastrado. Clique em "Adicionar KPI".</p>
-          )}
-          {(form.kpis || []).map((kpi, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <input className="flex-1 border border-gray-200 rounded-md px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                placeholder="Nome do KPI (ex: CPL, CPC, CPM, CTR...)" value={kpi.label}
-                onChange={e => updateKpi(i, 'label', e.target.value)} />
-              <select className="w-40 border border-gray-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary bg-white"
-                value={kpi.unit} onChange={e => updateKpi(i, 'unit', e.target.value)}>
-                {Object.entries(UNIT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-              </select>
-              <button onClick={() => removeKpi(i)} className="p-1 rounded hover:bg-red-50 text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
-            </div>
-          ))}
-        </div>
+        <DragDropContext onDragEnd={onKpiDragEnd}>
+          <Droppable droppableId="kpis">
+            {(provided) => (
+              <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-2">
+                {(form.kpis || []).length === 0 && (
+                  <p className="text-xs text-gray-400 italic py-2">Nenhum KPI cadastrado. Clique em "Adicionar KPI". Arraste para reordenar.</p>
+                )}
+                {(form.kpis || []).map((kpi, i) => (
+                  <Draggable key={`kpi-${i}`} draggableId={`kpi-${i}`} index={i}>
+                    {(p) => (
+                      <div ref={p.innerRef} {...p.draggableProps} className="flex items-center gap-2">
+                        <span {...p.dragHandleProps} className="cursor-grab text-gray-300 hover:text-gray-500 shrink-0">
+                          <GripVertical className="w-4 h-4" />
+                        </span>
+                        <input className="flex-1 border border-gray-200 rounded-md px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                          placeholder="Nome do KPI (ex: CPL, CPC, CPM, CTR...)" value={kpi.label}
+                          onChange={e => updateKpi(i, 'label', e.target.value)} />
+                        <select className="w-40 border border-gray-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary bg-white"
+                          value={kpi.unit} onChange={e => updateKpi(i, 'unit', e.target.value)}>
+                          {Object.entries(UNIT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                        </select>
+                        <button onClick={() => removeKpi(i)} className="p-1 rounded hover:bg-red-50 text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
       </div>
 
       {/* Métricas Calculadas */}
