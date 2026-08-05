@@ -248,7 +248,8 @@ export default function PlanDetail() {
         const g = groups[key];
         if (!g.channelData[chName]) g.channelData[chName] = { investment: 0, netInvestment: 0, impressions: 0, clicks: 0, reach: 0, leads: 0, sales: 0, revenue: 0, kpis: {} };
         const c = g.channelData[chName];
-        const campBudget = camp.budget_value || 0;
+        const campBudget = camp.budget_value
+          || (camp.adsets || []).reduce((s, a) => s + (a.budget_value || 0), 0);
         const netBudget = campBudget * (1 - taxRate);
         c.investment += campBudget;
         c.netInvestment += netBudget;
