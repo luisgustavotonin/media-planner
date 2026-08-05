@@ -69,7 +69,7 @@ function PlanList({ records, clients, onSelect, onNew }) {
 
   return (
     <div>
-      <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
+      <div className="bg-white rounded-lg border border-[#d9cdb8] p-5 mb-5">
         <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">1. Selecione o Cliente</p>
         <Select value={selectedClientId} onValueChange={setSelectedClientId}>
           <SelectTrigger className="max-w-xs">
@@ -239,7 +239,7 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
       </div>
 
       {result?.channel_budgets?.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
+        <div className="bg-white rounded-lg border border-[#d9cdb8] p-5 mb-5">
           <div className="flex items-center gap-2 mb-3">
             <Info className="w-4 h-4 text-secondary-foreground" />
             <span className="text-xs font-semibold text-secondary-foreground">Dados do Funil por Canal</span>
@@ -273,7 +273,7 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
+      <div className="bg-white rounded-lg border border-[#d9cdb8] p-5 mb-5">
         <p className="text-xs text-gray-400 mb-1">Meta de Receita</p>
         <p className="text-2xl font-bold text-gray-900">{fmt(record.target_revenue || 0)}</p>
       </div>
@@ -299,7 +299,7 @@ function PlanView({ record, clients, funnelTypes, onBack }) {
                     ? buildFunnelStagesView(ch.benchmark_rates, ch.funnel_stage_labels, benchLead)
                     : null;
                   return (
-                    <div key={i} className="bg-white rounded-xl border border-gray-100 p-5">
+                    <div key={i} className="bg-white rounded-lg border border-[#d9cdb8] p-5">
                       <div className="flex items-center gap-2 mb-3">
                         <ChannelBadge channel={ch.channel_name} />
                         <span className="text-xs text-gray-400">·</span>
@@ -626,7 +626,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
         )}
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
+      <div className="bg-white rounded-lg border border-[#d9cdb8] p-6 mb-6">
         <div className="mb-5">
           <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Título (opcional)</Label>
           <input
@@ -657,13 +657,18 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
             </div>
 
             <div className="mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Distribuição por Canal</Label>
-                <span className={`text-[11px] font-medium ${Math.abs(totalPercent - 100) < 0.01 ? 'text-green-600' : 'text-red-500'}`}>
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-[#312b1d] text-white flex items-center justify-center font-bold text-sm">2</div>
+                  <div>
+                    <Label className="text-base font-bold text-[#312b1d] leading-tight block">Distribuição por Canal</Label>
+                    <p className="text-xs text-[#7c7161] mt-0.5">Selecione um objetivo para cada canal. As taxas e o ticket vêm do funil do objetivo — edite para simular cenários.</p>
+                  </div>
+                </div>
+                <span className={`text-[11px] font-bold ${Math.abs(totalPercent - 100) < 0.01 ? 'text-[#3f7a4d]' : 'text-[#c0392b]'}`}>
                   Total: {totalPercent}%
                 </span>
               </div>
-              <p className="text-[11px] text-gray-400 mb-3">Selecione um objetivo para cada canal. As taxas e o ticket vêm do funil do objetivo — edite para simular cenários.</p>
 
               {activeChannels.length === 0 ? (
                 <p className="text-sm text-gray-400 py-3">Nenhum canal ativo cadastrado. Cadastre canais em Config. Campanhas.</p>
@@ -677,7 +682,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                     const convLabels = rowConversionLabels(row);
                     const hasObjective = !!row.objective_id;
                     return (
-                      <div key={idx} className="border border-gray-100 rounded-lg overflow-hidden" style={{ borderLeft: `4px solid ${channelAccent(row.channel_name)}` }}>
+                      <div key={idx} className="bg-white border border-[#d9cdb8] rounded-lg overflow-hidden" style={{ borderLeft: `4px solid ${channelAccent(row.channel_name)}` }}>
                         <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1.4fr_0.8fr_1fr_0.8fr_32px_32px] gap-2 items-center p-2 transition-colors" style={{ backgroundColor: channelAccent(row.channel_name) + (isExpanded ? '22' : '12') }}>
                           <Select value={row.channel_name || undefined} onValueChange={v => setChannelForRow(idx, v)}>
                             <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Canal..." /></SelectTrigger>
@@ -710,10 +715,10 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                         </div>
 
                         {hasObjective && isExpanded && (
-                          <div className="px-3 py-3 bg-secondary/30 border-t border-gray-100">
+                          <div className="px-3 py-3 bg-[#f2ede2]/50 border-t border-[#e2ccaf]/60">
                             <div className="flex items-center gap-2 mb-3">
-                              <Info className="w-3.5 h-3.5 text-secondary-foreground" />
-                              <span className="text-[11px] font-semibold text-secondary-foreground">Dados do Funil — {row.objective_name}</span>
+                              <Info className="w-3.5 h-3.5 text-[#7e6951]" />
+                              <span className="text-[11px] font-bold text-[#312b1d] uppercase tracking-wide">Dados do Funil — {row.objective_name}</span>
                             </div>
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-xs">
                               <div>
@@ -841,7 +846,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                     ? buildFunnelStages(ch.benchmark_rates, ch.funnel_stage_labels, benchLead)
                     : null;
                   return (
-                    <div key={i} className="bg-white rounded-xl border border-gray-100 p-5">
+                    <div key={i} className="bg-white rounded-lg border border-[#d9cdb8] p-5">
                       <div className="flex items-center gap-2 mb-3">
                         <ChannelBadge channel={ch.channel_name} />
                         <span className="text-xs text-gray-400">·</span>

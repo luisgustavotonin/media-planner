@@ -128,23 +128,29 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
         />
       )}
 
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-900">Alocação de Canais</h3>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-[#312b1d] text-white flex items-center justify-center font-bold text-sm">1</div>
+          <div>
+            <h3 className="text-base font-bold text-[#312b1d] leading-tight">Alocação de Canais</h3>
+            <p className="text-xs text-[#7c7161]">Distribua o investimento e configure as campanhas de cada canal.</p>
+          </div>
+        </div>
         {!readOnly && (
-          <Button variant="outline" size="sm" onClick={() => setShowModal(true)} className="text-xs gap-1.5">
+          <Button variant="outline" size="sm" onClick={() => setShowModal(true)} className="text-xs gap-1.5 border-[#f85d07] text-[#f85d07] hover:bg-[#f2ede2]">
             <Plus className="w-3.5 h-3.5" /> Adicionar Canal
           </Button>
         )}
       </div>
 
       {/* Labels */}
-      <div className="hidden sm:grid grid-cols-[1fr_1fr_60px_80px_100px_36px] gap-3 px-4 text-[10px] text-gray-400 uppercase tracking-wider">
+      <div className="hidden sm:grid grid-cols-[1fr_1fr_60px_80px_100px_36px] gap-3 px-4 text-[10px] text-[#7c7161] uppercase tracking-wide font-semibold">
         <span>Canal</span><span>Investimento</span><span className="text-center">%</span><span>Imposto</span><span className="text-center">Líquido</span><span></span>
       </div>
 
       <div className="space-y-2">
         {channels.map((ch, idx) => (
-          <div key={idx} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div key={idx} className="bg-white rounded-lg border border-[#d9cdb8] overflow-hidden">
             <div className="flex items-center gap-3 p-4">
               <div className="flex-1 grid grid-cols-2 sm:grid-cols-[1fr_1fr_60px_80px_100px] gap-3 items-center">
                 <div>
@@ -182,7 +188,7 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
             </div>
 
             {expandedIdx === idx && (
-              <div className="px-4 pb-4 pt-2 border-t border-gray-50 bg-gray-50/50">
+              <div className="px-4 pb-4 pt-2 border-t border-[#e2ccaf]/60 bg-[#f2ede2]/40">
                 <div className="flex items-center gap-3 mb-3">
                   <Switch checked={ch.use_custom_funnel || false} onCheckedChange={v => updateChannel(idx, 'use_custom_funnel', v)} disabled={readOnly} />
                   <span className="text-xs text-gray-600">Taxas de funil personalizadas para este canal</span>
