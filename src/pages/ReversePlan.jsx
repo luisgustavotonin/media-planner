@@ -456,35 +456,7 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
   };
 
   const handleDistChange = (idx, field, value) => {
-    if (field !== 'percent') {
-      setDistribution(d => d.map((r, i) => i === idx ? { ...r, [field]: Number(value) } : r));
-      setResult(null);
-      return;
-    }
-    // Redistribuição automática: o canal editado fica com o valor informado,
-    // os demais repartem o restante (100 - v) proporcionalmente (ou em partes iguais).
-    setDistribution(d => {
-      const v = Math.max(0, Math.min(100, Number(value) || 0));
-      const others = d.filter((_, i) => i !== idx);
-      const othersSum = others.reduce((s, r) => s + (Number(r.percent) || 0), 0);
-      const remainder = 100 - v;
-      let alloc;
-      if (others.length === 0) {
-        alloc = [];
-      } else if (othersSum > 0) {
-        alloc = others.map(r => Math.round(((Number(r.percent) || 0) / othersSum) * remainder));
-      } else {
-        const each = Math.floor(remainder / others.length);
-        alloc = others.map(() => each);
-      }
-      const diff = remainder - alloc.reduce((s, x) => s + x, 0);
-      if (alloc.length) alloc[alloc.length - 1] += diff;
-      return d.map((r, i) => {
-        if (i === idx) return { ...r, percent: v };
-        const oi = i < idx ? i : i - 1;
-        return { ...r, percent: Math.max(0, alloc[oi] || 0) };
-      });
-    });
+    setDistribution(d => d.map((r, i) => i === idx ? { ...r, [field]: Number(value) } : r));
     setResult(null);
   };
 
@@ -648,6 +620,31 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
               </div>
             </div>
 
+            <div className="mb-4 border border-dashed border-[#d9cdb8] rounded-lg p-3 bg-[#f2ede2]/30">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <span className="text-[11px] font-semibold text-[#7c7161] uppercase tracking-wide">Adicionar canal:</span>
+                <div className="flex gap-1 bg-white rounded-md p-0.5 border border-[#d9cdb8]">
+                  <button onClick={() => setPickerCategory('digital')}
+                    className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${pickerCategory === 'digital' ? 'bg-[#312b1d] text-white' : 'text-[#7c7161] hover:text-[#312b1d]'}`}>
+                    Digital
+                  </button>
+                  <button onClick={() => setPickerCategory('offline')}
+                    className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${pickerCategory === 'offline' ? 'bg-[#312b1d] text-white' : 'text-[#7c7161] hover:text-[#312b1d]'}`}>
+                    Offline
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {availableChannels.map(ch => (
+                  <button key={ch.id} onClick={() => addSpecificChannel(ch.name)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-[#d9cdb8] bg-white text-[#312b1d] hover:border-[#f85d07] hover:bg-[#f2ede2] transition-all">
+                    <Plus className="w-3 h-3" /> {ch.name}
+                  </button>
+                ))}
+                {availableChannels.length === 0 && <span className="text-xs text-gray-400 italic">Todos os canais desta categoria já foram adicionados.</span>}
+              </div>
+            </div>
+
             <div className="mb-4">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-3">
@@ -737,31 +734,6 @@ function PlanNew({ clients, funnelTypes, objectives, benchmarks, onSave, onBack 
                   })}
                 </div>
               )}
-
-              <div className="mt-3 border border-dashed border-[#d9cdb8] rounded-lg p-3 bg-[#f2ede2]/30">
-                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  <span className="text-[11px] font-semibold text-[#7c7161] uppercase tracking-wide">Adicionar canal:</span>
-                  <div className="flex gap-1 bg-white rounded-md p-0.5 border border-[#d9cdb8]">
-                    <button onClick={() => setPickerCategory('digital')}
-                      className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${pickerCategory === 'digital' ? 'bg-[#312b1d] text-white' : 'text-[#7c7161] hover:text-[#312b1d]'}`}>
-                      Digital
-                    </button>
-                    <button onClick={() => setPickerCategory('offline')}
-                      className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${pickerCategory === 'offline' ? 'bg-[#312b1d] text-white' : 'text-[#7c7161] hover:text-[#312b1d]'}`}>
-                      Offline
-                    </button>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {availableChannels.map(ch => (
-                    <button key={ch.id} onClick={() => addSpecificChannel(ch.name)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-[#d9cdb8] bg-white text-[#312b1d] hover:border-[#f85d07] hover:bg-[#f2ede2] transition-all">
-                      <Plus className="w-3 h-3" /> {ch.name}
-                    </button>
-                  ))}
-                  {availableChannels.length === 0 && <span className="text-xs text-gray-400 italic">Todos os canais desta categoria já foram adicionados.</span>}
-                </div>
-              </div>
 
               <div className="flex flex-wrap gap-3 mt-3">
                 <Button

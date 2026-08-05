@@ -261,7 +261,7 @@ export async function exportReversePlanToPdf({ clientName, planTitle, targetReve
   const marginL = 14;
 
   const titulo = safe(clientName || 'Cliente');
-  const subtitulo = safe(`Planejamento Reverso${planTitle ? ' · ' + planTitle : ''}   Gerado em: ${new Date().toLocaleDateString('pt-BR')}`);
+  const subtitulo = safe(`Planejamento de Mídia${planTitle ? ' · ' + planTitle : ''}   Gerado em: ${new Date().toLocaleDateString('pt-BR')}`);
 
   let y = drawHeader(doc, titulo, subtitulo, pageW) + 8;
 
@@ -376,6 +376,6 @@ export async function exportReversePlanToPdf({ clientName, planTitle, targetReve
     doc.circle(pageW / 2, pageH - 6, 0.8, 'F');
   }
 
-  const fileName = `planejamento_reverso_${(clientName || 'cliente').replace(/\s+/g, '_')}.pdf`;
+  const fileName = `planejamento_de_midia_${(clientName || 'cliente').replace(/\s+/g, '_')}.pdf`;
   doc.save(fileName);
 }
