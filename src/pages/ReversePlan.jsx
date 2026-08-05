@@ -21,18 +21,8 @@ import { exportReversePlanToPdf } from '../components/plan/ReversePlanPdfExport'
 const GENERIC_RATE_LABELS = ['Lead → Agend.', 'Agend. → Compar.', 'Compar. → Venda'];
 const GENERIC_STAGE_LABELS = ['Leads', 'Agendamentos', 'Comparecimentos', 'Vendas'];
 
-// Cor de destaque por canal para separar as caixas visualmente
-const CHANNEL_ACCENTS = {
-  'Google': '#4285F4',
-  'Meta': '#0866FF',
-  'Instagram': '#E1306C',
-  'TikTok': '#111111',
-  'YouTube': '#FF0000',
-  'LinkedIn': '#0A66C2',
-  'Outlook': '#0078D4',
-  'Wix': '#000000',
-};
-const channelAccent = (name) => CHANNEL_ACCENTS[name] || '#f85d07';
+// Material U-TRAX padronizado — sem acentos coloridos por canal (azul removido)
+const channelAccent = () => '#d9cdb8';
 
 // ── Diálogo de confirmação de exclusão ──
 function ConfirmDeleteDialog({ open, onConfirm, onCancel, title = 'Excluir?', message = 'Esta ação não pode ser desfeita.' }) {
