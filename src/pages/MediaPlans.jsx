@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -24,8 +24,24 @@ export default function MediaPlans() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [selectedClientId, setSelectedClientId] = useState('');
-  const [selectedPlanId, setSelectedPlanId] = useState('');
+  const [selectedClientId, setSelectedClientId] = useState(() => sessionStorage.getItem('mp.selectedClientId') || '');
+  const [selectedPlanId, setSelectedPlanId] = useState(() => sessionStorage.getItem('mp.selectedPlanId') || '');
+
+  // Persiste a unidade/plano selecionados para manter ao retornar do detalhe do plano
+  useEffect(() => {
+    if (selectedClientId) sessionStorage.setItem('mp.selectedClientId', selectedClientId);
+    else sessionStorage.removeItem('mp.selectedClientId');
+    if (selectedPlanId) sessionStorage.setItem('mp.selectedPlanId', selectedPlanId);
+    else sessionStorage.removeItem('mp.selectedPlanId');
+  }, [selectedClientId, selectedPlanId]);
+
+  // Limpa o plano salvo se ele não pertencer à unidade atual
+  useEffect(() => {
+    if (selectedPlanId && plans.length > 0) {
+      const p = plans.find(pl => pl.id === selectedPlanId);
+      if (p && p.client_id !== selectedClientId) setSelectedPlanId('');
+    }
+  }, [plans, selectedPlanId, selectedClientId]);
 
   const { data: plans = [], isLoading } = useQuery({
     queryKey: ['plans'],

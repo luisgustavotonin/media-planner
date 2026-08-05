@@ -2,11 +2,9 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Trash2, ChevronDown, ChevronUp, Plus, X } from 'lucide-react';
 import CurrencyInput from '../ui-custom/CurrencyInput';
-import PercentInput from '../ui-custom/PercentInput';
 import ChannelStrategies from './ChannelStrategies';
 import ChannelBadge from '../ui-custom/ChannelBadge';
 
@@ -194,51 +192,6 @@ export default function ChannelEditor({ channels, onChange, totalInvestment, rea
             </div>
 
               <div className="px-4 pb-4 pt-2 border-t border-[#e2ccaf]/60 bg-[#f2ede2]/40">
-                <div className="flex items-center gap-3 mb-3">
-                  <Switch checked={ch.use_custom_funnel || false} onCheckedChange={v => updateChannel(idx, 'use_custom_funnel', v)} disabled={readOnly} />
-                  <span className="text-xs text-gray-600">Taxas de funil personalizadas para este canal</span>
-                </div>
-                {ch.use_custom_funnel && (
-                  <div className="mb-4">
-                    {funnelStages.length >= 2 ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {funnelStages.slice(0, -1).map((stage, si) => {
-                          const nextStage = funnelStages[si + 1];
-                          const overrides = ch.conversion_rate_overrides || [];
-                          return (
-                            <div key={si}>
-                              <label className="text-[10px] text-gray-400">{stage.label}→{nextStage.label}</label>
-                              <PercentInput
-                                value={overrides[si] ?? 0}
-                                onChange={v => {
-                                  const updated = [...(ch.conversion_rate_overrides || funnelStages.slice(0, -1).map(() => 0))];
-                                  updated[si] = v;
-                                  updateChannel(idx, 'conversion_rate_overrides', updated);
-                                }}
-                                className="h-8 text-xs border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold focus-visible:ring-[#f85d07]" disabled={readOnly}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-3 gap-3">
-                        <div>
-                          <label className="text-[10px] text-gray-400">Lead→Agend.</label>
-                          <PercentInput value={ch.lead_to_appointment_rate_override || 0} onChange={v => updateChannel(idx, 'lead_to_appointment_rate_override', v)} className="h-8 text-xs border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold focus-visible:ring-[#f85d07]" disabled={readOnly} />
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-gray-400">Agend.→Compar.</label>
-                          <PercentInput value={ch.appointment_to_show_rate_override || 0} onChange={v => updateChannel(idx, 'appointment_to_show_rate_override', v)} className="h-8 text-xs border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold focus-visible:ring-[#f85d07]" disabled={readOnly} />
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-gray-400">Compar.→Venda</label>
-                          <PercentInput value={ch.show_to_sale_rate_override || 0} onChange={v => updateChannel(idx, 'show_to_sale_rate_override', v)} className="h-8 text-xs border-[#f85d07] bg-[#f2ede2] text-[#312b1d] font-semibold focus-visible:ring-[#f85d07]" disabled={readOnly} />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
                 <ChannelStrategies
                   strategies={ch.strategies || []}
                   channelBudget={ch.budget_value || 0}
