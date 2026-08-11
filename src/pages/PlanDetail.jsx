@@ -11,6 +11,7 @@ import ResultsTable from '../components/plan/ResultsTable';
 import ChannelBadge from '../components/ui-custom/ChannelBadge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CurrencyInput from '../components/ui-custom/CurrencyInput';
 import PercentInput from '../components/ui-custom/PercentInput';
@@ -95,9 +96,16 @@ export default function PlanDetail() {
     queryFn: () => base44.entities.CampaignObjective.filter({ is_active: true }),
   });
 
+  const { data: allPlans = [] } = useQuery({
+    queryKey: ['plans'],
+    queryFn: () => base44.entities.MediaPlan.list(),
+  });
+
   const [localPlan, setLocalPlan] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDuplicate, setShowDuplicate] = useState(false);
+  const [dupForm, setDupForm] = useState({ period_month: 1, period_year: new Date().getFullYear() });
   useEffect(() => {
     // Só sincroniza com o servidor se não houver edições locais em andamento
     if (plan && !isSaving) setLocalPlan(prev => prev === null ? { ...plan } : prev);
@@ -141,9 +149,24 @@ export default function PlanDetail() {
     onError: () => toast.error('Erro ao duplicar plano de mídia'),
   });
 
-  const handleDuplicate = () => {
+  const openDuplicateDialog = () => {
+    if (!localPlan) return;
+    const baseYear = localPlan.period_year || new Date().getFullYear();
+    const baseMonth = localPlan.period_month || 1;
+    const nextMonth = baseMonth === 12 ? 1 : baseMonth + 1;
+    const nextYear = baseMonth === 12 ? baseYear + 1 : baseYear;
+    setDupForm({ period_month: nextMonth, period_year: nextYear });
+    setShowDuplicate(true);
+  };
+
+  const handleDuplicateConfirm = () => {
     const { id, created_date, updated_date, created_by, created_by_id, ...rest } = localPlan;
-    duplicateMut.mutate({ ...rest, status: 'draft' });
+    duplicateMut.mutate({
+      ...rest,
+      period_month: dupForm.period_month,
+      period_year: dupForm.period_year,
+      status: 'draft',
+    });
   };
 
   if (isLoading || !localPlan) {
@@ -366,6 +389,52 @@ export default function PlanDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={showDuplicate} onOpenChange={v => !v && setShowDuplicate(false)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Copy className="w-5 h-5 text-primary" />
+              Duplicar Plano de Mídia
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600">
+            Selecione o novo período para a cópia. O plano será criado como <span className="font-medium">rascunho</span> em {MESES[(dupForm.period_month || 1) - 1]}/{dupForm.period_year}.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Novo Mês</Label>
+              <Select value={String(dupForm.period_month)} onValueChange={v => setDupForm(f => ({ ...f, period_month: Number(v) }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {MESES.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Novo Ano</Label>
+              <Input type="number" value={dupForm.period_year} onChange={e => setDupForm(f => ({ ...f, period_year: Number(e.target.value) }))} />
+            </div>
+          </div>
+          {(() => {
+            const dupBlocked = allPlans.some(p =>
+              p.client_id === localPlan.client_id &&
+              p.period_month === dupForm.period_month &&
+              p.period_year === dupForm.period_year
+            );
+            const sameMonth = localPlan.period_month === dupForm.period_month && localPlan.period_year === dupForm.period_year;
+            if (sameMonth) return <p className="text-xs text-amber-600 font-medium">O mês selecionado é o mesmo do plano original. Recomendado escolher um mês diferente.</p>;
+            if (dupBlocked) return <p className="text-xs text-red-500 font-medium">Já existe um plano para este cliente em {MESES[(dupForm.period_month || 1) - 1]}/{dupForm.period_year}. Apenas um plano por mês é permitido.</p>;
+            return null;
+          })()}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowDuplicate(false)}>Cancelar</Button>
+            <Button onClick={handleDuplicateConfirm} disabled={duplicateMut.isPending} className="bg-primary hover:bg-primary/90">
+              {duplicateMut.isPending ? 'Duplicando...' : 'Duplicar para novo mês'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="mb-6">
         <button
           onClick={() => {
@@ -410,7 +479,7 @@ export default function PlanDetail() {
               <Button
                 variant="outline"
                 className="gap-2 h-9 text-xs"
-                onClick={handleDuplicate}
+                onClick={openDuplicateDialog}
                 disabled={duplicateMut.isPending}
               >
                 <Copy className="w-4 h-4" /> {duplicateMut.isPending ? 'Duplicando...' : 'Duplicar'}
